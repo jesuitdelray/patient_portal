@@ -30,7 +30,8 @@ type Message = {
 
 const WELCOME_MESSAGE: Message = {
   role: "assistant",
-  content: "Hello! I'm your dental assistant. You can ask me questions about your procedures, appointments, or preparation for upcoming visits. How can I help you today?",
+  content:
+    "Hello! I'm your dental assistant. You can ask me questions about your procedures, appointments, or preparation for upcoming visits. How can I help you today?",
   timestamp: new Date(),
 };
 
@@ -51,14 +52,14 @@ export default function AskAIScreen() {
 
         const newDate = new Date(actionData.newDateTime);
         const now = new Date();
-        
+
         // Check if date is in the past
         if (newDate < now) {
           // Find next available date
           const nextAvailable = new Date(now);
           nextAvailable.setDate(nextAvailable.getDate() + 1);
           nextAvailable.setHours(10, 0, 0, 0);
-          
+
           const errorMessage: Message = {
             role: "assistant",
             content: `Запрошенная дата в прошлом. Могу предложить ближайшую доступную дату: ${nextAvailable.toLocaleDateString()}. Хотите перенести на эту дату?`,
@@ -76,12 +77,15 @@ export default function AskAIScreen() {
         }
 
         // Call API to reschedule
-        const res = await fetch(`${API_BASE}/appointments/${actionData.appointmentId}/reschedule`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ datetime: actionData.newDateTime }),
-        });
+        const res = await fetch(
+          `${API_BASE}/appointments/${actionData.appointmentId}/reschedule`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ datetime: actionData.newDateTime }),
+          }
+        );
 
         if (!res.ok) {
           const errorData = await res.json();
@@ -89,20 +93,28 @@ export default function AskAIScreen() {
         }
 
         const result = await res.json();
-        
+
         // Add success message
         const successMessage: Message = {
           role: "assistant",
-          content: `Аппоинтмент "${actionData.appointmentTitle}" успешно перенесен на ${newDate.toLocaleDateString()} в ${newDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`,
+          content: `Аппоинтмент "${
+            actionData.appointmentTitle
+          }" успешно перенесен на ${newDate.toLocaleDateString()} в ${newDate.toLocaleTimeString(
+            [],
+            { hour: "2-digit", minute: "2-digit" }
+          )}.`,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, successMessage]);
       } else if (actionData.action === "cancel_appointment") {
         // Call API to cancel
-        const res = await fetch(`${API_BASE}/appointments/${actionData.appointmentId}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
+        const res = await fetch(
+          `${API_BASE}/appointments/${actionData.appointmentId}`,
+          {
+            method: "DELETE",
+            credentials: "include",
+          }
+        );
 
         if (!res.ok) {
           throw new Error("Failed to cancel appointment");
@@ -119,7 +131,9 @@ export default function AskAIScreen() {
       console.error("Error executing action:", error);
       const errorMessage: Message = {
         role: "assistant",
-        content: `Ошибка при выполнении действия: ${error.message || "Неизвестная ошибка"}. Пожалуйста, попробуйте еще раз или обратитесь к врачу.`,
+        content: `Ошибка при выполнении действия: ${
+          error.message || "Неизвестная ошибка"
+        }. Пожалуйста, попробуйте еще раз или обратитесь к врачу.`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -139,7 +153,10 @@ export default function AskAIScreen() {
             timestamp: new Date(msg.timestamp),
           }));
           // If no welcome message, add it
-          if (loadedMessages.length === 0 || loadedMessages[0].content !== WELCOME_MESSAGE.content) {
+          if (
+            loadedMessages.length === 0 ||
+            loadedMessages[0].content !== WELCOME_MESSAGE.content
+          ) {
             setMessages([WELCOME_MESSAGE, ...loadedMessages]);
           } else {
             setMessages(loadedMessages);
@@ -190,7 +207,10 @@ export default function AskAIScreen() {
     try {
       // Prepare conversation history (exclude welcome message)
       const history = messages
-        .filter((msg) => msg.role !== "assistant" || msg.content !== WELCOME_MESSAGE.content)
+        .filter(
+          (msg) =>
+            msg.role !== "assistant" || msg.content !== WELCOME_MESSAGE.content
+        )
         .map((msg) => ({
           role: msg.role,
           content: msg.content,
@@ -210,16 +230,16 @@ export default function AskAIScreen() {
       if (!res.ok) throw new Error("Failed to get AI response");
 
       const data = await res.json();
-      
+
       // Check if response contains an action or pending action
       let responseText = data.response;
       let actionData = null;
       let pendingAction = null;
-      
+
       // Split response by newlines to check for JSON
-      const lines = data.response.split('\n');
+      const lines = data.response.split("\n");
       const textLines: string[] = [];
-      
+
       for (const line of lines) {
         try {
           const parsed = JSON.parse(line.trim());
@@ -227,7 +247,11 @@ export default function AskAIScreen() {
             // Execute action immediately
             actionData = parsed;
             await executeAction(parsed);
-            responseText = `Выполняю действие: ${parsed.action === "reschedule_appointment" ? "Перенос аппоинтмента" : "Отмена аппоинтмента"}...`;
+            responseText = `Выполняю действие: ${
+              parsed.action === "reschedule_appointment"
+                ? "Перенос аппоинтмента"
+                : "Отмена аппоинтмента"
+            }...`;
             break;
           } else if (parsed.type === "pending_action") {
             // Store pending action for confirmation
@@ -241,14 +265,16 @@ export default function AskAIScreen() {
           textLines.push(line);
         }
       }
-      
+
       if (!actionData && textLines.length > 0) {
-        responseText = textLines.join('\n').trim();
+        responseText = textLines.join("\n").trim();
       }
-      
+
       const aiMessage: Message = {
         role: "assistant",
-        content: responseText + (pendingAction ? '\n' + JSON.stringify(pendingAction) : ''),
+        content:
+          responseText +
+          (pendingAction ? "\n" + JSON.stringify(pendingAction) : ""),
         timestamp: new Date(),
         actionData: actionData || pendingAction,
       };
@@ -260,7 +286,8 @@ export default function AskAIScreen() {
       setMessages((prev) => prev.slice(0, -1));
       const errorMessage: Message = {
         role: "assistant",
-        content: "Sorry, I'm having trouble responding right now. Please try again later or contact your dentist directly.",
+        content:
+          "Sorry, I'm having trouble responding right now. Please try again later or contact your dentist directly.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -494,4 +521,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-

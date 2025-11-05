@@ -6,7 +6,12 @@ import { getIO } from "@/lib/io";
 
 // Intent detection for appointment actions
 interface DetectedIntent {
-  type: "reschedule_appointment" | "cancel_appointment" | "create_appointment" | "general_question" | null;
+  type:
+    | "reschedule_appointment"
+    | "cancel_appointment"
+    | "create_appointment"
+    | "general_question"
+    | null;
   appointmentId?: string;
   appointmentTitle?: string;
   newDateTime?: string;
@@ -17,7 +22,7 @@ interface DetectedIntent {
 export async function POST(req: NextRequest) {
   try {
     const { message, patientContext } = await req.json();
-    
+
     if (!message || typeof message !== "string") {
       return NextResponse.json(
         { error: "Message is required" },
@@ -36,10 +41,7 @@ export async function POST(req: NextRequest) {
     // Get patient ID from auth
     const authPayload = await getAuthPayload(req);
     if (!authPayload || authPayload.role !== "patient" || !authPayload.userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const patientId = authPayload.userId;
@@ -81,18 +83,23 @@ async function detectIntent(
     });
 
     // Format appointments for AI
-    const appointmentsList = appointments.map((apt, idx) => {
-      const date = new Date(apt.datetime);
-      return {
-        index: idx + 1,
-        id: apt.id,
-        title: apt.title,
-        datetime: date.toISOString(),
-        date: date.toLocaleDateString(),
-        time: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        location: apt.location || "N/A",
-      };
-    }).slice(0, 10); // Limit to 10 most recent
+    const appointmentsList = appointments
+      .map((apt, idx) => {
+        const date = new Date(apt.datetime);
+        return {
+          index: idx + 1,
+          id: apt.id,
+          title: apt.title,
+          datetime: date.toISOString(),
+          date: date.toLocaleDateString(),
+          time: date.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          location: apt.location || "N/A",
+        };
+      })
+      .slice(0, 10); // Limit to 10 most recent
 
     const systemPrompt = `You are an intent detection system for a dental clinic chat assistant. Your job is to analyze user messages and detect if they want to:
 1. Reschedule an appointment (change date/time)
@@ -142,11 +149,13 @@ Rules:
     }
 
     const intent = JSON.parse(response) as DetectedIntent;
-    
+
     // Validate and enhance intent
     if (intent.type === "reschedule_appointment" && intent.appointmentId) {
       // Find the appointment
-      const appointment = appointments.find((apt) => apt.id === intent.appointmentId);
+      const appointment = appointments.find(
+        (apt) => apt.id === intent.appointmentId
+      );
       if (appointment) {
         intent.appointmentTitle = appointment.title;
       }
@@ -158,4 +167,3 @@ Rules:
     return { type: null, confidence: 0 };
   }
 }
-
