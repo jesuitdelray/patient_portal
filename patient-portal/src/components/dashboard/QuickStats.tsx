@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useAuth, usePatient, useUnreadMessages } from "../../lib/queries";
+import { colors } from "../../lib/colors";
 
 type Plan = { id: string; title: string; status: string; steps: any };
 type Appointment = {
@@ -48,32 +49,32 @@ export function QuickStats() {
             })
           : "",
         icon: "📅",
-        color: "#007AFF",
-        bgColor: "#E6F2FF",
+        color: colors.textPrimary,
+        bgColor: colors.greyscale100,
       },
       {
         label: "Unread Messages",
         value: String(unread),
         subtext: unread === 1 ? "since last read" : "since last read",
         icon: "💬",
-        color: "#34C759",
-        bgColor: "#E8F5E9",
+        color: colors.textPrimary,
+        bgColor: colors.greyscale100,
       },
       {
         label: "Active Treatments",
         value: String(activeTreatments),
         subtext: "in progress",
         icon: "🩺",
-        color: "#007AFF",
-        bgColor: "#E6F2FF",
+        color: colors.textPrimary,
+        bgColor: colors.greyscale100,
       },
       {
         label: "Completed",
         value: String(completedTreatments),
         subtext: "treatments",
         icon: "🏆",
-        color: "#34C759",
-        bgColor: "#E8F5E9",
+        color: colors.textPrimary,
+        bgColor: colors.greyscale100,
       },
     ];
   }, [nextAppointment, unread, activeTreatments, completedTreatments]);
@@ -108,13 +109,13 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     minWidth: "47%",
-    backgroundColor: "#fff",
+    backgroundColor: colors.primaryWhite,
     borderRadius: 8,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    shadowColor: "#000",
+    shadowColor: colors.greyscale900,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -132,17 +133,17 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    color: "#666",
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   value: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#000",
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   subtext: {
     fontSize: 10,
-    color: "#666",
+    color: colors.textSecondary,
   },
 });

@@ -1,46 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { API_BASE } from "@/lib/api";
+import { useDashboardStats } from "@/lib/admin-queries";
+import { Loader } from "./components/Loader";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({
+  const { data: stats, isLoading: loading } = useDashboardStats();
+
+  const statsData = stats || {
     totalPatients: 0,
     totalAppointments: 0,
     upcomingAppointments: 0,
     recentMessages: 0,
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.all([
-      fetch(`${API_BASE}/patients`).then((r) => r.json()),
-      fetch(`${API_BASE}/appointments`)
-        .then((r) => r.json())
-        .catch(() => ({ appointments: [] })),
-    ])
-      .then(([patientsData, appointmentsData]) => {
-        const now = new Date();
-        const upcoming = (appointmentsData.appointments || []).filter(
-          (apt: any) => new Date(apt.datetime) > now
-        );
-        setStats({
-          totalPatients: patientsData.patients?.length || 0,
-          totalAppointments: appointmentsData.appointments?.length || 0,
-          upcomingAppointments: upcoming.length,
-          recentMessages: 0, // TODO: implement messages count
-        });
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  };
 
   if (loading) {
     return (
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-          <div className="text-slate-500">Loading...</div>
+          <div className="flex items-center justify-center py-12">
+            <Loader />
+          </div>
         </div>
       </main>
     );
@@ -56,7 +37,7 @@ export default function Dashboard() {
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
               <div className="text-sm text-slate-600 mb-1">Total Patients</div>
               <div className="text-3xl font-bold text-slate-900">
-                {stats.totalPatients}
+                {statsData.totalPatients}
               </div>
             </div>
           </Link>
@@ -67,7 +48,7 @@ export default function Dashboard() {
                 Total Appointments
               </div>
               <div className="text-3xl font-bold text-slate-900">
-                {stats.totalAppointments}
+                {statsData.totalAppointments}
               </div>
             </div>
           </Link>
@@ -76,7 +57,7 @@ export default function Dashboard() {
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
               <div className="text-sm text-slate-600 mb-1">Upcoming</div>
               <div className="text-3xl font-bold text-blue-600">
-                {stats.upcomingAppointments}
+                {statsData.upcomingAppointments}
               </div>
             </div>
           </Link>
@@ -85,7 +66,7 @@ export default function Dashboard() {
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
               <div className="text-sm text-slate-600 mb-1">Recent Messages</div>
               <div className="text-3xl font-bold text-slate-900">
-                {stats.recentMessages}
+                {statsData.recentMessages}
               </div>
             </div>
           </Link>

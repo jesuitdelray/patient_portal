@@ -1,9 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { API_BASE } from "@/lib/api";
 import Link from "next/link";
+import { useAppointments, useInvalidateAdminQueries } from "@/lib/admin-queries";
+import { Loader } from "@/app/components/Loader";
 
 function AppointmentsContent() {
   const searchParams = useSearchParams();
@@ -11,35 +13,23 @@ function AppointmentsContent() {
   const [statusFilter, setStatusFilter] = useState(
     searchParams.get("status") || "all"
   );
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [stats, setStats] = useState({
+  const invalidate = useInvalidateAdminQueries();
+
+  const paramsString = useMemo(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    return params.toString() ? `?${params.toString()}` : "";
+  }, [search, statusFilter]);
+
+  const { data, isLoading: loading } = useAppointments(paramsString);
+  const appointments = data?.appointments || [];
+  const stats = data?.stats || {
     scheduled: 0,
     upcoming: 0,
     missed: 0,
     completed: 0,
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (statusFilter !== "all") params.set("status", statusFilter);
-
-    fetch(`${API_BASE}/appointments?${params.toString()}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setAppointments(data.appointments || []);
-        setStats(
-          data.stats || {
-            scheduled: 0,
-            upcoming: 0,
-            missed: 0,
-            completed: 0,
-          }
-        );
-      })
-      .finally(() => setLoading(false));
-  }, [search, statusFilter]);
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -134,7 +124,9 @@ function AppointmentsContent() {
 
         {/* Appointments List */}
         {loading ? (
-          <div className="text-center py-12 text-slate-500">Loading...</div>
+          <div className="flex items-center justify-center py-12">
+            <Loader />
+          </div>
         ) : appointments.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center">
             <div className="text-slate-400 mb-2">No appointments found</div>
@@ -147,7 +139,7 @@ function AppointmentsContent() {
         ) : (
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
             <div className="divide-y divide-slate-200">
-              {appointments.map((apt) => (
+              {appointments.map((apt: any) => (
                 <Link
                   key={apt.id}
                   href={`/patients/${apt.patient.id}`}
@@ -199,26 +191,8 @@ function AppointmentsContent() {
                             }
                           );
                           if (res.ok) {
-                            // Refetch appointments
-                            const params = new URLSearchParams();
-                            if (search) params.set("search", search);
-                            if (statusFilter !== "all")
-                              params.set("status", statusFilter);
-                            fetch(
-                              `${API_BASE}/appointments?${params.toString()}`
-                            )
-                              .then((r) => r.json())
-                              .then((data) => {
-                                setAppointments(data.appointments || []);
-                                setStats(
-                                  data.stats || {
-                                    scheduled: 0,
-                                    upcoming: 0,
-                                    missed: 0,
-                                    completed: 0,
-                                  }
-                                );
-                              });
+                            // Invalidate cache to refetch
+                            invalidate.invalidateAppointments(paramsString);
                           } else {
                             alert("Failed to cancel appointment");
                           }
@@ -243,7 +217,13 @@ function AppointmentsContent() {
 
 export default function AppointmentsPage() {
   return (
-    <Suspense fallback={<div className="flex-1 p-8">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex-1 p-8 flex items-center justify-center">
+          <Loader />
+        </div>
+      }
+    >
       <AppointmentsContent />
     </Suspense>
   );

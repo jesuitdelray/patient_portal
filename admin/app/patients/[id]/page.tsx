@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { API_BASE, connectSocket } from "@/lib/api";
+import {
+  usePatient,
+  useTreatmentPlans,
+  useInvalidateAdminQueries,
+} from "@/lib/admin-queries";
+import { Loader } from "@/app/components/Loader";
 
 type Appointment = {
   id: string;
@@ -22,15 +28,14 @@ import * as React from "react";
 
 function TreatmentPlansSection({
   patientId,
-  plans,
   appointments,
-  onPlansUpdate,
 }: {
   patientId: string;
-  plans: Plan[];
   appointments: Appointment[];
-  onPlansUpdate: (plans: Plan[]) => void;
 }) {
+  const { data: plansData } = useTreatmentPlans(patientId);
+  const plans = plansData?.plans ?? [];
+  const invalidate = useInvalidateAdminQueries();
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [showProcedureForm, setShowProcedureForm] = useState<string | null>(
     null
@@ -47,16 +52,6 @@ function TreatmentPlansSection({
     }
     setExpandedPlans(newExpanded);
   };
-
-  const fetchPlans = async () => {
-    const res = await fetch(`${API_BASE}/treatment-plans/${patientId}`);
-    const data = await res.json();
-    onPlansUpdate(data.plans || []);
-  };
-
-  useEffect(() => {
-    fetchPlans();
-  }, [patientId]);
 
   return (
     <section className="bg-white/80 backdrop-blur rounded-xl border shadow-sm p-5">
@@ -75,7 +70,7 @@ function TreatmentPlansSection({
           patientId={patientId}
           onSuccess={() => {
             setShowPlanForm(false);
-            fetchPlans();
+            invalidate.invalidateTreatmentPlans(patientId);
           }}
         />
       )}
@@ -84,7 +79,7 @@ function TreatmentPlansSection({
         <p className="text-slate-500">No treatment plans</p>
       ) : (
         <div className="space-y-3 mt-3">
-          {plans.map((plan) => (
+          {plans.map((plan: Plan) => (
             <div key={plan.id} className="border rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -118,7 +113,9 @@ function TreatmentPlansSection({
                   <ProceduresList
                     planId={plan.id}
                     appointments={appointments}
-                    onUpdate={fetchPlans}
+                    onUpdate={() =>
+                      invalidate.invalidateTreatmentPlans(patientId)
+                    }
                     procedures={(plan as any).procedures}
                   />
                   {showProcedureForm === plan.id && (
@@ -127,7 +124,7 @@ function TreatmentPlansSection({
                       appointments={appointments}
                       onSuccess={() => {
                         setShowProcedureForm(null);
-                        fetchPlans();
+                        invalidate.invalidateTreatmentPlans(patientId);
                       }}
                     />
                   )}
@@ -245,7 +242,7 @@ function ProceduresList({
 
   return (
     <div className="space-y-2">
-      {procedures.map((proc) => (
+      {procedures.map((proc: any) => (
         <div
           key={proc.id}
           className="text-sm border-l-2 border-blue-200 pl-3 py-2"
@@ -358,7 +355,7 @@ function CreateProcedureForm({
             className="w-full border rounded px-2 py-1 text-sm"
           >
             <option value="">None</option>
-            {appointments.map((apt) => (
+            {appointments.map((apt: Appointment) => (
               <option key={apt.id} value={apt.id}>
                 {apt.title} - {new Date(apt.datetime).toLocaleDateString()}
               </option>
@@ -399,13 +396,13 @@ function CreateProcedureForm({
 
 function CreateAppointmentForm({
   patientId,
-  plans,
   onSuccess,
 }: {
   patientId: string;
-  plans: Plan[];
   onSuccess: () => void;
 }) {
+  const { data: plansData } = useTreatmentPlans(patientId);
+  const plans = plansData?.plans ?? [];
   const [title, setTitle] = useState("");
   const [datetime, setDatetime] = useState("");
   const [location, setLocation] = useState("");
@@ -513,7 +510,7 @@ function CreateAppointmentForm({
               className="w-full border rounded px-3 py-2 text-sm"
             >
               <option value="">None</option>
-              {plans.map((plan) => (
+              {plans.map((plan: Plan) => (
                 <option key={plan.id} value={plan.id}>
                   {plan.title}
                 </option>
@@ -555,11 +552,13 @@ export default function PatientDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id: patientId } = React.use(params);
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const invalidate = useInvalidateAdminQueries();
+  const { data: patientData, isLoading: isLoadingPatient } =
+    usePatient(patientId);
+
+  const patient = patientData?.patient || null;
+  const appointments = patientData?.appointments ?? [];
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [reschedule, setReschedule] = useState<{
     id: string;
@@ -570,20 +569,15 @@ export default function PatientDetail({
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // Initialize messages from patient data
+  useEffect(() => {
+    if (patientData?.messages) {
+      setMessages(patientData.messages);
+    }
+  }, [patientData?.messages]);
+
   useEffect(() => {
     let mounted = true;
-    fetch(`${API_BASE}/patients/${patientId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!mounted) return;
-        setPatient(data.patient);
-        setPlans(data.plans ?? []);
-        setAppointments(data.appointments ?? []);
-        setMessages(data.messages ?? []);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
     // Realtime updates via WebSocket
     // Use singleton socket - don't disconnect it, just change rooms
     const socket: any = connectSocket({ patientId });
@@ -600,14 +594,59 @@ export default function PatientDetail({
       }
     };
 
+    // Setup messages cleared listener
+    const messagesClearedHandler = ({ patientId: clearedPatientId }: any) => {
+      // Only clear messages if it's for this patient
+      if (mounted && clearedPatientId === patientId) {
+        setMessages([]);
+      }
+    };
+
+    // Setup appointment event listeners
+    const appointmentNewHandler = ({ appointment }: any) => {
+      // Only process appointments for this patient
+      if (mounted && appointment?.patientId === patientId) {
+        invalidate.invalidatePatient(patientId);
+      }
+    };
+
+    const appointmentUpdateHandler = ({ appointment }: any) => {
+      // Only process appointments for this patient
+      if (mounted && appointment?.patientId === patientId) {
+        invalidate.invalidatePatient(patientId);
+      }
+    };
+
+    const appointmentCancelledHandler = ({
+      appointmentId,
+      patientId: cancelledPatientId,
+    }: any) => {
+      // Only process cancellations for this patient
+      if (mounted && cancelledPatientId === patientId) {
+        invalidate.invalidatePatient(patientId);
+      }
+    };
+
     // Remove any existing listener first to prevent duplicates
     socket.off("message:new");
     socket.on("message:new", messageHandler);
+    socket.off("messages:cleared");
+    socket.on("messages:cleared", messagesClearedHandler);
+    socket.off("appointment:new");
+    socket.on("appointment:new", appointmentNewHandler);
+    socket.off("appointment:update");
+    socket.on("appointment:update", appointmentUpdateHandler);
+    socket.off("appointment:cancelled");
+    socket.on("appointment:cancelled", appointmentCancelledHandler);
 
     return () => {
       mounted = false;
       // Only cleanup listener, don't disconnect socket
       socket.off("message:new", messageHandler);
+      socket.off("messages:cleared", messagesClearedHandler);
+      socket.off("appointment:new", appointmentNewHandler);
+      socket.off("appointment:update", appointmentUpdateHandler);
+      socket.off("appointment:cancelled", appointmentCancelledHandler);
       // Clear global reference if this is still the current patient
       if ((window as any).__adminPatientId === patientId) {
         (window as any).__adminPatientSocket = null;
@@ -691,14 +730,17 @@ export default function PatientDetail({
       }
     );
     const data = await r.json();
-    setAppointments((arr) =>
-      arr.map((a) => (a.id === data.appointment.id ? data.appointment : a))
-    );
+    // Invalidate cache to refetch
+    invalidate.invalidatePatient(patientId);
     setReschedule(null);
   };
 
-  if (loading)
-    return <div className="animate-pulse text-slate-500">Loading…</div>;
+  if (isLoadingPatient)
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <Loader />
+      </div>
+    );
   if (!patient) return <p className="text-red-600">Patient not found</p>;
 
   return (
@@ -710,9 +752,7 @@ export default function PatientDetail({
 
       <TreatmentPlansSection
         patientId={patientId}
-        plans={plans}
         appointments={appointments}
-        onPlansUpdate={(newPlans) => setPlans(newPlans)}
       />
 
       <section className="bg-white/80 backdrop-blur rounded-xl border shadow-sm p-5">
@@ -729,15 +769,9 @@ export default function PatientDetail({
         {showAppointmentForm && (
           <CreateAppointmentForm
             patientId={patientId}
-            plans={plans}
             onSuccess={() => {
               setShowAppointmentForm(false);
-              // Refetch appointments
-              fetch(`${API_BASE}/patients/${patientId}`)
-                .then((r) => r.json())
-                .then((data) => {
-                  setAppointments(data.appointments ?? []);
-                });
+              invalidate.invalidatePatient(patientId);
             }}
           />
         )}
@@ -746,7 +780,7 @@ export default function PatientDetail({
           <p className="text-slate-500">No appointments</p>
         ) : (
           <ul className="space-y-2 mt-3">
-            {appointments.map((a) => (
+            {appointments.map((a: Appointment) => (
               <li
                 key={a.id}
                 className="border rounded-lg p-3 flex items-center justify-between hover:bg-slate-50 transition"
@@ -814,12 +848,7 @@ export default function PatientDetail({
                               }
                             );
                             if (res.ok) {
-                              // Refetch appointments
-                              fetch(`${API_BASE}/patients/${patientId}`)
-                                .then((r) => r.json())
-                                .then((data) => {
-                                  setAppointments(data.appointments ?? []);
-                                });
+                              invalidate.invalidatePatient(patientId);
                             } else {
                               alert("Failed to cancel appointment");
                             }
@@ -851,21 +880,42 @@ export default function PatientDetail({
                   )
                 )
                   return;
-                try {
-                  const res = await fetch(
-                    `${API_BASE}/patients/${patientId}/messages`,
-                    {
-                      method: "DELETE",
-                    }
-                  );
-                  if (res.ok) {
-                    setMessages([]);
-                  } else {
-                    alert("Failed to clear messages");
-                  }
-                } catch (error) {
-                  alert("Failed to clear messages");
+
+                // Get current socket - should always exist due to useEffect
+                let socket: any = (window as any).__adminPatientSocket;
+
+                // If socket doesn't exist (shouldn't happen), create it
+                if (!socket) {
+                  socket = connectSocket({ patientId });
+                  (window as any).__adminPatientSocket = socket;
                 }
+
+                // Wait for connection if not connected
+                if (!socket.connected) {
+                  await new Promise<void>((resolve) => {
+                    const timeout = setTimeout(() => resolve(), 2000);
+                    socket.once("connect", () => {
+                      clearTimeout(timeout);
+                      resolve();
+                    });
+                    socket.once("connect_error", () => {
+                      clearTimeout(timeout);
+                      resolve();
+                    });
+                  });
+
+                  if (!socket.connected) {
+                    return; // Silently fail, no alert
+                  }
+                }
+
+                // Send clear message event via socket
+                socket.emit("messages:clear", { patientId }, (ack: any) => {
+                  // Silently handle - messages will be cleared via socket event
+                  if (!ack?.ok) {
+                    // Silently fail, no alert
+                  }
+                });
               }}
               className="px-3 py-1.5 text-sm text-red-600 border border-red-600 rounded hover:bg-red-50 transition"
             >
@@ -888,7 +938,7 @@ export default function PatientDetail({
             ref={messagesContainerRef}
             className="border rounded-lg p-3 space-y-2 max-h-80 overflow-auto bg-white"
           >
-            {messages.map((m) => (
+            {messages.map((m: Message) => (
               <div
                 key={m.id}
                 className={

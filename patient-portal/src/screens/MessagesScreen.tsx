@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { API_BASE, connectSocket, resolvePatientId } from "../lib/api";
+import { storageSync } from "../lib/storage";
+import { Header } from "../components/Header";
 
 const screenWidth = Dimensions.get("window").width;
 const isMobile = screenWidth < 768;
@@ -97,12 +99,7 @@ export default function MessagesScreen() {
           setConversations([]);
         }
 
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(
-            "pp_lastReadAt",
-            new Date().toISOString()
-          );
-        }
+        storageSync.setItem("pp_lastReadAt", new Date().toISOString());
       } catch (e) {
         console.error("Failed to load conversations:", e);
         setConversations([]);
@@ -128,12 +125,7 @@ export default function MessagesScreen() {
       }));
       setMessages(msgs);
       try {
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(
-            "pp_lastReadAt",
-            new Date().toISOString()
-          );
-        }
+        storageSync.setItem("pp_lastReadAt", new Date().toISOString());
       } catch {}
     })();
   }, [selectedConversation, patientId]);
@@ -268,12 +260,7 @@ export default function MessagesScreen() {
       }
 
       try {
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(
-            "pp_lastReadAt",
-            new Date().toISOString()
-          );
-        }
+        storageSync.setItem("pp_lastReadAt", new Date().toISOString());
       } catch {}
 
       // Show toast notification (already have native notification in App.tsx)
@@ -376,11 +363,9 @@ export default function MessagesScreen() {
       }
     );
 
-    try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("pp_lastReadAt", new Date().toISOString());
-      }
-    } catch {}
+      try {
+        storageSync.setItem("pp_lastReadAt", new Date().toISOString());
+      } catch {}
   };
 
   const handleSelectConversation = (conv: any) => {
@@ -412,7 +397,8 @@ export default function MessagesScreen() {
           keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
         >
           <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
+            <Header title="Messages" />
+            <View style={styles.chatHeaderContainer}>
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={handleBackToList}
@@ -518,8 +504,8 @@ export default function MessagesScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
         <SafeAreaView style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Messages</Text>
+          <Header title="Messages" />
+          <View style={styles.headerContent}>
             <Text style={styles.subtitle}>
               Communicate securely with your dental care team
             </Text>
@@ -571,8 +557,8 @@ export default function MessagesScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Messages</Text>
+      <Header title="Messages" />
+      <View style={styles.headerContent}>
         <Text style={styles.subtitle}>
           Communicate securely with your dental care team
         </Text>
@@ -753,9 +739,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  header: {
+  headerContent: {
     padding: 24,
     paddingBottom: 16,
+  },
+  chatHeaderContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#E5E5E5",
   },

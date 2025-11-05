@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { colors } from "../lib/colors";
 
 const menuItems = [
   { title: "Dashboard", screen: "Dashboard", icon: "🏠" },
@@ -33,36 +35,42 @@ export function BottomNavigation() {
   }, [navigation]);
 
   return (
-    <View style={styles.container}>
-      {menuItems.map((item) => {
-        const isActive = currentRoute === item.screen;
-        return (
-          <TouchableOpacity
-            key={item.screen}
-            style={styles.menuItem}
-            onPress={() => navigation.navigate(item.screen)}
-          >
-            <Text style={{ fontSize: 18 }}>{item.icon}</Text>
-            <Text style={[styles.menuText, isActive && styles.menuTextActive]}>
-              {item.title}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
+    <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+      <View style={styles.container}>
+        {menuItems.map((item) => {
+          const isActive = currentRoute === item.screen;
+          return (
+            <TouchableOpacity
+              key={item.screen}
+              style={styles.menuItem}
+              onPress={() => navigation.navigate(item.screen)}
+            >
+              <Text style={{ fontSize: 18 }}>{item.icon}</Text>
+              <Text style={[styles.menuText, isActive && styles.menuTextActive]}>
+                {item.title}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: colors.primaryWhite,
+  },
   container: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: colors.primaryWhite,
     borderTopWidth: 1,
-    borderTopColor: "#E5E5E5",
-    paddingVertical: 8,
+    borderTopColor: colors.greyscale200,
+    paddingTop: 8,
+    paddingBottom: 8,
     paddingHorizontal: 4,
     justifyContent: "space-around",
-    shadowColor: "#000",
+    shadowColor: colors.greyscale900,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -76,10 +84,10 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 10,
-    color: "#666",
+    color: colors.textSecondary,
   },
   menuTextActive: {
-    color: "#007AFF",
+    color: colors.textPrimary,
     fontWeight: "500",
   },
 });

@@ -44,6 +44,10 @@ export async function POST(req: NextRequest) {
         appointment,
         by: "doctor",
       });
+      io.to("admin").emit("appointment:new", {
+        appointment,
+        by: "doctor",
+      });
     }
 
     return Response.json({ appointment });

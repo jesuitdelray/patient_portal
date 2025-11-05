@@ -12,9 +12,11 @@ import { LayoutWrapper } from "./components/LayoutWrapper";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1 * 60 * 1000, // 1 minute default
+      staleTime: 2 * 60 * 1000, // 2 minutes default
+      gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnMount: false, // Don't refetch if data exists in cache
     },
   },
 });

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { API_BASE, resolvePatientId } from "../../lib/api";
+import { colors } from "../../lib/colors";
 
 type Plan = { id: string; title: string; status: string; steps: any };
 
@@ -68,11 +69,11 @@ export function TreatmentOverview() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.primaryWhite,
     borderRadius: 8,
     padding: 16,
     marginVertical: 8,
-    shadowColor: "#000",
+    shadowColor: colors.greyscale900,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#000",
+    color: colors.textPrimary,
   },
   content: {
     gap: 20,
@@ -106,12 +107,12 @@ const styles = StyleSheet.create({
   treatmentName: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#000",
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   treatmentStep: {
     fontSize: 12,
-    color: "#666",
+    color: colors.textSecondary,
   },
   progressInfo: {
     flexDirection: "row",
@@ -121,21 +122,21 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#000",
+    color: colors.textPrimary,
   },
   progressBarContainer: {
     height: 8,
-    backgroundColor: "#E5E5E5",
+    backgroundColor: colors.greyscale200,
     borderRadius: 4,
     overflow: "hidden",
   },
   progressBar: {
     height: "100%",
-    backgroundColor: "#007AFF",
+    backgroundColor: colors.greyscale700,
     borderRadius: 4,
   },
   progressBarComplete: {
-    backgroundColor: "#34C759",
+    backgroundColor: colors.greyscale800,
   },
   emptyState: {
     padding: 24,
@@ -144,11 +145,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#666",
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 12,
-    color: "#999",
+    color: colors.textTertiary,
   },
 });

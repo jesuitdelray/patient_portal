@@ -20,10 +20,16 @@ export async function POST(
   );
   try {
     const io = getIO();
-    io?.to(`patient:${updated.patientId}`).emit("appointment:update", {
-      appointment: updated,
-      by: "doctor",
-    });
+    if (io) {
+      io.to(`patient:${updated.patientId}`).emit("appointment:update", {
+        appointment: updated,
+        by: "doctor",
+      });
+      io.to("admin").emit("appointment:update", {
+        appointment: updated,
+        by: "doctor",
+      });
+    }
   } catch {}
   return Response.json({ appointment: updated });
 }

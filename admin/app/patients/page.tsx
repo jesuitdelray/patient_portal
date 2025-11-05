@@ -1,8 +1,10 @@
 "use client";
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { API_BASE } from "@/lib/api";
+import { usePatients } from "@/lib/admin-queries";
+import { Loader } from "@/app/components/Loader";
 
 type Patient = {
   id: string;
@@ -14,9 +16,6 @@ type Patient = {
 // Use admin API routed via Next
 
 function PatientsPageInner() {
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -35,16 +34,9 @@ function PatientsPageInner() {
     return s ? `?${s}` : "";
   }, [q, page, pageSize]);
 
-  useEffect(() => {
-    setLoading(true);
-    fetch(`${API_BASE}/patients${queryString}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setPatients(data.patients ?? []);
-        setTotal(data.total ?? 0);
-      })
-      .finally(() => setLoading(false));
-  }, [queryString]);
+  const { data, isLoading: loading } = usePatients(queryString);
+  const patients = data?.patients ?? [];
+  const total = data?.total ?? 0;
 
   const setParam = (next: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams(searchParams.toString());
@@ -80,7 +72,9 @@ function PatientsPageInner() {
         <div className="ml-auto text-sm text-gray-600">{total} total</div>
       </div>
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <div className="flex items-center justify-center py-12">
+          <Loader />
+        </div>
       ) : (
         <>
           <div className="overflow-x-auto">
@@ -94,7 +88,7 @@ function PatientsPageInner() {
                 </tr>
               </thead>
               <tbody>
-                {patients.map((p) => (
+                {patients.map((p: Patient) => (
                   <tr key={p.id} className="border-b hover:bg-gray-50">
                     <td className="py-2 pr-4">{p.name}</td>
                     <td className="py-2 pr-4">{p.email}</td>
@@ -153,7 +147,13 @@ function PatientsPageInner() {
 
 export default function PatientsPage() {
   return (
-    <Suspense fallback={<div className="text-gray-500">Loading…</div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-12">
+          <Loader />
+        </div>
+      }
+    >
       <PatientsPageInner />
     </Suspense>
   );

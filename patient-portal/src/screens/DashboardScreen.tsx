@@ -7,6 +7,8 @@ import { UpcomingAppointments } from "../components/dashboard/UpcomingAppointmen
 import { TreatmentOverview } from "../components/dashboard/TreatmentOverview";
 import { AppointmentsProvider } from "../components/dashboard/AppointmentsContext";
 import { useAuth, usePatient } from "../lib/queries";
+import { colors } from "../lib/colors";
+import { Header } from "../components/Header";
 
 export default function DashboardScreen() {
   const { data: authData } = useAuth();
@@ -18,6 +20,7 @@ export default function DashboardScreen() {
   return (
     <AppointmentsProvider>
       <SafeAreaView style={styles.container}>
+        <Header title="Dashboard" />
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.content}
@@ -54,7 +57,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: colors.primaryWhite,
   },
   scrollView: {
     flex: 1,
@@ -68,11 +71,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: "bold",
-    color: "#000",
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
+    color: colors.textSecondary,
   },
   grid: {
     marginTop: 24,

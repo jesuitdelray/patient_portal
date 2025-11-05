@@ -1,6 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { Logo } from "./Logo";
+import { colors } from "../lib/colors";
 
 const menuItems = [
   { title: "Dashboard", screen: "Dashboard", icon: "🏠" },
@@ -35,7 +37,7 @@ export function Sidebar() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.logo}>🏥</Text>
+        <Logo size={32} />
         <Text style={styles.title}>Patient Portal</Text>
       </View>
       <View style={styles.menu}>
@@ -64,9 +66,9 @@ export function Sidebar() {
 const styles = StyleSheet.create({
   container: {
     width: 240,
-    backgroundColor: "#fff",
+    backgroundColor: colors.primaryWhite,
     borderRightWidth: 1,
-    borderRightColor: "#E5E5E5",
+    borderRightColor: colors.greyscale200,
     height: "100vh",
     paddingVertical: 24,
     paddingHorizontal: 16,
@@ -74,19 +76,16 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
     marginBottom: 32,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
-  },
-  logo: {
-    fontSize: 24,
+    borderBottomColor: colors.greyscale200,
   },
   title: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#000",
+    color: colors.textPrimary,
   },
   menu: {
     gap: 4,

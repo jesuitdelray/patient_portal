@@ -1,0 +1,10 @@
+node_modules
+.expo
+ios
+android
+.git
+*.log
+.env.local
+.env.*.local
+*.md
+!README.md

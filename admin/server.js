@@ -21,6 +21,9 @@ async function start() {
   global.__io = io;
 
   io.on("connection", (socket) => {
+    // Automatically join admin room for all connections (admin panel connections)
+    socket.join("admin");
+
     socket.on("join", ({ patientId, doctorId }) => {
       if (patientId) socket.join(`patient:${patientId}`);
       if (doctorId) socket.join(`doctor:${doctorId}`);
@@ -36,8 +39,30 @@ async function start() {
         const message = await prisma.message.create({
           data: { patientId, sender, content },
         });
+        // Send to patient room (for patient app)
         io.to(`patient:${patientId}`).emit("message:new", { message });
+        // Also send to admin room (for admin panel)
+        io.to("admin").emit("message:new", { message });
         ack && ack({ ok: true, message });
+      } catch (e) {
+        ack && ack({ ok: false, error: "server_error" });
+      }
+    });
+
+    socket.on("messages:clear", async ({ patientId }, ack) => {
+      try {
+        if (!patientId) {
+          ack && ack({ ok: false, error: "invalid_payload" });
+          return;
+        }
+        // Delete all messages for this patient
+        await prisma.message.deleteMany({
+          where: { patientId },
+        });
+        // Notify both patient and admin rooms
+        io.to(`patient:${patientId}`).emit("messages:cleared", { patientId });
+        io.to("admin").emit("messages:cleared", { patientId });
+        ack && ack({ ok: true });
       } catch (e) {
         ack && ack({ ok: false, error: "server_error" });
       }

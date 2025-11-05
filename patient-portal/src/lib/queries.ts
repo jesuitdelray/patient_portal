@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { API_BASE, resolvePatientId, fetchWithAuth, getAuthBase } from "./api";
+import { storageSync } from "./storage";
 
 // Query keys
 export const queryKeys = {
@@ -22,10 +23,8 @@ export function useAuth() {
         if (res.status === 401) {
           // Clear tokens immediately
           try {
-            if (typeof window !== "undefined") {
-              localStorage.removeItem("auth_token");
-              sessionStorage.removeItem("auth_token_temp");
-            }
+            storageSync.removeItem("auth_token");
+            storageSync.removeItem("auth_token_temp");
           } catch {}
         }
         throw new Error("Not authenticated");
@@ -111,7 +110,10 @@ export function useMessages(patientId?: string | null) {
       return data.messages || [];
     },
     enabled: !!finalPatientId,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes (formerly cacheTime)
+    refetchOnMount: false, // Don't refetch if data exists in cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 }
 
@@ -137,13 +139,11 @@ export function useUnreadMessages(patientId?: string | null) {
       const msgs = data.messages || [];
 
       // Try to use lastReadAt saved by Messages screen
-      // On native, use AsyncStorage; on web, use localStorage
+      // Use storageSync for cross-platform compatibility
       let lastRead = 0;
       try {
-        if (typeof window !== "undefined" && window.localStorage) {
-          const s = window.localStorage.getItem("pp_lastReadAt");
-          if (s) lastRead = new Date(s).getTime();
-        }
+        const s = storageSync.getItem("pp_lastReadAt");
+        if (s) lastRead = new Date(s).getTime();
       } catch {}
       // Default to 7 days ago if no lastRead timestamp
       if (!lastRead) lastRead = Date.now() - 7 * 24 * 60 * 60 * 1000;

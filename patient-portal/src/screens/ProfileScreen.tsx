@@ -9,11 +9,16 @@ import {
   Modal,
   Animated,
   Dimensions,
+  Linking,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth, usePatient } from "../lib/queries";
-import { logout } from "../lib/api";
+import { logout, API_BASE } from "../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
+import { colors } from "../lib/colors";
+import { Header } from "../components/Header";
+import { Loader } from "../components/Loader";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -171,7 +176,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text>Loading profile...</Text>
+          <Loader />
         </View>
       </SafeAreaView>
     );
@@ -179,16 +184,11 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Header title="Profile" />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
-          <Text style={styles.subtitle}>
-            Manage your personal information and preferences
-          </Text>
-        </View>
 
         <View style={styles.grid}>
           <View style={styles.card}>

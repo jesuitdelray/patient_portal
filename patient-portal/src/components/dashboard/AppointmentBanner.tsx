@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useAppointments } from "./AppointmentsContext";
+import { colors } from "../../lib/colors";
 
 export function AppointmentBanner() {
   const { appointments } = useAppointments();
@@ -25,8 +26,8 @@ export function AppointmentBanner() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FEF3C7",
-    borderColor: "#FED7AA",
+    backgroundColor: colors.greyscale100,
+    borderColor: colors.greyscale300,
     borderWidth: 1,
     borderRadius: 8,
     padding: 16,
@@ -38,12 +39,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#9A3412",
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   text: {
     fontSize: 14,
-    color: "#9A3412",
+    color: colors.textSecondary,
     textAlign: "center",
   },
 });

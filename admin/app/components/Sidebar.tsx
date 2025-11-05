@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/queries";
+import { Loader } from "./Loader";
 
 interface User {
   userId: string;
@@ -43,8 +44,8 @@ export function Sidebar() {
 
   if (loading) {
     return (
-      <aside className="hidden md:block w-64 border-r bg-white/80 backdrop-blur p-5">
-        <div className="text-slate-500 text-sm">Loading...</div>
+      <aside className="hidden md:block w-64 border-r bg-white/80 backdrop-blur p-5 flex items-center justify-center">
+        <Loader />
       </aside>
     );
   }
@@ -56,9 +57,16 @@ export function Sidebar() {
   return (
     <aside className="hidden md:block w-64 border-r bg-white/80 backdrop-blur p-5 flex flex-col h-screen">
       <div className="flex-1">
-        <div className="mb-6">
-          <div className="text-xl font-semibold text-slate-900">Admin</div>
-          <div className="text-xs text-slate-500">Control panel</div>
+        <div className="mb-6 flex items-center gap-3">
+          <img
+            src="/teeth-logo.webp"
+            alt="Logo"
+            className="w-10 h-10 object-contain"
+          />
+          <div>
+            <div className="text-xl font-semibold text-slate-900">Admin</div>
+            <div className="text-xs text-slate-500">Control panel</div>
+          </div>
         </div>
         <nav className="space-y-1 text-sm">
           <Link

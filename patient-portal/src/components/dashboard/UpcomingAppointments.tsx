@@ -12,9 +12,21 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useAppointments } from "./AppointmentsContext";
 import { API_BASE } from "../../lib/api";
+import { useAuth } from "../../lib/queries";
+import { colors } from "../../lib/colors";
 
 export function UpcomingAppointments() {
   const { appointments, setAppointments } = useAppointments();
+  const { data: authData } = useAuth();
+  const isAdmin = authData?.role === "admin";
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    title: "",
+    location: "",
+    type: "",
+    datetime: "",
+  });
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
@@ -45,6 +57,58 @@ export function UpcomingAppointments() {
     }
   };
 
+  const handleOpenEdit = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    const appointmentDate = new Date(appointment.datetime || new Date());
+    setSelectedDate(appointmentDate);
+    setEditData({
+      title: appointment.title || "",
+      location: appointment.location || "",
+      type: appointment.type || "",
+      datetime: appointmentDate.toISOString().slice(0, 16),
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleEdit = async () => {
+    if (
+      isEditing ||
+      !editData.title ||
+      !editData.datetime ||
+      !selectedAppointment?.id
+    )
+      return;
+    setIsEditing(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/appointments/${selectedAppointment.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            title: editData.title,
+            location: editData.location,
+            type: editData.type,
+            datetime: editData.datetime,
+          }),
+        }
+      );
+      if (res.ok) {
+        // SSE на бэке пришлет обновление; локально только закрываем
+        setIsEditOpen(false);
+        setEditData({ title: "", location: "", type: "", datetime: "" });
+      } else {
+        alert("Failed to update appointment");
+      }
+    } catch (error) {
+      console.error("Edit appointment error:", error);
+      alert("Failed to update appointment");
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
   const handleOpenReschedule = (appointment: any) => {
     setSelectedAppointment(appointment);
     const initialDate = new Date();
@@ -56,6 +120,13 @@ export function UpcomingAppointments() {
   const handleDateChange = (event: any, date?: Date) => {
     if (Platform.OS === "android") {
       setShowDatePicker(false);
+    }
+    if (Platform.OS === "ios") {
+      // On iOS, allow toggle by keeping picker open if user wants to change again
+      // But close if user selects a date
+      if (event.type === "set" && date) {
+        setShowDatePicker(false);
+      }
     }
     if (date) {
       setSelectedDate(date);
@@ -115,14 +186,23 @@ export function UpcomingAppointments() {
               </View>
 
               <View style={styles.actionButtons}>
+                {isAdmin ? (
+                  <TouchableOpacity
+                    style={styles.rescheduleButton}
+                    onPress={() => handleOpenEdit(appointment)}
+                  >
+                    <Text style={styles.rescheduleButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.rescheduleButton}
+                    onPress={() => handleOpenReschedule(appointment)}
+                  >
+                    <Text style={styles.rescheduleButtonText}>Reschedule</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
-                  style={styles.rescheduleButton}
-                  onPress={() => handleOpenReschedule(appointment)}
-                >
-                  <Text style={styles.rescheduleButtonText}>Reschedule</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelButton}
+                  style={styles.cancelModalButton}
                   onPress={async () => {
                     if (
                       !confirm(
@@ -148,7 +228,7 @@ export function UpcomingAppointments() {
                     }
                   }}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelModalButtonText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -179,23 +259,37 @@ export function UpcomingAppointments() {
                     value={newDateTime}
                     onChange={(e) => setNewDateTime(e.target.value)}
                     min={todayString}
+                    readOnly
+                    onClick={() => {
+                      // Trigger native date picker behavior
+                      const input = document.querySelector(
+                        'input[type="datetime-local"]'
+                      ) as HTMLInputElement;
+                      if (input) {
+                        input.showPicker?.();
+                      }
+                    }}
                     style={{
                       width: "100%",
                       padding: "12px",
                       fontSize: "14px",
-                      border: "1px solid #E5E5E5",
+                      border: `1px solid ${colors.greyscale200}`,
                       borderRadius: "6px",
-                      backgroundColor: "#fff",
+                      backgroundColor: colors.greyscale100,
                       fontFamily: "inherit",
                       boxSizing: "border-box",
                       maxWidth: "100%",
+                      color: colors.textPrimary,
+                      outline: "none",
+                      cursor: "pointer",
+                      marginTop: 8,
                     }}
                   />
                 </View>
               ) : (
                 <TouchableOpacity
                   style={styles.dateTimeInput}
-                  onPress={() => setShowDatePicker(true)}
+                  onPress={() => setShowDatePicker(!showDatePicker)}
                 >
                   <Text style={styles.dateTimeText}>
                     {selectedDate.toLocaleString()}
@@ -204,28 +298,29 @@ export function UpcomingAppointments() {
                 </TouchableOpacity>
               )}
               {showDatePicker && Platform.OS !== "web" && (
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="datetime"
-                  display="default"
-                  onChange={handleDateChange}
-                  minimumDate={today}
-                />
+                <View style={styles.datePickerContainer}>
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="datetime"
+                    display="default"
+                    onChange={handleDateChange}
+                    minimumDate={today}
+                  />
+                </View>
               )}
             </View>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={styles.cancelModalButton}
                 onPress={() => setIsRescheduleOpen(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelModalButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
-                  styles.modalButton,
                   styles.saveButton,
-                  (isRescheduling || !newDateTime) && styles.disabledButton,
+                  (isRescheduling || !newDateTime) && styles.saveButtonDisabled,
                 ]}
                 onPress={handleReschedule}
                 disabled={isRescheduling || !newDateTime}
@@ -234,6 +329,176 @@ export function UpcomingAppointments() {
                   <Text style={styles.saveButtonText}>Rescheduling...</Text>
                 ) : (
                   <Text style={styles.saveButtonText}>Reschedule</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isEditOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsEditOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Appointment</Text>
+            <Text style={styles.modalDescription}>
+              Edit appointment details below.
+            </Text>
+
+            <ScrollView style={styles.modalForm}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Title *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={editData.title}
+                  onChangeText={(text) =>
+                    setEditData({ ...editData, title: text })
+                  }
+                  placeholder="Appointment title"
+                  placeholderTextColor={colors.textTertiary}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Location</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={editData.location}
+                  onChangeText={(text) =>
+                    setEditData({ ...editData, location: text })
+                  }
+                  placeholder="Location (optional)"
+                  placeholderTextColor={colors.textTertiary}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Type</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={editData.type}
+                  onChangeText={(text) =>
+                    setEditData({ ...editData, type: text })
+                  }
+                  placeholder="Type (optional)"
+                  placeholderTextColor={colors.textTertiary}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Date & Time *</Text>
+                {Platform.OS === "web" ? (
+                  <View style={styles.dateTimeInputWrapper}>
+                    <input
+                      type="datetime-local"
+                      value={editData.datetime}
+                      onChange={(e) =>
+                        setEditData({ ...editData, datetime: e.target.value })
+                      }
+                      min={todayString}
+                      readOnly
+                      onClick={() => {
+                        // Trigger native date picker behavior
+                        const input = document.querySelectorAll(
+                          'input[type="datetime-local"]'
+                        )[1] as HTMLInputElement;
+                        if (input) {
+                          input.showPicker?.();
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        fontSize: "14px",
+                        border: `1px solid ${colors.greyscale200}`,
+                        borderRadius: "6px",
+                        backgroundColor: colors.greyscale100,
+                        color: colors.textPrimary,
+                        outline: "none",
+                        boxSizing: "border-box",
+                        cursor: "pointer",
+                        marginTop: 8,
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <View>
+                    <TouchableOpacity
+                      style={styles.dateTimeButton}
+                      onPress={() => setShowDatePicker(!showDatePicker)}
+                    >
+                      <Text style={styles.dateTimeButtonText}>
+                        {editData.datetime
+                          ? new Date(editData.datetime).toLocaleString()
+                          : "Select date & time"}
+                      </Text>
+                    </TouchableOpacity>
+                    {showDatePicker && (
+                      <View style={styles.datePickerContainer}>
+                        <DateTimePicker
+                          value={selectedDate}
+                          mode="datetime"
+                          display="default"
+                          onChange={(event, date) => {
+                            if (Platform.OS === "android") {
+                              setShowDatePicker(false);
+                            }
+                            if (Platform.OS === "ios") {
+                              // On iOS, allow toggle by keeping picker open if user wants to change again
+                              // But close if user selects a date
+                              if (event.type === "set" && date) {
+                                setShowDatePicker(false);
+                              }
+                            }
+                            if (date) {
+                              setSelectedDate(date);
+                              setEditData({
+                                ...editData,
+                                datetime: date.toISOString().slice(0, 16),
+                              });
+                            }
+                          }}
+                          minimumDate={today}
+                        />
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelModalButton}
+                onPress={() => {
+                  setIsEditOpen(false);
+                  setEditData({
+                    title: "",
+                    location: "",
+                    type: "",
+                    datetime: "",
+                  });
+                }}
+              >
+                <Text style={styles.cancelModalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.saveButton,
+                  (!editData.title || !editData.datetime || isEditing) &&
+                    styles.saveButtonDisabled,
+                ]}
+                onPress={handleEdit}
+                disabled={!editData.title || !editData.datetime || isEditing}
+              >
+                {isEditing ? (
+                  <Text style={styles.saveButtonText}>Saving...</Text>
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -325,29 +590,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
-    backgroundColor: "#fff",
+    borderColor: colors.greyscale200,
+    backgroundColor: colors.primaryWhite,
+    alignItems: "center",
+    justifyContent: "center",
   },
   rescheduleButtonText: {
     fontSize: 14,
     color: "#007AFF",
+    fontWeight: "500",
   },
   actionButtons: {
     flexDirection: "row",
     gap: 8,
-  },
-  cancelButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: "#FF3B30",
-    backgroundColor: "#fff",
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FF3B30",
   },
   modalOverlay: {
     flex: 1,
@@ -356,7 +611,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.primaryWhite,
     borderRadius: 12,
     padding: 24,
     width: "90%",
@@ -366,71 +621,103 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#000",
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   modalDescription: {
     fontSize: 14,
-    color: "#666",
+    color: colors.textSecondary,
     marginBottom: 20,
+  },
+  modalForm: {
+    maxHeight: 400,
   },
   inputContainer: {
     marginBottom: 20,
+    marginTop: 8,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#000",
+    color: colors.textPrimary,
     marginBottom: 8,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 14,
+    backgroundColor: colors.primaryWhite,
+    color: colors.textPrimary,
+  },
+  dateTimeButton: {
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
+    borderRadius: 6,
+    padding: 12,
+    backgroundColor: colors.greyscale100,
+    marginTop: 12,
+  },
+  dateTimeButtonText: {
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  cancelModalButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: colors.greyscale100,
+    marginRight: 8,
+  },
+  cancelModalButtonText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: "500",
   },
   dateTimeInputWrapper: {
     width: "100%",
     overflow: "hidden",
+    marginTop: 8,
+  },
+  datePickerContainer: {
+    marginTop: 12,
+    marginBottom: 8,
+    alignItems: "center",
   },
   dateTimeInput: {
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: colors.greyscale200,
     borderRadius: 6,
     padding: 12,
-    fontSize: 14,
-    width: "100%",
-    backgroundColor: "#fff",
+    backgroundColor: colors.greyscale100,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 12,
   },
   dateTimeText: {
     fontSize: 14,
-    color: "#000",
+    color: colors.textPrimary,
   },
   modalButtons: {
     flexDirection: "row",
     gap: 12,
     justifyContent: "flex-end",
-  },
-  modalButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  cancelButton: {
-    backgroundColor: "#F5F5F5",
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-  },
-  cancelButtonText: {
-    color: "#000",
-    fontSize: 14,
-    fontWeight: "500",
+    marginTop: 20,
+    alignItems: "center",
   },
   saveButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: colors.greyscale700,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  disabledButton: {
+  saveButtonDisabled: {
     opacity: 0.5,
   },
   saveButtonText: {
-    color: "#fff",
+    color: colors.primaryWhite,
     fontSize: 14,
     fontWeight: "500",
   },

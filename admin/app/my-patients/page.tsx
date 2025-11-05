@@ -1,8 +1,13 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { API_BASE, connectEvents } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
+import {
+  useDoctorPatients,
+  useInvalidateAdminQueries,
+} from "@/lib/admin-queries";
+import { Loader } from "@/app/components/Loader";
 
 type Patient = {
   id: string;
@@ -17,30 +22,27 @@ function MyPatientsPageInner() {
   const searchParams = useSearchParams();
   const doctorIdParam = searchParams.get("doctorId") || undefined;
   const doctorId = doctorIdParam || "seed"; // mock doctor
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading } = useDoctorPatients(doctorId);
+  const patients = data?.patients ?? [];
+  const invalidate = useInvalidateAdminQueries();
 
   useEffect(() => {
-    fetch(`${API_BASE}/doctors/${doctorId}/patients`)
-      .then((r) => r.json())
-      .then((data) => setPatients(data.patients ?? []))
-      .finally(() => setLoading(false));
     // realtime subscribe for doctor
     const es = connectEvents({ doctorId });
     es.addEventListener("doctor.assign", () => {
-      // pull fresh list on assign
-      fetch(`${API_BASE}/doctors/${doctorId}/patients`)
-        .then((r) => r.json())
-        .then((data) => setPatients(data.patients ?? []));
+      // Invalidate cache to refetch
+      invalidate.invalidateDoctorPatients(doctorId);
     });
     return () => es.close();
-  }, [doctorId]);
+  }, [doctorId, invalidate]);
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">My patients</h1>
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <div className="flex items-center justify-center py-12">
+          <Loader />
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -53,7 +55,7 @@ function MyPatientsPageInner() {
               </tr>
             </thead>
             <tbody>
-              {patients.map((p) => (
+              {patients.map((p: Patient) => (
                 <tr key={p.id} className="border-b hover:bg-gray-50">
                   <td className="py-2 pr-4">{p.name}</td>
                   <td className="py-2 pr-4">{p.email}</td>
@@ -75,7 +77,13 @@ function MyPatientsPageInner() {
 
 export default function MyPatientsPage() {
   return (
-    <Suspense fallback={<div className="text-gray-500">Loading…</div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-12">
+          <Loader />
+        </div>
+      }
+    >
       <MyPatientsPageInner />
     </Suspense>
   );

@@ -10,6 +10,7 @@ import {
   Text,
   View,
   Platform,
+  Linking,
 } from "react-native";
 import { useEffect, useState } from "react";
 import {
@@ -17,7 +18,15 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from "@tanstack/react-query";
-import { connectSocket, resolvePatientId } from "./src/lib/api";
+import {
+  connectSocket,
+  setupGlobalMessageHandler,
+  removeGlobalMessageHandler,
+  resolvePatientId,
+  setQueryClientForAuth,
+  setNavigateForAuth,
+} from "./src/lib/api";
+import { storageSync } from "./src/lib/storage";
 import { navigationRef, navigate } from "./src/lib/navigation";
 import { useAuth } from "./src/lib/queries";
 import {
@@ -34,6 +43,9 @@ import LoginScreen from "./src/screens/LoginScreen";
 import { BottomNavigation } from "./src/components/BottomNavigation";
 import { Sidebar } from "./src/components/Sidebar";
 import Toast from "react-native-toast-message";
+// Import DebugLogs early to capture console logs
+import "./src/components/DebugLogs";
+import { DebugLogs } from "./src/components/DebugLogs";
 
 const Stack = createNativeStackNavigator();
 
@@ -59,52 +71,60 @@ function AuthChecker({
   const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
+    console.log("[AuthChecker] State update:", {
+      isLoading,
+      hasAuthData: !!authData,
+      authRole: authData?.role,
+      error: error?.message,
+      isError,
+      hasRedirected,
+    });
+
     // If we have an error (401), redirect to login immediately
     if (isError && !hasRedirected) {
+      console.log("[AuthChecker] Error detected, setting authenticated to false");
       setIsAuthenticated(false);
       setHasRedirected(true);
       // Clear tokens
       try {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("auth_token");
-          sessionStorage.removeItem("auth_token_temp");
-          // Force redirect to login - stop all retries
-          queryClient.setQueryData(["auth", "me"], null);
-          queryClient.cancelQueries({ queryKey: ["auth", "me"] });
-        }
+        storageSync.removeItem("auth_token");
+        storageSync.removeItem("auth_token_temp");
+        // Force redirect to login - stop all retries
+        queryClient.setQueryData(["auth", "me"], null);
+        queryClient.cancelQueries({ queryKey: ["auth", "me"] });
       } catch {}
       return;
     }
 
     if (isLoading) {
+      console.log("[AuthChecker] Loading, authenticated = null");
       setIsAuthenticated(null);
       return;
     }
 
     if (error || !authData) {
+      console.log("[AuthChecker] No auth data or error, setting authenticated to false");
       setIsAuthenticated(false);
       // Clear tokens on error
       try {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("auth_token");
-          sessionStorage.removeItem("auth_token_temp");
-        }
+        storageSync.removeItem("auth_token");
+        storageSync.removeItem("auth_token_temp");
       } catch {}
       return;
     }
 
     // Only patients can access patient portal
     if (authData.role === "patient") {
+      console.log("[AuthChecker] Patient authenticated, setting authenticated to true");
       setIsAuthenticated(true);
       setHasRedirected(false); // Reset redirect flag on success
     } else {
+      console.log("[AuthChecker] Wrong role:", authData.role);
       setIsAuthenticated(false);
       // Clear tokens if wrong role
       try {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("auth_token");
-          sessionStorage.removeItem("auth_token_temp");
-        }
+        storageSync.removeItem("auth_token");
+        storageSync.removeItem("auth_token_temp");
       } catch {}
     }
   }, [authData, isLoading, error, isError, hasRedirected, queryClient]);
@@ -118,7 +138,7 @@ function AuthChecker({
           alignItems: "center",
         }}
       >
-        <Text>Loading...</Text>
+        <Loader />
       </View>
     );
   }
@@ -132,20 +152,54 @@ function AuthChecker({
 }
 
 function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
-  // Handle initial route from URL
+  // Handle title updates - must be outside conditional to follow Rules of Hooks
   useEffect(() => {
-    if (typeof window !== "undefined" && isAuthenticated) {
-      const path = window.location.pathname;
-      const routeMap: Record<string, string> = {
-        "/dashboard": "Dashboard",
-        "/profile": "Profile",
-        "/messages": "Messages",
-        "/promotions": "Promotions",
-        "/treatment": "Treatment",
-      };
-      const routeName = routeMap[path];
-      if (routeName && navigationRef.current?.isReady()) {
-        navigationRef.current.navigate(routeName as never);
+    if (typeof window !== "undefined" && typeof document !== "undefined") {
+      if (!isAuthenticated) {
+        console.log("[MainNavigator] Login page - setting title");
+        document.title = "Login - Patient Portal";
+      }
+    }
+  }, [isAuthenticated]);
+
+  // Handle initial route from URL - must be outside conditional
+  useEffect(() => {
+    // Only on web platform where window.location exists
+    if (
+      typeof window !== "undefined" &&
+      window.location &&
+      window.location.pathname &&
+      isAuthenticated
+    ) {
+      try {
+        const path = window.location.pathname;
+        console.log("[MainNavigator] Initial route from URL:", path);
+        const routeMap: Record<string, string> = {
+          "/dashboard": "Dashboard",
+          "/profile": "Profile",
+          "/messages": "Messages",
+          "/promotions": "Promotions",
+          "/treatment": "Treatment",
+        };
+        const routeName = routeMap[path];
+        console.log("[MainNavigator] Mapped route name:", routeName);
+        if (routeName && navigationRef.current?.isReady()) {
+          console.log("[MainNavigator] Navigating to:", routeName);
+          navigationRef.current.navigate(routeName as never);
+
+          // Set initial title based on route
+          if (
+            typeof document !== "undefined" &&
+            routeName &&
+            routeName !== "undefined"
+          ) {
+            console.log("[MainNavigator] Setting initial title to:", routeName);
+            document.title = routeName;
+            console.log("[MainNavigator] Title after set:", document.title);
+          }
+        }
+      } catch (e) {
+        console.error("[MainNavigator] Error handling initial route:", e);
       }
     }
   }, [isAuthenticated]);
@@ -166,28 +220,65 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
       {isDesktop && <Sidebar />}
       <View style={{ flex: 1 }}>
         <Stack.Navigator
+          key={isAuthenticated ? "authenticated" : "login"}
           initialRouteName="Dashboard"
           screenOptions={{
             headerShown: false,
           }}
           screenListeners={{
             state: (e: any) => {
-              // Update URL when navigation state changes
-              if (typeof window !== "undefined") {
-                const state = e.data?.state;
-                if (state) {
-                  const route = state.routes[state.index];
-                  if (route?.name) {
-                    const routeMap: Record<string, string> = {
-                      Dashboard: "/dashboard",
-                      Profile: "/profile",
-                      Messages: "/messages",
-                      Promotions: "/promotions",
-                      Treatment: "/treatment",
-                    };
-                    const path = routeMap[route.name] || "/dashboard";
-                    window.history.replaceState(null, "", path);
+              // Update URL when navigation state changes - only on web
+              if (
+                typeof window !== "undefined" &&
+                window.location &&
+                window.history
+              ) {
+                try {
+                  const state = e.data?.state;
+                  console.log("[App] Navigation state changed:", state);
+                  if (state) {
+                    const route = state.routes[state.index];
+                    console.log("[App] Current route:", route?.name);
+                    if (route?.name) {
+                      const routeMap: Record<string, string> = {
+                        Dashboard: "/dashboard",
+                        Profile: "/profile",
+                        Messages: "/messages",
+                        Promotions: "/promotions",
+                        Treatment: "/treatment",
+                      };
+                      const path = routeMap[route.name] || "/dashboard";
+                      
+                      // Only update history if available
+                      if (window.history && window.history.replaceState) {
+                        window.history.replaceState(null, "", path);
+                      }
+
+                      // Update document.title
+                      if (typeof document !== "undefined") {
+                        const currentTitle = document.title;
+                        // Prevent setting "undefined" as string - use fallback
+                        const newTitle =
+                          route.name && route.name !== "undefined"
+                            ? route.name
+                            : "Patient Portal";
+
+                        // Only update if title is actually undefined or different
+                        if (
+                          currentTitle === "undefined" ||
+                          currentTitle !== newTitle
+                        ) {
+                          console.log("[App] Title update:", {
+                            currentTitle,
+                            newTitle,
+                          });
+                          document.title = newTitle;
+                        }
+                      }
+                    }
                   }
+                } catch (e) {
+                  console.error("[App] Error updating URL/title:", e);
                 }
               }
             },
@@ -208,22 +299,28 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
 export default function App() {
   // OAuth callback - handle token from URL if cross-domain
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !window.location || !window.location.search) return;
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get("_auth_token");
 
     if (tokenFromUrl) {
-      // Cross-domain: cookies don't work, use localStorage as persistent fallback
+      // Cross-domain: cookies don't work, use storageSync as persistent fallback
       // This is less secure but necessary for cross-domain OAuth
       try {
-        // Save to both localStorage (persistent) and sessionStorage (temp)
-        localStorage.setItem("auth_token", tokenFromUrl);
-        sessionStorage.setItem("auth_token_temp", tokenFromUrl);
+        // Save to storageSync (handles both web and native)
+        storageSync.setItem("auth_token", tokenFromUrl);
+        if (typeof window !== "undefined" && window.sessionStorage) {
+          window.sessionStorage.setItem("auth_token_temp", tokenFromUrl);
+        } else {
+          storageSync.setItem("auth_token_temp", tokenFromUrl);
+        }
       } catch {}
 
       // Clean URL immediately
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, "", newUrl);
+      if (window.location && window.history) {
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+      }
 
       // Invalidate auth query to refetch with new token
       queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
@@ -257,6 +354,7 @@ export default function App() {
             </AuthChecker>
           </NavigationContainer>
           <StatusBar style="auto" />
+          {Platform.OS === "web" && <DebugLogs />}
           <Toast
             position="top"
             config={{
@@ -297,6 +395,109 @@ export default function App() {
 function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
   const { data: authData } = useAuth();
   const queryClient = useQueryClient();
+
+  // Log when authentication state changes
+  // Navigation will happen automatically via MainNavigator key prop
+  useEffect(() => {
+    console.log("[AppContent] Auth state changed - isAuthenticated:", isAuthenticated, "authData role:", authData?.role, "authData exists:", !!authData);
+    if (isAuthenticated && authData?.role === "patient") {
+      console.log("[AppContent] User authenticated - MainNavigator will automatically show Dashboard");
+    }
+  }, [isAuthenticated, authData]);
+
+  // Set global query client and navigate for api.ts
+  useEffect(() => {
+    setQueryClientForAuth(queryClient);
+    setNavigateForAuth(navigate);
+  }, [queryClient]);
+
+  // Handle deep link authentication (patient-portal://auth?token=...)
+  useEffect(() => {
+    const handleDeepLink = async (url: string | null) => {
+      if (!url) return;
+
+      try {
+        console.log("[App] Deep link received:", url);
+
+        // Check if it's an auth deep link
+        if (
+          url.includes("patient-portal://auth") ||
+          url.includes("://auth?token=")
+        ) {
+          console.log("[App] Deep link detected - processing auth");
+          // Extract token from URL
+          // Replace custom scheme with https:// for URL parsing
+          const normalizedUrl = url.replace("patient-portal://", "https://");
+          const urlObj = new URL(normalizedUrl);
+          const token =
+            urlObj.searchParams.get("token") ||
+            urlObj.searchParams.get("_auth_token");
+          
+          console.log("[App] Token extracted from deep link:", token ? `present (length: ${token.length})` : "missing");
+
+          if (token) {
+            console.log("[App] Deep link auth token received");
+            // Save token
+            try {
+              storageSync.setItem("auth_token", token);
+              if (Platform.OS === "web" && typeof window !== "undefined" && window.sessionStorage) {
+                window.sessionStorage.setItem("auth_token_temp", token);
+              } else {
+                storageSync.setItem("auth_token_temp", token);
+              }
+            } catch (e) {
+              console.error("[App] Failed to save token from deep link:", e);
+            }
+
+            // Invalidate and immediately refetch auth query to get user data
+            console.log("[App] Invalidating auth queries");
+            queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+            
+            console.log("[App] Refetching auth data from deep link");
+            queryClient.refetchQueries({ queryKey: ["auth", "me"] }).then(() => {
+              console.log("[App] Auth data refetched from deep link - AuthChecker will handle navigation");
+            }).catch((err) => {
+              console.error("[App] Failed to refetch auth from deep link:", err);
+            });
+
+            // Navigation will happen automatically via the isAuthenticated useEffect above
+            console.log(
+              "[App] Deep link processed, waiting for auth to update"
+            );
+          }
+        }
+      } catch (e) {
+        console.error("[App] Deep link handling error:", e);
+      }
+    };
+
+    // Handle initial URL (if app was opened via deep link)
+    if (Platform.OS === "web") {
+      // Web: check window.location
+      if (typeof window !== "undefined") {
+        const url = window.location.href;
+        console.log("[App] Checking initial URL for auth token:", url);
+        if (url.includes("://auth?token=") || url.includes("_auth_token=")) {
+          console.log("[App] Auth token found in URL, processing...");
+          handleDeepLink(url);
+        } else {
+          console.log("[App] No auth token in initial URL");
+        }
+      }
+    } else {
+      // Native: use Linking API
+      Linking.getInitialURL().then(handleDeepLink).catch(console.error);
+
+      // Listen for deep link events (when app is already open)
+      const subscription = Linking.addEventListener("url", ({ url }) => {
+        handleDeepLink(url);
+      });
+
+      return () => {
+        subscription.remove();
+      };
+    }
+  }, [queryClient]);
 
   useEffect(() => {
     if (!isAuthenticated || authData?.role !== "patient") return;
@@ -432,8 +633,8 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
           // Simple check - if promotions screen has any active promotions, notify
           // In real app, this would come from API
           const hasPromotions = true; // For now, always true since we have mock data
-          if (hasPromotions && typeof window !== "undefined") {
-            const lastPromoCheck = localStorage.getItem("pp_lastPromoCheck");
+          if (hasPromotions) {
+            const lastPromoCheck = storageSync.getItem("pp_lastPromoCheck");
             const now = Date.now();
             // Only show notification once per day
             if (
@@ -445,7 +646,7 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
                   title: "New promotions available",
                   body: "Check out our special offers and discounts",
                 });
-                localStorage.setItem("pp_lastPromoCheck", now.toString());
+                storageSync.setItem("pp_lastPromoCheck", now.toString());
               }, 5000); // Show after 5 seconds to avoid spam
             }
           }

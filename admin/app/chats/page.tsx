@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, useMemo, Suspense } from "react";
+import { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useChats } from "@/lib/admin-queries";
+import { Loader } from "@/app/components/Loader";
 
 type Chat = {
   patient: {
@@ -21,30 +23,20 @@ type Chat = {
 
 function ChatsContent() {
   const searchParams = useSearchParams();
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading } = useChats();
+  const chats = data?.chats || [];
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
 
   const filteredChats = useMemo(() => {
     if (!searchQuery.trim()) return chats;
     const q = searchQuery.toLowerCase();
     return chats.filter(
-      (chat) =>
+      (chat: Chat) =>
         chat.patient.name.toLowerCase().includes(q) ||
         chat.patient.email.toLowerCase().includes(q) ||
         chat.latestMessage?.content.toLowerCase().includes(q)
     );
   }, [chats, searchQuery]);
-
-  useEffect(() => {
-    fetch("/api/chats")
-      .then((r) => r.json())
-      .then((data) => {
-        setChats(data.chats || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -72,7 +64,7 @@ function ChatsContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-slate-500">Loading chats...</div>
+        <Loader />
       </div>
     );
   }
@@ -110,7 +102,7 @@ function ChatsContent() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 divide-y divide-slate-200">
-          {filteredChats.map((chat) => (
+          {filteredChats.map((chat: Chat) => (
             <Link
               key={chat.patient.id}
               href={`/patients/${chat.patient.id}`}
@@ -172,7 +164,7 @@ export default function ChatsPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-screen">
-          <div className="text-slate-500">Loading...</div>
+          <Loader />
         </div>
       }
     >
