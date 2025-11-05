@@ -19,6 +19,13 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  actionData?: {
+    type: "action";
+    action: string;
+    appointmentId?: string;
+    newDateTime?: string;
+    appointmentTitle?: string;
+  } | null;
 };
 
 const WELCOME_MESSAGE: Message = {
@@ -33,6 +40,91 @@ export default function AskAIScreen() {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Execute action from AI
+  const executeAction = async (actionData: any) => {
+    try {
+      if (actionData.action === "reschedule_appointment") {
+        if (!actionData.appointmentId || !actionData.newDateTime) {
+          throw new Error("Missing appointment ID or new date");
+        }
+
+        const newDate = new Date(actionData.newDateTime);
+        const now = new Date();
+        
+        // Check if date is in the past
+        if (newDate < now) {
+          // Find next available date
+          const nextAvailable = new Date(now);
+          nextAvailable.setDate(nextAvailable.getDate() + 1);
+          nextAvailable.setHours(10, 0, 0, 0);
+          
+          const errorMessage: Message = {
+            role: "assistant",
+            content: `Запрошенная дата в прошлом. Могу предложить ближайшую доступную дату: ${nextAvailable.toLocaleDateString()}. Хотите перенести на эту дату?`,
+            timestamp: new Date(),
+            actionData: {
+              type: "action",
+              action: "reschedule_appointment",
+              appointmentId: actionData.appointmentId,
+              newDateTime: nextAvailable.toISOString(),
+              appointmentTitle: actionData.appointmentTitle,
+            },
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+          return;
+        }
+
+        // Call API to reschedule
+        const res = await fetch(`${API_BASE}/appointments/${actionData.appointmentId}/reschedule`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ datetime: actionData.newDateTime }),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Failed to reschedule");
+        }
+
+        const result = await res.json();
+        
+        // Add success message
+        const successMessage: Message = {
+          role: "assistant",
+          content: `Аппоинтмент "${actionData.appointmentTitle}" успешно перенесен на ${newDate.toLocaleDateString()} в ${newDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, successMessage]);
+      } else if (actionData.action === "cancel_appointment") {
+        // Call API to cancel
+        const res = await fetch(`${API_BASE}/appointments/${actionData.appointmentId}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to cancel appointment");
+        }
+
+        const successMessage: Message = {
+          role: "assistant",
+          content: `Аппоинтмент "${actionData.appointmentTitle}" успешно отменен.`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, successMessage]);
+      }
+    } catch (error: any) {
+      console.error("Error executing action:", error);
+      const errorMessage: Message = {
+        role: "assistant",
+        content: `Ошибка при выполнении действия: ${error.message || "Неизвестная ошибка"}. Пожалуйста, попробуйте еще раз или обратитесь к врачу.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
+  };
 
   // Load chat history from storage on mount
   useEffect(() => {
@@ -118,10 +210,47 @@ export default function AskAIScreen() {
       if (!res.ok) throw new Error("Failed to get AI response");
 
       const data = await res.json();
+      
+      // Check if response contains an action or pending action
+      let responseText = data.response;
+      let actionData = null;
+      let pendingAction = null;
+      
+      // Split response by newlines to check for JSON
+      const lines = data.response.split('\n');
+      const textLines: string[] = [];
+      
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line.trim());
+          if (parsed.type === "action") {
+            // Execute action immediately
+            actionData = parsed;
+            await executeAction(parsed);
+            responseText = `Выполняю действие: ${parsed.action === "reschedule_appointment" ? "Перенос аппоинтмента" : "Отмена аппоинтмента"}...`;
+            break;
+          } else if (parsed.type === "pending_action") {
+            // Store pending action for confirmation
+            pendingAction = parsed;
+            textLines.push(line); // Keep text, JSON will be extracted
+          } else {
+            textLines.push(line);
+          }
+        } catch (e) {
+          // Not JSON, keep as text
+          textLines.push(line);
+        }
+      }
+      
+      if (!actionData && textLines.length > 0) {
+        responseText = textLines.join('\n').trim();
+      }
+      
       const aiMessage: Message = {
         role: "assistant",
-        content: data.response,
+        content: responseText + (pendingAction ? '\n' + JSON.stringify(pendingAction) : ''),
         timestamp: new Date(),
+        actionData: actionData || pendingAction,
       };
 
       setMessages((prev) => [...prev, aiMessage]);

@@ -91,26 +91,41 @@ RESPONSE STYLE
 PATIENT CONTEXT (CRITICAL - when provided):
 You have access to PATIENT CONTEXT with the patient's name, email, phone, procedures, appointments, treatment plans, invoices, and assigned doctor(s).
 
+STRICT RULES - NO HALLUCINATIONS ALLOWED:
+1. USE ONLY the information EXACTLY as provided in PATIENT CONTEXT
+2. DO NOT invent, add, or assume ANY information that is NOT explicitly in the context
+3. DO NOT add details like times, locations, addresses, or phone numbers if they are NOT in the context
+4. DO NOT combine information from different sources - use ONLY what is in PATIENT CONTEXT
+5. If information is missing from context, say "This information is not available in your records" or "I don't have this information"
+6. If asked about appointments and context shows only dates without times - DO NOT invent times like "10:00" or "14:00"
+7. If asked about appointments and context shows no location - DO NOT invent locations like "клиника на ул. Пушкина"
+8. If procedures are listed without times - DO NOT add times to appointments
+9. NEVER guess or assume information - ONLY use what is explicitly provided
+
 WHEN PATIENT CONTEXT IS PROVIDED:
 - DO NOT ask questions like "What would you like to know?" - GIVE DIRECT INFORMATION from the context
-- Use ALL available information from the context to answer questions
-- If asked "как меня зовут?" or "what is my name?" - IMMEDIATELY tell them their name from PATIENT NAME in context
-- If asked about procedures: IMMEDIATELY list all procedures from the context with their status, dates, and descriptions
-- If asked about appointments: IMMEDIATELY list all appointments with dates, times, and locations
-- If asked "у меня есть тритменты?" or "do I have treatments?" - IMMEDIATELY tell them about their TREATMENT PLANS from context
-- If asked "у меня есть инвойсы?" or "do I have invoices?" - IMMEDIATELY tell them about their INVOICES from context (list them if any, or say "No invoices" if none)
+- Use ONLY the exact information available in the context
+- If asked "как меня зовут?" or "what is my name?" - IMMEDIATELY tell them their name from PATIENT NAME in context (ONLY if it exists)
+- If asked about procedures: List ONLY procedures from PROCEDURES section with EXACTLY the information provided (title, status, dates IF provided, descriptions IF provided)
+- If asked about appointments: List ONLY appointments from APPOINTMENTS section with EXACTLY the information provided (title, date IF provided, time IF provided, location IF provided)
+- If asked "у меня есть тритменты?" or "do I have treatments?" - Tell them about TREATMENT PLANS from context (ONLY if they exist)
+- If asked "у меня есть инвойсы?" or "do I have invoices?" - Tell them about INVOICES from context (list them EXACTLY as provided, or say "No invoices" if INVOICES section says "None")
 - If asked about discounts/promotions - say "I don't have information about discounts in your account" (this is not in context)
-- If asked about their doctor: IMMEDIATELY tell them their assigned doctor(s) from the context
-- Be PROACTIVE and INFORMATIVE - provide the actual information, not questions
+- If asked about their doctor: Tell them ASSIGNED DOCTOR(S) from context (ONLY if provided)
+- Be PROACTIVE and INFORMATIVE - but ONLY with information from context
 - Answer in the same language the user asked (Russian or English)
+- If information is missing, be honest: "I don't have this information in your records"
 
 Examples:
-- "как меня зовут?" → "Your name is [PATIENT NAME from context]"
-- "у меня есть инвойсы?" → If invoices exist: "Yes, you have [X] invoice(s): [list them]". If none: "No, you don't have any invoices."
-- "у меня есть тритменты?" → "Yes, you have [X] treatment plan(s): [list them from TREATMENT PLANS]"
-- "какие у меня процедуры?" → List all procedures from context
+- "как меня зовут?" → "Your name is [PATIENT NAME from context]" (ONLY if PATIENT NAME exists)
+- "у меня есть инвойсы?" → If INVOICES section has items: "Yes, you have [X] invoice(s): [list EXACTLY as in context]". If INVOICES section says "None": "No, you don't have any invoices."
+- "у меня есть тритменты?" → If TREATMENT PLANS exist: "Yes, you have [X] treatment plan(s): [list EXACTLY as in context]". If not in context: "I don't have information about treatment plans."
+- "какие у меня процедуры?" → List ONLY procedures from PROCEDURES section with EXACTLY the information provided (do NOT add times, locations, or other details if not in context)
+- "какие у меня аппоинтменты?" → List ONLY appointments from APPOINTMENTS section with EXACTLY the information provided (if no time is provided, DO NOT invent a time; if no location is provided, DO NOT invent a location)
 
-DO NOT respond with "What would you like to know?" - GIVE THE INFORMATION DIRECTLY.`,
+CRITICAL: If you see "APPOINTMENTS:" section with dates but NO times - do NOT add times. If you see appointments with dates but NO locations - do NOT add locations. Use ONLY what is explicitly provided.
+
+DO NOT respond with "What would you like to know?" - GIVE THE INFORMATION DIRECTLY, but ONLY from context.`,
         },
       });
     }
@@ -295,15 +310,91 @@ DO NOT respond with "What would you like to know?" - GIVE THE INFORMATION DIRECT
       }
     }
 
+    // Check for actions first (only for patients)
+    let actionIntent = null;
+    let pendingAction = null;
+    
+    if (role === "patient") {
+      try {
+        const authPayload = await getAuthPayload(req);
+        if (authPayload?.role === "patient" && authPayload?.userId) {
+          const patientId = authPayload.userId;
+          
+          // Get appointments for intent detection
+          const appointments = await prisma.appointment.findMany({
+            where: { patientId },
+            select: {
+              id: true,
+              title: true,
+              datetime: true,
+              location: true,
+              type: true,
+            },
+            orderBy: { datetime: "asc" },
+          });
+
+          // Check if there's a pending action in conversation history
+          const lastAssistantMessage = conversationHistory
+            .filter(msg => msg.role === "assistant")
+            .slice(-1)[0];
+          
+          if (lastAssistantMessage) {
+            // Try to extract pending action from last assistant message (check all lines)
+            const lines = lastAssistantMessage.content.split('\n');
+            for (const line of lines) {
+              try {
+                const parsed = JSON.parse(line.trim());
+                if (parsed.type === "pending_action") {
+                  pendingAction = parsed;
+                  break;
+                }
+              } catch (e) {
+                // Not JSON, continue
+              }
+            }
+          }
+
+          // If user confirmed, use pending action
+          const confirmationKeywords = ["да", "yes", "подтверждаю", "confirm", "согласен", "ок", "ok", "хорошо", "сделай", "do it"];
+          const isConfirmation = confirmationKeywords.some(keyword => 
+            message.toLowerCase().trim() === keyword || 
+            message.toLowerCase().includes(keyword)
+          );
+          
+          if (isConfirmation && pendingAction) {
+            // User confirmed pending action - return action JSON
+            return NextResponse.json({
+              response: JSON.stringify({
+                type: "action",
+                action: pendingAction.action,
+                appointmentId: pendingAction.appointmentId,
+                newDateTime: pendingAction.newDateTime,
+                appointmentTitle: pendingAction.appointmentTitle,
+              }),
+              actionIntent: pendingAction,
+            });
+          }
+
+          // Detect new intent if no pending action
+          if (!pendingAction) {
+            actionIntent = await detectIntent(message, appointments, patientContext);
+          }
+        }
+      } catch (error) {
+        console.error("Error detecting intent:", error);
+      }
+    }
+
     // Generate AI response using OpenAI with patient context and conversation history
     const response = await generateAIResponse(
       message, 
       settings.prompt + patientContext, 
       role,
-      conversationHistory
+      conversationHistory,
+      actionIntent
     );
 
-    return NextResponse.json({ response });
+    return NextResponse.json({ response, actionIntent });
   } catch (error: any) {
     console.error("AI chat error:", error);
     return NextResponse.json(
@@ -313,11 +404,92 @@ DO NOT respond with "What would you like to know?" - GIVE THE INFORMATION DIRECT
   }
 }
 
+interface ActionIntent {
+  type: "reschedule_appointment" | "cancel_appointment" | "create_appointment" | "general_question" | null;
+  appointmentId?: string;
+  appointmentTitle?: string;
+  newDateTime?: string;
+  confidence?: number;
+  requiresConfirmation?: boolean;
+}
+
+async function detectIntent(
+  message: string,
+  appointments: any[],
+  patientContext: string
+): Promise<ActionIntent | null> {
+  try {
+    // Simple keyword-based detection first (can be enhanced with AI later)
+    const lowerMessage = message.toLowerCase();
+    
+    // Check for reschedule intent
+    const rescheduleKeywords = ["перенести", "reschedule", "изменить дату", "change date", "перенеси", "перенести на"];
+    const hasReschedule = rescheduleKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    // Check for cancel intent
+    const cancelKeywords = ["отменить", "cancel", "удалить", "delete", "отмени"];
+    const hasCancel = cancelKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    if (hasReschedule) {
+      // Try to extract date from message
+      const dateMatch = message.match(/(\d{1,2})[./](\d{1,2})[./](\d{2,4})/);
+      let newDateTime: string | undefined;
+      
+      if (dateMatch) {
+        const [, day, month, year] = dateMatch;
+        const fullYear = year.length === 2 ? `20${year}` : year;
+        newDateTime = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T10:00:00`;
+      }
+      
+      // Find appointment by keywords in title
+      const cleaningKeywords = ["чистка", "cleaning", "чистка зубов"];
+      const appointment = appointments.find(apt => 
+        cleaningKeywords.some(keyword => apt.title.toLowerCase().includes(keyword))
+      ) || appointments[0]; // Fallback to first appointment
+      
+      if (appointment) {
+        return {
+          type: "reschedule_appointment",
+          appointmentId: appointment.id,
+          appointmentTitle: appointment.title,
+          newDateTime,
+          confidence: 0.8,
+          requiresConfirmation: true,
+        };
+      }
+    }
+    
+    if (hasCancel) {
+      // Find appointment by keywords
+      const cleaningKeywords = ["чистка", "cleaning", "чистка зубов"];
+      const appointment = appointments.find(apt => 
+        cleaningKeywords.some(keyword => apt.title.toLowerCase().includes(keyword))
+      ) || appointments[0];
+      
+      if (appointment) {
+        return {
+          type: "cancel_appointment",
+          appointmentId: appointment.id,
+          appointmentTitle: appointment.title,
+          confidence: 0.8,
+          requiresConfirmation: true,
+        };
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Intent detection error:", error);
+    return null;
+  }
+}
+
 async function generateAIResponse(
   userMessage: string,
   systemPrompt: string,
   role: "patient" | "admin",
-  conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = []
+  conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
+  actionIntent: ActionIntent | null = null
 ): Promise<string> {
   try {
     const openai = new OpenAI({
@@ -325,8 +497,42 @@ async function generateAIResponse(
     });
 
     // Build messages array with system prompt, conversation history, and current message
+    let enhancedSystemPrompt = systemPrompt;
+    let shouldReturnAction = false;
+    
+    // Check if user is confirming a previous action intent
+    const confirmationKeywords = ["да", "yes", "подтверждаю", "confirm", "согласен", "ок", "ok", "хорошо", "сделай", "do it"];
+    const isConfirmation = confirmationKeywords.some(keyword => 
+      userMessage.toLowerCase().trim() === keyword || 
+      userMessage.toLowerCase().includes(keyword)
+    );
+    
+    // If action intent detected, add instructions for confirmation
+    if (actionIntent && actionIntent.type === "reschedule_appointment" && actionIntent.requiresConfirmation) {
+      // Store pending action in response
+      const pendingActionJson = JSON.stringify({
+        type: "pending_action",
+        action: "reschedule_appointment",
+        appointmentId: actionIntent.appointmentId,
+        newDateTime: actionIntent.newDateTime,
+        appointmentTitle: actionIntent.appointmentTitle,
+      });
+      
+      enhancedSystemPrompt += `\n\nACTION DETECTED: User wants to reschedule appointment "${actionIntent.appointmentTitle}" to ${actionIntent.newDateTime || "new date"}.\nRespond with: "Вы имеете в виду аппоинтмент "${actionIntent.appointmentTitle}"? Подтвердите, чтобы перенести его."\n\nIMPORTANT: After your text response, append this JSON on a new line: ${pendingActionJson}`;
+    } else if (actionIntent && actionIntent.type === "cancel_appointment" && actionIntent.requiresConfirmation) {
+      // Store pending action in response
+      const pendingActionJson = JSON.stringify({
+        type: "pending_action",
+        action: "cancel_appointment",
+        appointmentId: actionIntent.appointmentId,
+        appointmentTitle: actionIntent.appointmentTitle,
+      });
+      
+      enhancedSystemPrompt += `\n\nACTION DETECTED: User wants to cancel appointment "${actionIntent.appointmentTitle}".\nRespond with: "Вы хотите отменить аппоинтмент "${actionIntent.appointmentTitle}"? Подтвердите, чтобы отменить."\n\nIMPORTANT: After your text response, append this JSON on a new line: ${pendingActionJson}`;
+    }
+    
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: enhancedSystemPrompt },
     ];
 
     // Add conversation history (convert assistant -> assistant for OpenAI API)
@@ -351,6 +557,21 @@ async function generateAIResponse(
     
     if (!response) {
       throw new Error("No response from OpenAI");
+    }
+
+    // Try to extract pending action JSON from response
+    try {
+      // Look for JSON in response (might be at the end)
+      const jsonMatch = response.match(/\{[\s\S]*"type"\s*:\s*"pending_action"[\s\S]*\}/);
+      if (jsonMatch) {
+        const pendingAction = JSON.parse(jsonMatch[0]);
+        // Remove JSON from response text
+        const textResponse = response.replace(jsonMatch[0], "").trim();
+        // Return text with pending action stored
+        return textResponse + "\n" + JSON.stringify(pendingAction);
+      }
+    } catch (error) {
+      // Not a pending action, continue with normal response
     }
 
     return response;
