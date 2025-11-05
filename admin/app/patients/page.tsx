@@ -19,7 +19,6 @@ function PatientsPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const doctorId = "seed"; // mock doctor id resolved by backend
 
   const q = searchParams.get("q") || "";
   const page = parseInt(searchParams.get("page") || "1", 10) || 1;
@@ -93,29 +92,13 @@ function PatientsPageInner() {
                     <td className="py-2 pr-4">{p.name}</td>
                     <td className="py-2 pr-4">{p.email}</td>
                     <td className="py-2 pr-4">{p.phone || "—"}</td>
-                    <td className="py-2 pr-4 space-x-3">
+                    <td className="py-2 pr-4">
                       <Link
                         href={`/patients/${p.id}`}
                         className="text-blue-600"
                       >
                         Open
                       </Link>
-                      <button
-                        className="text-sm px-2 py-1 border rounded"
-                        onClick={async () => {
-                          await fetch(
-                            `${API_BASE}/doctors/${doctorId}/assign-patient`,
-                            {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ patientId: p.id }),
-                            }
-                          );
-                          // no toast, minimal UX
-                        }}
-                      >
-                        Add to my patients
-                      </button>
                     </td>
                   </tr>
                 ))}

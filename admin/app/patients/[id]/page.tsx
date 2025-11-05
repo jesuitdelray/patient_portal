@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { API_BASE, connectSocket } from "@/lib/api";
+import { sendSocketEvent } from "@/lib/socket-utils";
 import {
   usePatient,
   useTreatmentPlans,
@@ -237,6 +238,77 @@ function ProceduresList({
   onUpdate: () => void;
   procedures?: any[];
 }) {
+  const [createInvoiceFor, setCreateInvoiceFor] = useState<string | null>(null);
+  const [invoiceAmount, setInvoiceAmount] = useState("");
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
+  const [isCompleting, setIsCompleting] = useState<string | null>(null);
+
+  const handleComplete = async (procedureId: string) => {
+    setIsCompleting(procedureId);
+    try {
+      const res = await fetch(`${API_BASE}/procedures/${procedureId}/complete`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        onUpdate();
+      } else {
+        alert("Failed to complete procedure");
+      }
+    } catch (error) {
+      alert("Failed to complete procedure");
+    } finally {
+      setIsCompleting(null);
+    }
+  };
+
+  const handleCreateInvoice = async (procedureId: string) => {
+    if (!invoiceAmount || parseFloat(invoiceAmount) <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+    setIsCreatingInvoice(true);
+    try {
+      const res = await fetch(`${API_BASE}/procedures/${procedureId}/invoice`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: invoiceAmount }),
+      });
+      if (res.ok) {
+        setCreateInvoiceFor(null);
+        setInvoiceAmount("");
+        onUpdate();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to create invoice");
+      }
+    } catch (error) {
+      alert("Failed to create invoice");
+    } finally {
+      setIsCreatingInvoice(false);
+    }
+  };
+
+  const handleMarkPaid = async (invoiceId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/invoices/${invoiceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "paid" }),
+      });
+      if (res.ok) {
+        onUpdate();
+      } else {
+        alert("Failed to mark invoice as paid");
+      }
+    } catch (error) {
+      alert("Failed to mark invoice as paid");
+    }
+  };
+
+  const handleDownloadPDF = (invoiceId: string) => {
+    window.open(`${API_BASE}/invoices/${invoiceId}/pdf`, "_blank");
+  };
+
   if (!procedures || procedures.length === 0)
     return <div className="text-sm text-slate-500">No procedures yet</div>;
 
@@ -245,25 +317,103 @@ function ProceduresList({
       {procedures.map((proc: any) => (
         <div
           key={proc.id}
-          className="text-sm border-l-2 border-blue-200 pl-3 py-2"
+          className="text-sm border-l-2 border-blue-200 pl-3 py-2 space-y-2"
         >
-          <div className="font-medium">{proc.title}</div>
-          {proc.description && (
-            <div className="text-slate-600">{proc.description}</div>
-          )}
-          {proc.scheduledDate && (
-            <div className="text-xs text-slate-500">
-              Scheduled: {new Date(proc.scheduledDate).toLocaleDateString()}
+          <div>
+            <div className="font-medium">{proc.title}</div>
+            {proc.description && (
+              <div className="text-slate-600">{proc.description}</div>
+            )}
+            {proc.scheduledDate && (
+              <div className="text-xs text-slate-500">
+                Scheduled: {new Date(proc.scheduledDate).toLocaleDateString()}
+              </div>
+            )}
+            {proc.appointment && (
+              <div className="text-xs text-slate-500">
+                Linked to: {proc.appointment.title} (
+                {new Date(proc.appointment.datetime).toLocaleDateString()})
+              </div>
+            )}
+            <div className="text-xs">
+              Status: <span className="font-medium">{proc.status}</span>
             </div>
-          )}
-          {proc.appointment && (
-            <div className="text-xs text-slate-500">
-              Linked to: {proc.appointment.title} (
-              {new Date(proc.appointment.datetime).toLocaleDateString()})
-            </div>
-          )}
-          <div className="text-xs">
-            Status: <span className="font-medium">{proc.status}</span>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            {proc.status !== "completed" && (
+              <button
+                onClick={() => handleComplete(proc.id)}
+                disabled={isCompleting === proc.id}
+                className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+              >
+                {isCompleting === proc.id ? "Completing..." : "Mark as Done"}
+              </button>
+            )}
+
+            {proc.status === "completed" && !proc.invoice && (
+              <>
+                {createInvoiceFor === proc.id ? (
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={invoiceAmount}
+                      onChange={(e) => setInvoiceAmount(e.target.value)}
+                      placeholder="Amount"
+                      className="border rounded px-2 py-1 text-xs w-24"
+                    />
+                    <button
+                      onClick={() => handleCreateInvoice(proc.id)}
+                      disabled={isCreatingInvoice}
+                      className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {isCreatingInvoice ? "Creating..." : "Create"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCreateInvoiceFor(null);
+                        setInvoiceAmount("");
+                      }}
+                      className="px-2 py-1 text-xs border rounded hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setCreateInvoiceFor(proc.id)}
+                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Create Invoice
+                  </button>
+                )}
+              </>
+            )}
+
+            {proc.invoice && (
+              <div className="flex gap-2 items-center">
+                <span className="text-xs">
+                  Invoice: ${proc.invoice.amount.toFixed(2)} (
+                  {proc.invoice.status})
+                </span>
+                <button
+                  onClick={() => handleDownloadPDF(proc.invoice.id)}
+                  className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
+                >
+                  Download PDF
+                </button>
+                {proc.invoice.status === "unpaid" && (
+                  <button
+                    onClick={() => handleMarkPaid(proc.invoice.id)}
+                    className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                  >
+                    Mark as Paid
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       ))}
@@ -627,6 +777,31 @@ export default function PatientDetail({
       }
     };
 
+    // Setup invoice event listeners
+    const procedureCompletedHandler = ({ procedure }: any) => {
+      if (mounted && procedure?.treatmentPlan?.patientId === patientId) {
+        invalidate.invalidateTreatmentPlans(patientId);
+      }
+    };
+
+    const invoiceCreatedHandler = ({ invoice }: any) => {
+      if (
+        mounted &&
+        invoice?.procedure?.treatmentPlan?.patientId === patientId
+      ) {
+        invalidate.invalidateTreatmentPlans(patientId);
+      }
+    };
+
+    const invoicePaidHandler = ({ invoice }: any) => {
+      if (
+        mounted &&
+        invoice?.procedure?.treatmentPlan?.patientId === patientId
+      ) {
+        invalidate.invalidateTreatmentPlans(patientId);
+      }
+    };
+
     // Remove any existing listener first to prevent duplicates
     socket.off("message:new");
     socket.on("message:new", messageHandler);
@@ -638,6 +813,12 @@ export default function PatientDetail({
     socket.on("appointment:update", appointmentUpdateHandler);
     socket.off("appointment:cancelled");
     socket.on("appointment:cancelled", appointmentCancelledHandler);
+    socket.off("procedure:completed");
+    socket.on("procedure:completed", procedureCompletedHandler);
+    socket.off("invoice:created");
+    socket.on("invoice:created", invoiceCreatedHandler);
+    socket.off("invoice:paid");
+    socket.on("invoice:paid", invoicePaidHandler);
 
     return () => {
       mounted = false;
@@ -647,6 +828,9 @@ export default function PatientDetail({
       socket.off("appointment:new", appointmentNewHandler);
       socket.off("appointment:update", appointmentUpdateHandler);
       socket.off("appointment:cancelled", appointmentCancelledHandler);
+      socket.off("procedure:completed", procedureCompletedHandler);
+      socket.off("invoice:created", invoiceCreatedHandler);
+      socket.off("invoice:paid", invoicePaidHandler);
       // Clear global reference if this is still the current patient
       if ((window as any).__adminPatientId === patientId) {
         (window as any).__adminPatientSocket = null;
@@ -675,41 +859,28 @@ export default function PatientDetail({
       (window as any).__adminPatientSocket = socket;
     }
 
-    // Wait for connection if not connected
-    if (!socket.connected) {
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => resolve(), 2000); // Timeout after 2 seconds
-        socket.once("connect", () => {
-          clearTimeout(timeout);
-          resolve();
-        });
-        socket.once("connect_error", () => {
-          clearTimeout(timeout);
-          resolve(); // Don't wait forever
-        });
-      });
-
-      // If still not connected after waiting, show error
-      if (!socket.connected) {
-        alert("Connection lost. Please refresh the page.");
-        return;
-      }
-    }
-
     const msgContent = message.trim();
     setMessage(""); // Clear input immediately
 
-    socket.emit(
-      "message:send",
-      { patientId, sender: "doctor", content: msgContent },
-      (ack: any) => {
-        if (!ack?.ok) {
-          // revert input on failure
-          setMessage(msgContent);
-          alert("Failed to send message");
+    // Use sendSocketEvent utility for automatic retry and queue management
+    try {
+      await sendSocketEvent(
+        "message:send",
+        { patientId, sender: "doctor", content: msgContent },
+        { patientId },
+        (ack: any) => {
+          if (!ack?.ok) {
+            // revert input on failure
+            setMessage(msgContent);
+            alert("Failed to send message");
+          }
         }
-      }
-    );
+      );
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setMessage(msgContent);
+      alert("Failed to send message. It will be retried automatically.");
+    }
   };
 
   const onMessageKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -890,32 +1061,23 @@ export default function PatientDetail({
                   (window as any).__adminPatientSocket = socket;
                 }
 
-                // Wait for connection if not connected
-                if (!socket.connected) {
-                  await new Promise<void>((resolve) => {
-                    const timeout = setTimeout(() => resolve(), 2000);
-                    socket.once("connect", () => {
-                      clearTimeout(timeout);
-                      resolve();
-                    });
-                    socket.once("connect_error", () => {
-                      clearTimeout(timeout);
-                      resolve();
-                    });
-                  });
-
-                  if (!socket.connected) {
-                    return; // Silently fail, no alert
-                  }
+                // Use sendSocketEvent utility for automatic retry and queue management
+                try {
+                  await sendSocketEvent(
+                    "messages:clear",
+                    { patientId },
+                    { patientId },
+                    (ack: any) => {
+                      // Silently handle - messages will be cleared via socket event
+                      if (!ack?.ok) {
+                        console.error("Failed to clear messages:", ack?.error);
+                      }
+                    }
+                  );
+                } catch (error) {
+                  console.error("Error clearing messages:", error);
+                  // Silently fail, will retry automatically
                 }
-
-                // Send clear message event via socket
-                socket.emit("messages:clear", { patientId }, (ack: any) => {
-                  // Silently handle - messages will be cleared via socket event
-                  if (!ack?.ok) {
-                    // Silently fail, no alert
-                  }
-                });
               }}
               className="px-3 py-1.5 text-sm text-red-600 border border-red-600 rounded hover:bg-red-50 transition"
             >

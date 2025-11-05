@@ -39,9 +39,12 @@ import ProfileScreen from "./src/screens/ProfileScreen";
 import MessagesScreen from "./src/screens/MessagesScreen";
 import PromotionsScreen from "./src/screens/PromotionsScreen";
 import TreatmentScreen from "./src/screens/TreatmentScreen";
+import InvoicesScreen from "./src/screens/InvoicesScreen";
+import AskAIScreen from "./src/screens/AskAIScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import { BottomNavigation } from "./src/components/BottomNavigation";
 import { Sidebar } from "./src/components/Sidebar";
+import { Loader } from "./src/components/Loader";
 import Toast from "react-native-toast-message";
 // Import DebugLogs early to capture console logs
 import "./src/components/DebugLogs";
@@ -180,6 +183,8 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
           "/messages": "Messages",
           "/promotions": "Promotions",
           "/treatment": "Treatment",
+          "/invoices": "Invoices",
+          "/ask-ai": "AskAI",
         };
         const routeName = routeMap[path];
         console.log("[MainNavigator] Mapped route name:", routeName);
@@ -246,6 +251,8 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
                         Messages: "/messages",
                         Promotions: "/promotions",
                         Treatment: "/treatment",
+                        Invoices: "/invoices",
+                        AskAI: "/ask-ai",
                       };
                       const path = routeMap[route.name] || "/dashboard";
                       
@@ -289,6 +296,8 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
           <Stack.Screen name="Messages" component={MessagesScreen} />
           <Stack.Screen name="Promotions" component={PromotionsScreen} />
           <Stack.Screen name="Treatment" component={TreatmentScreen} />
+          <Stack.Screen name="Invoices" component={InvoicesScreen} />
+          <Stack.Screen name="AskAI" component={AskAIScreen} />
         </Stack.Navigator>
         {!isDesktop && <BottomNavigation />}
       </View>
@@ -624,6 +633,69 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
           }
         } catch (error) {
           console.error("Error handling appointment:cancelled:", error);
+        }
+      });
+      socket.on("procedure:completed", ({ procedure }: any) => {
+        try {
+          console.log("🔔 procedure:completed received", procedure);
+          void showNotification({
+            title: "Procedure completed",
+            body: procedure?.title
+              ? `${procedure.title} has been marked as completed`
+              : "A procedure has been completed",
+          });
+
+          if (patientId) {
+            queryClient.invalidateQueries({
+              queryKey: ["patients", patientId],
+            });
+          }
+        } catch (error) {
+          console.error("Error handling procedure:completed:", error);
+        }
+      });
+      socket.on("invoice:created", ({ invoice }: any) => {
+        try {
+          console.log("🔔 invoice:created received", invoice);
+          void showNotification({
+            title: "New invoice",
+            body: invoice?.procedure?.title
+              ? `Invoice for ${invoice.procedure.title}: $${invoice.amount.toFixed(2)}`
+              : `New invoice: $${invoice.amount.toFixed(2)}`,
+          });
+
+          if (patientId) {
+            queryClient.invalidateQueries({
+              queryKey: ["patients", patientId],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["invoices", patientId],
+            });
+          }
+        } catch (error) {
+          console.error("Error handling invoice:created:", error);
+        }
+      });
+      socket.on("invoice:paid", ({ invoice }: any) => {
+        try {
+          console.log("🔔 invoice:paid received", invoice);
+          void showNotification({
+            title: "Invoice paid",
+            body: invoice?.procedure?.title
+              ? `Invoice for ${invoice.procedure.title} has been marked as paid`
+              : "An invoice has been marked as paid",
+          });
+
+          if (patientId) {
+            queryClient.invalidateQueries({
+              queryKey: ["patients", patientId],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["invoices", patientId],
+            });
+          }
+        } catch (error) {
+          console.error("Error handling invoice:paid:", error);
         }
       });
 

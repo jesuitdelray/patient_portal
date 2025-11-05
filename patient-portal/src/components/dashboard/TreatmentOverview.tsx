@@ -3,7 +3,18 @@ import { View, Text, StyleSheet } from "react-native";
 import { API_BASE, resolvePatientId } from "../../lib/api";
 import { colors } from "../../lib/colors";
 
-type Plan = { id: string; title: string; status: string; steps: any };
+type Procedure = {
+  id: string;
+  title: string;
+  status: string;
+};
+
+type Plan = {
+  id: string;
+  title: string;
+  status: string;
+  procedures?: Procedure[];
+};
 
 export function TreatmentOverview() {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -17,6 +28,18 @@ export function TreatmentOverview() {
       setPlans(data.plans || []);
     })();
   }, []);
+
+  const calculateProgress = (plan: Plan) => {
+    if (!plan.procedures || plan.procedures.length === 0) {
+      return { percentage: 0, completed: 0, total: 0 };
+    }
+    const total = plan.procedures.length;
+    const completed = plan.procedures.filter(
+      (p) => p.status === "completed"
+    ).length;
+    const percentage = Math.round((completed / total) * 100);
+    return { percentage, completed, total };
+  };
 
   return (
     <View style={styles.container}>
@@ -34,33 +57,49 @@ export function TreatmentOverview() {
             </Text>
           </View>
         ) : (
-          plans.map((plan) => (
-            <View key={plan.id} style={styles.treatmentCard}>
-              <View style={styles.treatmentHeader}>
-                <View style={styles.treatmentInfo}>
-                  <Text style={styles.treatmentName}>{plan.title}</Text>
-                  <Text style={styles.treatmentStep}>{plan.status}</Text>
+          plans.map((plan) => {
+            const { percentage, completed, total } = calculateProgress(plan);
+            const isCompleted = plan.status === "completed" || percentage === 100;
+
+            return (
+              <View key={plan.id} style={styles.treatmentCard}>
+                <View style={styles.treatmentHeader}>
+                  <View style={styles.treatmentInfo}>
+                    <Text style={styles.treatmentName}>{plan.title}</Text>
+                    <Text style={styles.treatmentStep}>
+                      {plan.status === "completed"
+                        ? "Completed"
+                        : plan.status === "active"
+                        ? "Active"
+                        : plan.status}
+                    </Text>
+                  </View>
+                  <View style={styles.progressInfo}>
+                    <Text style={{ fontSize: 16 }}>
+                      {isCompleted ? "✅" : "⏰"}
+                    </Text>
+                    <Text style={styles.progressText}>
+                      {percentage}%
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.progressInfo}>
-                  <Text style={{ fontSize: 16 }}>
-                    {plan.status === "completed" ? "✅" : "⏰"}
-                  </Text>
-                  <Text style={styles.progressText}>
-                    {plan.status === "completed" ? "100%" : ""}
-                  </Text>
+                <View style={styles.progressBarContainer}>
+                  <View
+                    style={[
+                      styles.progressBar,
+                      { width: `${percentage}%` },
+                      isCompleted && styles.progressBarComplete,
+                    ]}
+                  />
                 </View>
+                {total > 0 && (
+                  <Text style={styles.progressLabel}>
+                    {completed} of {total} procedures completed
+                  </Text>
+                )}
               </View>
-              <View style={styles.progressBarContainer}>
-                <View
-                  style={[
-                    styles.progressBar,
-                    { width: `${plan.status === "completed" ? 100 : 30}%` },
-                    plan.status === "completed" && styles.progressBarComplete,
-                  ]}
-                />
-              </View>
-            </View>
-          ))
+            );
+          })
         )}
       </View>
     </View>
@@ -137,6 +176,11 @@ const styles = StyleSheet.create({
   },
   progressBarComplete: {
     backgroundColor: colors.greyscale800,
+  },
+  progressLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
   },
   emptyState: {
     padding: 24,

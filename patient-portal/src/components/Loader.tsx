@@ -7,13 +7,11 @@ export function Loader() {
   useEffect(() => {
     const animate = () => {
       Animated.loop(
-        Animated.sequence([
-          Animated.timing(rotation, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
+        Animated.timing(rotation, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
       ).start();
     };
     animate();
@@ -26,65 +24,36 @@ export function Loader() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.loader}>
-        <Animated.View
-          style={[
-            styles.square,
-            {
-              transform: [{ rotate }],
-            },
-          ]}
-        >
-          <View style={styles.corner} />
-        </Animated.View>
-        <Animated.View
-          style={[
-            styles.square2,
-            {
-              transform: [{ rotate: "-180deg" }, { scale: -1 }],
-            },
-          ]}
-        >
-          <View style={styles.corner} />
-        </Animated.View>
-      </View>
+      <Animated.View
+        style={[
+          styles.loader,
+          {
+            transform: [{ rotate }],
+          },
+        ]}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
     justifyContent: "center",
     alignItems: "center",
   },
   loader: {
-    width: 50,
-    height: 50,
-    position: "relative",
-  },
-  square: {
-    position: "absolute",
-    width: 35,
-    height: 35,
-    marginLeft: 15,
-    marginBottom: 15,
-  },
-  square2: {
-    position: "absolute",
-    width: 35,
-    height: 35,
-    marginRight: 15,
-    marginTop: 15,
-  },
-  corner: {
-    width: "100%",
-    height: "100%",
-    borderWidth: 2,
-    borderColor: "#046D8B",
-    borderTopWidth: 0,
-    borderRightWidth: 0,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+    borderTopColor: "#6b7280",
+    borderRightColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: "transparent",
+    borderStyle: "solid",
   },
 });
 

@@ -111,7 +111,10 @@ export function UpcomingAppointments() {
 
   const handleOpenReschedule = (appointment: any) => {
     setSelectedAppointment(appointment);
-    const initialDate = new Date();
+    // Use appointment's current datetime as initial value
+    const initialDate = appointment?.datetime 
+      ? new Date(appointment.datetime) 
+      : new Date();
     setSelectedDate(initialDate);
     setNewDateTime(initialDate.toISOString().slice(0, 16));
     setIsRescheduleOpen(true);
@@ -257,18 +260,15 @@ export function UpcomingAppointments() {
                   <input
                     type="datetime-local"
                     value={newDateTime}
-                    onChange={(e) => setNewDateTime(e.target.value)}
-                    min={todayString}
-                    readOnly
-                    onClick={() => {
-                      // Trigger native date picker behavior
-                      const input = document.querySelector(
-                        'input[type="datetime-local"]'
-                      ) as HTMLInputElement;
-                      if (input) {
-                        input.showPicker?.();
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setNewDateTime(value);
+                      // Also update selectedDate for consistency
+                      if (value) {
+                        setSelectedDate(new Date(value));
                       }
                     }}
+                    min={todayString}
                     style={{
                       width: "100%",
                       padding: "12px",

@@ -8,6 +8,8 @@ const menuItems = [
   { title: "Dashboard", screen: "Dashboard", icon: "🏠" },
   { title: "Treatment", screen: "Treatment", icon: "🩺" },
   { title: "Messages", screen: "Messages", icon: "💬" },
+  { title: "Ask AI", screen: "AskAI", icon: "🤖" },
+  { title: "Invoices", screen: "Invoices", icon: "📄" },
   { title: "Promotions", screen: "Promotions", icon: "🏷️" },
   { title: "Profile", screen: "Profile", icon: "👤" },
 ];

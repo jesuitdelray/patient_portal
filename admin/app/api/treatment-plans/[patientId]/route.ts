@@ -11,6 +11,9 @@ export async function GET(
       where: { patientId },
       include: {
         procedures: {
+          include: {
+            invoice: true,
+          },
           orderBy: { createdAt: "desc" },
         },
       },

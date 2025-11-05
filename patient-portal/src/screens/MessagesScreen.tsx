@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { API_BASE, connectSocket, resolvePatientId } from "../lib/api";
+import { sendSocketEvent } from "../lib/socket-utils";
 import { storageSync } from "../lib/storage";
 import { Header } from "../components/Header";
 
@@ -298,52 +299,22 @@ export default function MessagesScreen() {
     if (!message.trim()) return;
     if (!patientId) return;
 
-    let socket: any = wsRef.current;
-
-    // If socket doesn't exist or is disconnected, reconnect
-    if (!socket || !socket.connected) {
-      socket = connectSocket({ patientId });
-      wsRef.current = socket;
-
-      // Wait for connection
-      if (!socket.connected) {
-        await new Promise<void>((resolve) => {
-          const timeout = setTimeout(() => resolve(), 2000);
-          socket.once("connect", () => {
-            clearTimeout(timeout);
-            resolve();
-          });
-          socket.once("connect_error", () => {
-            clearTimeout(timeout);
-            resolve();
-          });
-        });
-
-        // If still not connected, show error
-        if (!socket.connected) {
-          Toast.show({
-            type: "error",
-            text1: "Connection lost",
-            text2: "Please refresh the page",
-          });
-          return;
-        }
-      }
-    }
-
     const prev = message.trim();
     const msgContent = prev;
     setMessage(""); // Clear input immediately
 
-    socket.emit(
-      "message:send",
-      { patientId, sender: "patient", content: msgContent },
-      (ack: any) => {
-        if (!ack?.ok) {
-          // Revert input on failure
-          setMessage(msgContent);
-          Toast.show({ type: "error", text1: "Failed to send message" });
-        } else {
+    // Use sendSocketEvent utility for automatic retry and queue management
+    try {
+      await sendSocketEvent(
+        "message:send",
+        { patientId, sender: "patient", content: msgContent },
+        { patientId },
+        (ack: any) => {
+          if (!ack?.ok) {
+            // Revert input on failure
+            setMessage(msgContent);
+            Toast.show({ type: "error", text1: "Failed to send message" });
+          } else {
           // Update conversation last message when message is sent successfully
           setConversations((prev) =>
             prev.map((conv) =>
@@ -359,9 +330,18 @@ export default function MessagesScreen() {
                 : conv
             )
           );
+          }
         }
-      }
-    );
+      );
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setMessage(msgContent);
+      Toast.show({
+        type: "error",
+        text1: "Failed to send message",
+        text2: "It will be retried automatically",
+      });
+    }
 
       try {
         storageSync.setItem("pp_lastReadAt", new Date().toISOString());

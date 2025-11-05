@@ -18,6 +18,8 @@
     "google-auth-library": "^9.11.0",
     "jose": "^5.10.0",
     "next": "15.0.3",
+    "openai": "^4.104.0",
+    "pdfkit": "^0.15.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "socket.io": "^4.7.5",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "24.9.2",
+    "@types/pdfkit": "^0.17.3",
     "@types/react": "~19.1.10",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
