@@ -8,6 +8,7 @@ import {
   useInvalidateAdminQueries,
 } from "@/lib/admin-queries";
 import { Loader } from "@/app/components/Loader";
+import { PatientDiscountBadge } from "@/app/components/PatientDiscountBadge";
 
 type Appointment = {
   id: string;
@@ -917,8 +918,13 @@ export default function PatientDetail({
   return (
     <div className="space-y-8">
       <section className="bg-white/80 backdrop-blur rounded-xl border shadow-sm p-5">
-        <h1 className="text-2xl font-bold tracking-tight">{patient.name}</h1>
-        <p className="text-slate-600">{patient.email}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{patient.name}</h1>
+            <p className="text-slate-600">{patient.email}</p>
+          </div>
+          <PatientDiscountBadge patientId={patientId} />
+        </div>
       </section>
 
       <TreatmentPlansSection

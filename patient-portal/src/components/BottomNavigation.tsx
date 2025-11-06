@@ -7,8 +7,8 @@ import { colors } from "../lib/colors";
 const menuItems = [
   { title: "Dashboard", screen: "Dashboard", icon: "🏠" },
   { title: "Treatment", screen: "Treatment", icon: "🩺" },
-  { title: "Messages", screen: "Messages", icon: "💬" },
-  { title: "Promotions", screen: "Promotions", icon: "🏷️" },
+  { title: "Price List", screen: "PriceList", icon: "💰" },
+  { title: "Chat", screen: "Chat", icon: "💬" },
   { title: "Profile", screen: "Profile", icon: "👤" },
 ];
 

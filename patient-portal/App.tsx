@@ -36,11 +36,11 @@ import {
 
 import DashboardScreen from "./src/screens/DashboardScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
-import MessagesScreen from "./src/screens/MessagesScreen";
 import PromotionsScreen from "./src/screens/PromotionsScreen";
 import TreatmentScreen from "./src/screens/TreatmentScreen";
 import InvoicesScreen from "./src/screens/InvoicesScreen";
-import AskAIScreen from "./src/screens/AskAIScreen";
+import PriceListScreen from "./src/screens/PriceListScreen";
+import ChatScreen from "./src/screens/ChatScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import { BottomNavigation } from "./src/components/BottomNavigation";
 import { Sidebar } from "./src/components/Sidebar";
@@ -180,11 +180,10 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
         const routeMap: Record<string, string> = {
           "/dashboard": "Dashboard",
           "/profile": "Profile",
-          "/messages": "Messages",
           "/promotions": "Promotions",
           "/treatment": "Treatment",
           "/invoices": "Invoices",
-          "/ask-ai": "AskAI",
+          "/chat": "Chat",
         };
         const routeName = routeMap[path];
         console.log("[MainNavigator] Mapped route name:", routeName);
@@ -248,11 +247,11 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
                       const routeMap: Record<string, string> = {
                         Dashboard: "/dashboard",
                         Profile: "/profile",
-                        Messages: "/messages",
                         Promotions: "/promotions",
                         Treatment: "/treatment",
+                        PriceList: "/price-list",
                         Invoices: "/invoices",
-                        AskAI: "/ask-ai",
+                        Chat: "/chat",
                       };
                       const path = routeMap[route.name] || "/dashboard";
                       
@@ -293,11 +292,11 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
         >
           <Stack.Screen name="Dashboard" component={DashboardScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="Messages" component={MessagesScreen} />
           <Stack.Screen name="Promotions" component={PromotionsScreen} />
           <Stack.Screen name="Treatment" component={TreatmentScreen} />
+          <Stack.Screen name="PriceList" component={PriceListScreen} />
           <Stack.Screen name="Invoices" component={InvoicesScreen} />
-          <Stack.Screen name="AskAI" component={AskAIScreen} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
         </Stack.Navigator>
         {!isDesktop && <BottomNavigation />}
       </View>
@@ -349,9 +348,9 @@ export default function App() {
                   Login: "",
                   Dashboard: "dashboard",
                   Profile: "profile",
-                  Messages: "messages",
                   Promotions: "promotions",
                   Treatment: "treatment",
+                  Chat: "chat",
                 },
               },
             }}
@@ -523,10 +522,13 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
       const socket: any = connectSocket({ patientId: patientId || undefined });
       socket.on("message:new", ({ message: m }: any) => {
         try {
-          void showNotification({
-            title: m?.sender === "doctor" ? "New message" : "Message sent",
-            body: m?.content || "",
-          });
+          // Only show notification for messages from doctor, not for patient's own messages
+          if (m?.sender === "doctor") {
+            void showNotification({
+              title: "New message",
+              body: m?.content || "",
+            });
+          }
           // Invalidate messages query
           if (patientId) {
             queryClient.invalidateQueries({

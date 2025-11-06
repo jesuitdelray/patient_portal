@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { Header } from "../components/Header";
 import { colors } from "../lib/colors";
+import { storage } from "../lib/storage";
 
 const promotions = [
   {
@@ -44,8 +45,29 @@ const promotions = [
 export default function PromotionsScreen() {
   const [claimedOffers, setClaimedOffers] = useState<number[]>([]);
   const [loadingOffers, setLoadingOffers] = useState<number[]>([]);
+  const [activeDiscount, setActiveDiscount] = useState<number | null>(null);
 
-  const handleClaimOffer = (offerId: number, offerTitle: string) => {
+  // Load claimed offers and active discount from storage
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const saved = await storage.getItem("claimedOffers");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setClaimedOffers(parsed);
+        }
+        const active = await storage.getItem("activeDiscount");
+        if (active) {
+          setActiveDiscount(parseInt(active));
+        }
+      } catch (e) {
+        console.error("Error loading promotions:", e);
+      }
+    };
+    loadData();
+  }, []);
+
+  const handleClaimOffer = async (offerId: number, offerTitle: string) => {
     if (claimedOffers.includes(offerId)) {
       return;
     }
@@ -55,10 +77,24 @@ export default function PromotionsScreen() {
     }
 
     setLoadingOffers((prev) => [...prev, offerId]);
-    setTimeout(() => {
-      setClaimedOffers((prev) => [...prev, offerId]);
-      setLoadingOffers((prev) => prev.filter((id) => id !== offerId));
-    }, 1000);
+           setTimeout(async () => {
+             const newClaimed = [...claimedOffers, offerId];
+             setClaimedOffers(newClaimed);
+             setLoadingOffers((prev) => prev.filter((id) => id !== offerId));
+             
+             // Save to storage
+             try {
+               await storage.setItem("claimedOffers", JSON.stringify(newClaimed));
+               // Trigger custom event for same-tab updates (ActiveDiscountCard)
+               if (typeof window !== "undefined") {
+                 window.dispatchEvent(new CustomEvent("claimedOffersUpdated", {
+                   detail: { newValue: JSON.stringify(newClaimed) },
+                 }));
+               }
+             } catch (e) {
+               console.error("Error saving promotions:", e);
+             }
+           }, 1000);
   };
 
   return (
@@ -117,10 +153,7 @@ export default function PromotionsScreen() {
                       <Text style={styles.claimButtonTextClaimed}>Claimed</Text>
                     </>
                   ) : (
-                    <>
-                      <Text style={styles.claimButtonText}>Claim Offer</Text>
-                      <Feather name="arrow-right" size={16} color="#fff" />
-                    </>
+                    <Text style={styles.claimButtonText}>Claim Offer</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -193,7 +226,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   discountBadge: {
-    backgroundColor: "#007AFF",
+    backgroundColor: colors.medicalBlue,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -233,7 +266,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#007AFF",
+    backgroundColor: colors.medicalBlue,
     paddingVertical: 12,
     borderRadius: 6,
     marginTop: 8,

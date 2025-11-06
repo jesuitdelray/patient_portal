@@ -1,0 +1,156 @@
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { colors } from "../../lib/colors";
+import { storage } from "../../lib/storage";
+
+const promotions = [
+  {
+    id: 1,
+    title: "20% Off Teeth Whitening",
+    discount: "20% OFF",
+    category: "Cosmetic",
+  },
+  {
+    id: 2,
+    title: "Free Dental Checkup",
+    discount: "FREE",
+    category: "Checkup",
+  },
+  {
+    id: 3,
+    title: "Family Package - Save $500",
+    discount: "$500 OFF",
+    category: "Package",
+  },
+];
+
+export function ActiveDiscountCard() {
+  const [claimedOffers, setClaimedOffers] = useState<number[]>([]);
+
+  useEffect(() => {
+    const loadDiscounts = async () => {
+      try {
+        const saved = await storage.getItem("claimedOffers");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setClaimedOffers(parsed);
+        }
+      } catch (e) {
+        console.error("Error loading discounts:", e);
+      }
+    };
+    loadDiscounts();
+    
+    // Listen for storage changes (when discount is claimed on another tab/page)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "claimedOffers" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setClaimedOffers(parsed);
+        } catch (err) {
+          console.error("Error parsing storage change:", err);
+        }
+      }
+    };
+    
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", handleStorageChange);
+      return () => window.removeEventListener("storage", handleStorageChange);
+    }
+  }, []);
+
+  // Show all claimed discounts
+  const activePromotions = promotions.filter((p) => claimedOffers.includes(p.id));
+
+  if (activePromotions.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.container}>
+      {activePromotions.map((promotion) => (
+        <View key={promotion.id} style={styles.card}>
+          <View style={styles.content}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.icon}>🏷️</Text>
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.label}>Active Discount</Text>
+              <Text style={styles.title}>{promotion.title}</Text>
+              <Text style={styles.discount}>{promotion.discount}</Text>
+            </View>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{promotion.category}</Text>
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    marginBottom: 16,
+    gap: 12,
+  },
+  card: {
+    backgroundColor: colors.medicalBlue,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: colors.medicalBlue,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  icon: {
+    fontSize: 24,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  label: {
+    fontSize: 12,
+    color: "rgba(255, 255, 255, 0.8)",
+    marginBottom: 4,
+    fontWeight: "500",
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.primaryWhite,
+    marginBottom: 4,
+  },
+  discount: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: colors.primaryWhite,
+  },
+  badge: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  badgeText: {
+    fontSize: 12,
+    color: colors.primaryWhite,
+    fontWeight: "600",
+  },
+});
+

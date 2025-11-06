@@ -135,3 +135,19 @@ model AISettings {
 
   @@unique([id])
 }
+
+model PriceList {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  price       Float
+  category    String?   // e.g., "Cleaning", "Restoration", "Surgery"
+  duration    Int?      // Duration in minutes
+  isActive    Boolean   @default(true)
+  order       Int       @default(0) // For sorting
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+}

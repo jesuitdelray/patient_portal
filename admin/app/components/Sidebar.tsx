@@ -120,14 +120,14 @@ export function Sidebar() {
             📄 Invoices
           </Link>
           <Link
-            href="/ai-settings"
+            href="/price-list"
             className={`block rounded-md px-3 py-2 transition-colors ${
-              pathname === "/ai-settings"
+              pathname === "/price-list"
                 ? "bg-blue-50 text-blue-700 font-medium"
                 : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
             }`}
           >
-            🤖 AI Settings
+            💰 Price List
           </Link>
         </nav>
       </div>

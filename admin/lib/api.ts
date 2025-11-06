@@ -43,8 +43,21 @@ export function connectSocket(params?: {
         singletonSocket!.emit("join", {
           patientId: params?.patientId,
           doctorId: params?.doctorId,
+          isAdmin: !!params?.doctorId, // Mark as admin if doctorId is provided
         });
         joinedRooms.add(key);
+      }
+    };
+    if (singletonSocket.connected) doJoin();
+    else singletonSocket.once("connect", doJoin);
+  } else {
+    // If no patientId or doctorId, but this is admin panel, join admin room
+    const doJoin = () => {
+      if (!joinedRooms.has("admin")) {
+        singletonSocket!.emit("join", {
+          isAdmin: true,
+        });
+        joinedRooms.add("admin");
       }
     };
     if (singletonSocket.connected) doJoin();
