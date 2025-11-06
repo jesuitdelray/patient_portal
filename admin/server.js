@@ -88,33 +88,23 @@ async function getActionData(action, patientId) {
   };
 
   const emptyStateMessages = {
-    view_next_appointment:
-      "Sorry, but you don't have any upcoming appointments yet.",
-    view_upcoming_appointments:
-      "Sorry, but you don't have any upcoming appointments yet.",
-    view_remaining_procedures:
-      "Sorry, but you don't have any remaining procedures.",
-    view_unpaid_invoices: "Sorry, but we don't have any unpaid invoices yet.",
+    view_next_appointment: "No appointments found",
+    view_upcoming_appointments: "No appointments found",
+    view_remaining_procedures: "No remaining procedures",
+    view_unpaid_invoices: "No unpaid invoices",
     view_past_invoices: "Sorry, but we don't have any past invoices yet.",
-    view_all_invoices: "Sorry, but you don't have any invoices yet.",
-    view_treatment_plan_details:
-      "Sorry, but you don't have any treatment plans yet.",
-    view_next_procedure: "Sorry, but you don't have any upcoming procedures.",
-    view_completed_treatments:
-      "Sorry, but you don't have any completed treatments yet.",
-    view_assigned_doctor: "Sorry, but you don't have an assigned doctor yet.",
-    view_promotions:
-      "Sorry, but there are no promotions available at the moment.",
-    view_available_slots:
-      "Sorry, but there are no available time slots at the moment.",
-    view_messages: "Sorry, but you don't have any messages yet.",
-    view_dental_history: "Sorry, but you don't have any dental history yet.",
-    view_next_treatment_step:
-      "Sorry, but you don't have any upcoming treatment steps.",
-    check_appointment_procedures:
-      "Sorry, but this appointment doesn't have any procedures.",
-    view_completed_treatments:
-      "Sorry, but you don't have any completed treatments yet.",
+    view_all_invoices: "No invoices found",
+    view_treatment_plan_details: "No treatment plans found",
+    view_next_procedure: "No upcoming procedures",
+    view_completed_treatments: "No completed treatments",
+    view_assigned_doctor: "No assigned doctor",
+    view_promotions: "No promotions available",
+    view_available_slots: "No available time slots",
+    view_messages: "No messages found",
+    view_dental_history: "No dental history",
+    view_next_treatment_step: "No upcoming treatment steps",
+    check_appointment_procedures: "No procedures in this appointment",
+    view_completed_treatments: "No completed treatments",
   };
 
   const title = actionTitles[action] || "Response";

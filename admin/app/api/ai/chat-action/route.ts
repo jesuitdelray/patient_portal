@@ -89,10 +89,20 @@ PATIENT CONTEXT:
 - Phone: ${patient.phone || "N/A"}
 
 Upcoming Appointments:
-${patient.appointments.map((apt) => `- ${apt.title} on ${new Date(apt.datetime).toLocaleString()}`).join("\n") || "No upcoming appointments"}
+${
+  patient.appointments
+    .map(
+      (apt) => `- ${apt.title} on ${new Date(apt.datetime).toLocaleString()}`
+    )
+    .join("\n") || "No upcoming appointments"
+}
 
 Treatment Plans:
-${patient.treatmentPlans.map((plan) => `- ${plan.title}: ${plan.status}`).join("\n") || "No treatment plans"}
+${
+  patient.treatmentPlans
+    .map((plan) => `- ${plan.title}: ${plan.status}`)
+    .join("\n") || "No treatment plans"
+}
 `
       : "";
 
@@ -187,7 +197,7 @@ STRICTLY return ONLY valid JSON, no other text before or after.`;
     });
 
     const aiResponse = completion.choices[0]?.message?.content || "";
-    
+
     // Parse JSON response
     let actionData;
     try {
@@ -214,8 +224,10 @@ STRICTLY return ONLY valid JSON, no other text before or after.`;
         view_next_appointment: "Let me check your next appointment for you.",
         reschedule_appointment: "I'll help you reschedule your appointment.",
         book_appointment: "I'll help you book a new appointment.",
-        view_upcoming_appointments: "Let me show you your upcoming appointments.",
-        view_remaining_procedures: "Let me check what procedures are remaining in your treatment plan.",
+        view_upcoming_appointments:
+          "Let me show you your upcoming appointments.",
+        view_remaining_procedures:
+          "Let me check what procedures are remaining in your treatment plan.",
         view_treatment_progress: "Let me show you your treatment progress.",
         send_message_to_doctor: "I'll send a message to your dentist.",
         send_message_to_front_desk: "I'll send a message to the front desk.",
@@ -223,7 +235,8 @@ STRICTLY return ONLY valid JSON, no other text before or after.`;
         view_past_invoices: "Let me show you your past invoices.",
         view_procedure_price: "Let me check the price for that procedure.",
         view_price_list: "Let me show you our price list.",
-        view_treatment_plan_details: "Let me show you the details of your treatment plan.",
+        view_treatment_plan_details:
+          "Let me show you the details of your treatment plan.",
         view_next_procedure: "Let me check what your next procedure is.",
         view_completed_treatments: "Let me show you your completed treatments.",
         remind_appointment: "I'll send you a reminder about your appointment.",
@@ -233,16 +246,21 @@ STRICTLY return ONLY valid JSON, no other text before or after.`;
         add_to_calendar: "I'll add that appointment to your calendar.",
         view_messages: "Let me show you your messages.",
         update_contact_info: "I'll help you update your contact information.",
-        view_procedure_details: "Let me show you the details of that procedure.",
+        view_procedure_details:
+          "Let me show you the details of that procedure.",
         download_invoice: "I'll help you download that invoice.",
         view_dental_history: "Let me show you your dental history.",
-        view_next_treatment_step: "Let me check what your next treatment step is.",
+        view_next_treatment_step:
+          "Let me check what your next treatment step is.",
         view_assigned_doctor: "Let me check who your assigned dentist is.",
-        check_appointment_procedures: "Let me check what procedures are included in that appointment.",
+        check_appointment_procedures:
+          "Let me check what procedures are included in that appointment.",
         view_weekend_slots: "Let me check for weekend availability.",
         general_response: "I understand. How can I help you further?",
       };
-      responseText = actionResponses[actionData.action] || `Processing your request: ${actionData.action}`;
+      responseText =
+        actionResponses[actionData.action] ||
+        `Processing your request: ${actionData.action}`;
     }
 
     console.log("[AI] Returning response:", {
@@ -269,4 +287,3 @@ STRICTLY return ONLY valid JSON, no other text before or after.`;
     );
   }
 }
-

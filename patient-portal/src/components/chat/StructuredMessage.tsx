@@ -41,10 +41,15 @@ export function StructuredMessage({ content, onAction }: Props) {
 
   const { action, title, data } = parsed;
   const isEmpty = data === null || (Array.isArray(data) && data.length === 0);
-  
+
   // Don't show title if it's empty or if there's a button with the same text
-  const actionsWithButtons = ["book_appointment", "view_price_list", "view_promotions"];
-  const shouldShowTitle = title && title.trim() !== "" && !actionsWithButtons.includes(action);
+  const actionsWithButtons = [
+    "book_appointment",
+    "view_price_list",
+    "view_promotions",
+  ];
+  const shouldShowTitle =
+    title && title.trim() !== "" && !actionsWithButtons.includes(action);
 
   return (
     <View style={styles.container}>
