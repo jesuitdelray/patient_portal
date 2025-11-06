@@ -430,8 +430,10 @@ export function connectSocket(params?: {
       path: "/socket.io",
       reconnection: true,
       reconnectionAttempts: Infinity,
-      reconnectionDelay: 500,
-      reconnectionDelayMax: 5000,
+      reconnectionDelay: 100, // Faster initial connection
+      reconnectionDelayMax: 2000,
+      timeout: 5000, // Shorter timeout for faster connection
+      forceNew: false, // Reuse connection if available
     });
     // Debug lifecycle
     singletonSocket.on("connect", () => {
@@ -449,6 +451,9 @@ export function connectSocket(params?: {
     singletonSocket.io.on("reconnect", (n: number) => {
       console.log("[socket] reconnected", n);
     });
+    
+    // Force immediate connection attempt
+    singletonSocket.connect();
   }
   const key = `${params?.patientId || ""}|${params?.doctorId || ""}`;
   if (key !== "|") {
@@ -465,8 +470,19 @@ export function connectSocket(params?: {
         joinedRooms.add(key);
       }
     };
-    if (singletonSocket.connected) doJoin();
-    else singletonSocket.once("connect", doJoin);
+    if (singletonSocket.connected) {
+      doJoin();
+    } else {
+      // Wait for connection with timeout
+      const timeout = setTimeout(() => {
+        console.warn("[socket] Connection timeout, attempting join anyway");
+        doJoin();
+      }, 1000);
+      singletonSocket.once("connect", () => {
+        clearTimeout(timeout);
+        doJoin();
+      });
+    }
   }
   return singletonSocket as any;
 }

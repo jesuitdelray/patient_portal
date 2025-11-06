@@ -19,6 +19,7 @@ const AVAILABLE_ACTIONS = [
   "send_message_to_front_desk",
   "view_unpaid_invoices",
   "view_past_invoices",
+  "view_all_invoices",
   "view_procedure_price",
   "view_price_list",
   "view_treatment_plan_details",
@@ -105,41 +106,52 @@ CRITICAL: You MUST respond with ONLY a valid JSON object. The JSON must have thi
   "response": "A natural, conversational response to the user's message"
 }
 
-IMPORTANT: The "response" field is REQUIRED and must contain a friendly, conversational message that directly answers the user's question or acknowledges their request. This message will be displayed to the user in the chat. Do NOT just repeat the action name - provide a natural, helpful response as if you are a dental assistant talking to the patient.
+CRITICAL ACTION MAPPING RULES:
+1. Analyze the user's question carefully and match it to the MOST SPECIFIC action from the list above
+2. Questions about treatments/treatment plans → use "view_treatment_plan_details"
+3. Questions about invoices/bills:
+   - If user asks specifically about "unpaid", "outstanding", "what I owe" → use "view_unpaid_invoices"
+   - If user asks specifically about "past", "paid", "history" → use "view_past_invoices"
+   - If user asks generally "do I have invoices?", "show me invoices", "my invoices" → use "view_all_invoices"
+4. Questions about appointments → use "view_next_appointment", "view_upcoming_appointments", etc.
+5. Questions about procedures → use "view_remaining_procedures", "view_next_procedure", etc.
+6. ONLY use "general_response" if the question truly doesn't match any specific action
+7. The "action" field is what the frontend will use to display the correct UI - choose it carefully!
 
-The "action" field indicates what action should be taken based on the user's request, but the "response" field is what the user will see in the chat.
+IMPORTANT: The "response" field is REQUIRED but will NOT be used - the frontend only uses the "action" field. You can put any text here, but focus on getting the "action" field correct.
 
-Available actions:
-- view_next_appointment: When user asks about their next appointment
-- reschedule_appointment: When user wants to reschedule an appointment
-- book_appointment: When user wants to book a new appointment
-- view_upcoming_appointments: When user asks to see all upcoming appointments
-- view_remaining_procedures: When user asks what procedures are left in treatment plan
-- view_treatment_progress: When user asks about treatment progress
-- send_message_to_doctor: When user wants to message their dentist
-- send_message_to_front_desk: When user wants to message front desk
-- view_unpaid_invoices: When user asks about balance or unpaid invoices
-- view_past_invoices: When user asks to see past invoices
-- view_procedure_price: When user asks about cost of a specific procedure
-- view_price_list: When user asks to see clinic pricelist
-- view_treatment_plan_details: When user asks what's included in treatment plan
-- view_next_procedure: When user asks what procedure is next
-- view_completed_treatments: When user asks to see completed treatments
-- remind_appointment: When user asks for appointment reminder
-- cancel_appointment: When user wants to cancel an appointment
-- view_promotions: When user asks about promotions or special offers
-- view_available_slots: When user asks for available time slots
-- add_to_calendar: When user wants to add appointment to calendar
-- view_messages: When user asks to see messages from dentist
-- update_contact_info: When user wants to update contact information
-- view_procedure_details: When user asks for details about a specific procedure
-- download_invoice: When user wants to download an invoice
-- view_dental_history: When user asks about dental history
-- view_next_treatment_step: When user asks about next step in treatment plan
-- view_assigned_doctor: When user asks who their dentist is
-- check_appointment_procedures: When user asks if appointment includes specific procedure
-- view_weekend_slots: When user asks for weekend availability
-- general_response: For general questions that don't match any specific action
+Available actions with examples:
+- view_next_appointment: "when is my next appointment?", "what's my next visit?", "next appointment"
+- reschedule_appointment: "reschedule my appointment", "change appointment date", "move my appointment"
+- book_appointment: "book an appointment", "schedule a visit", "make an appointment"
+- view_upcoming_appointments: "show my appointments", "all my appointments", "upcoming visits"
+- view_remaining_procedures: "what procedures are left?", "remaining procedures", "what's left to do"
+- view_treatment_progress: "how is my treatment going?", "treatment progress", "how far along am I"
+- send_message_to_doctor: "message my dentist", "contact my doctor", "send message to doctor"
+- send_message_to_front_desk: "message front desk", "contact reception", "send message to front desk"
+- view_unpaid_invoices: "unpaid invoices", "what do I owe", "outstanding balance", "unpaid bills", "bills I need to pay"
+- view_past_invoices: "past invoices", "invoice history", "previous invoices", "paid invoices"
+- view_all_invoices: "do I have invoices?", "show me my invoices", "all my invoices", "invoices", "my invoices", "what invoices do I have"
+- view_procedure_price: "how much does [procedure] cost", "price of [procedure]", "cost of [procedure]"
+- view_price_list: "price list", "pricelist", "show me prices", "what procedures do you offer"
+- view_treatment_plan_details: "what are my treatments?", "my treatment plans", "what treatments do I have", "show my treatments", "do I have treatments", "treatment plan details"
+- view_next_procedure: "what's my next procedure", "next procedure", "what procedure is next"
+- view_completed_treatments: "completed treatments", "what have I finished", "done procedures"
+- remind_appointment: "remind me about appointment", "appointment reminder", "send me a reminder"
+- cancel_appointment: "cancel my appointment", "cancel appointment", "I want to cancel"
+- view_promotions: "promotions", "discounts", "special offers", "any promotions"
+- view_available_slots: "available times", "when can I book", "free slots", "available appointments"
+- add_to_calendar: "add to calendar", "save to calendar", "calendar"
+- view_messages: "show messages", "my messages", "messages from doctor"
+- update_contact_info: "update my phone", "change email", "update contact"
+- view_procedure_details: "details about [procedure]", "what is [procedure]", "tell me about [procedure]"
+- download_invoice: "download invoice", "get invoice pdf", "invoice download"
+- view_dental_history: "dental history", "my history", "past treatments"
+- view_next_treatment_step: "next step in treatment", "what's next in my plan"
+- view_assigned_doctor: "who is my dentist", "my doctor", "assigned doctor"
+- check_appointment_procedures: "what procedures in my appointment", "appointment includes"
+- view_weekend_slots: "weekend availability", "weekend appointments", "saturday sunday"
+- general_response: ONLY use this if the question doesn't match ANY of the above actions. Try to map to a specific action first!
 
 STRICTLY return ONLY valid JSON, no other text before or after.`;
 

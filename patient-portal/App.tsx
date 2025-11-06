@@ -524,9 +524,20 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
         try {
           // Only show notification for messages from doctor, not for patient's own messages
           if (m?.sender === "doctor") {
+            // Try to parse JSON and extract title, otherwise use content as-is
+            let notificationBody = m?.content || "";
+            try {
+              const parsed = JSON.parse(m?.content || "{}");
+              if (parsed.title) {
+                notificationBody = parsed.title;
+              }
+            } catch (e) {
+              // Not JSON, use content as-is
+            }
+            
             void showNotification({
               title: "New message",
-              body: m?.content || "",
+              body: notificationBody,
             });
           }
           // Invalidate messages query

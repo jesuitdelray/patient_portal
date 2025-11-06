@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import { colors } from "../../lib/colors";
 import { storage } from "../../lib/storage";
 
@@ -41,21 +41,32 @@ export function ActiveDiscountCard() {
     };
     loadDiscounts();
     
-    // Listen for storage changes (when discount is claimed on another tab/page)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "claimedOffers" && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
+    // Listen for custom events (when discount is claimed)
+    const handleClaimedOffersUpdated = (e: any) => {
+      try {
+        if (e.detail?.newValue) {
+          const parsed = JSON.parse(e.detail.newValue);
           setClaimedOffers(parsed);
-        } catch (err) {
-          console.error("Error parsing storage change:", err);
+        } else {
+          // Fallback: reload from storage
+          loadDiscounts();
         }
+      } catch (err) {
+        console.error("Error handling claimedOffersUpdated event:", err);
+        // Fallback: reload from storage
+        loadDiscounts();
       }
     };
     
-    if (typeof window !== "undefined") {
-      window.addEventListener("storage", handleStorageChange);
-      return () => window.removeEventListener("storage", handleStorageChange);
+    // Use custom event listener for cross-platform compatibility
+    // Only add listener on web platform where window.addEventListener is available
+    if (Platform.OS === "web" && typeof window !== "undefined" && window.addEventListener) {
+      window.addEventListener("claimedOffersUpdated", handleClaimedOffersUpdated);
+      return () => {
+        if (window.removeEventListener) {
+          window.removeEventListener("claimedOffersUpdated", handleClaimedOffersUpdated);
+        }
+      };
     }
   }, []);
 

@@ -6,13 +6,15 @@ const { PrismaClient } = require("@prisma/client");
 
 // For making HTTP requests to AI endpoint
 async function fetch(url, options) {
-  const httpModule = url.startsWith("https") ? require("https") : require("http");
+  const httpModule = url.startsWith("https")
+    ? require("https")
+    : require("http");
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
     const req = httpModule.request(
       {
         hostname: urlObj.hostname,
-        port: urlObj.port,
+        port: urlObj.port || (url.startsWith("https") ? 443 : 80),
         path: urlObj.pathname + urlObj.search,
         method: options?.method || "GET",
         headers: options?.headers || {},
@@ -32,7 +34,10 @@ async function fetch(url, options) {
         });
       }
     );
-    req.on("error", reject);
+    req.on("error", (error) => {
+      console.error("[Server] Fetch error:", error);
+      reject(error);
+    });
     if (options?.body) {
       req.write(options.body);
     }
@@ -45,6 +50,313 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const prisma = new PrismaClient();
+
+// Map actions to titles and fetch data from database
+async function getActionData(action, patientId) {
+  const actionTitles = {
+    view_next_appointment: "Next appointment",
+    reschedule_appointment: "Reschedule appointment",
+    book_appointment: "", // No title - button will show the action
+    view_upcoming_appointments: "Upcoming appointments",
+    view_remaining_procedures: "Remaining procedures",
+    view_treatment_progress: "Treatment progress",
+    send_message_to_doctor: "Message sent to your dentist",
+    send_message_to_front_desk: "Message sent to front desk",
+    view_unpaid_invoices: "Unpaid invoices",
+    view_past_invoices: "Past invoices",
+    view_all_invoices: "Invoices",
+    view_procedure_price: "Procedure price",
+    view_price_list: "", // No title - button will show the action
+    view_treatment_plan_details: "Treatment plans",
+    view_next_procedure: "Next procedure",
+    view_completed_treatments: "Completed treatments",
+    remind_appointment: "Appointment reminder sent",
+    cancel_appointment: "Appointment cancelled",
+    view_promotions: "", // No title - button will show the action
+    view_available_slots: "Available time slots",
+    add_to_calendar: "Added to calendar",
+    view_messages: "Messages",
+    update_contact_info: "Contact information updated",
+    view_procedure_details: "Procedure details",
+    download_invoice: "Invoice download",
+    view_dental_history: "Dental history",
+    view_next_treatment_step: "Next treatment step",
+    view_assigned_doctor: "Assigned doctor",
+    check_appointment_procedures: "Appointment procedures",
+    view_weekend_slots: "Weekend available slots",
+    general_response: "I understand. How can I help you?",
+  };
+
+  const emptyStateMessages = {
+    view_next_appointment:
+      "Sorry, but you don't have any upcoming appointments yet.",
+    view_upcoming_appointments:
+      "Sorry, but you don't have any upcoming appointments yet.",
+    view_remaining_procedures:
+      "Sorry, but you don't have any remaining procedures.",
+    view_unpaid_invoices: "Sorry, but we don't have any unpaid invoices yet.",
+    view_past_invoices: "Sorry, but we don't have any past invoices yet.",
+    view_all_invoices: "Sorry, but you don't have any invoices yet.",
+    view_treatment_plan_details:
+      "Sorry, but you don't have any treatment plans yet.",
+    view_next_procedure: "Sorry, but you don't have any upcoming procedures.",
+    view_completed_treatments:
+      "Sorry, but you don't have any completed treatments yet.",
+    view_assigned_doctor: "Sorry, but you don't have an assigned doctor yet.",
+    view_promotions:
+      "Sorry, but there are no promotions available at the moment.",
+    view_available_slots:
+      "Sorry, but there are no available time slots at the moment.",
+    view_messages: "Sorry, but you don't have any messages yet.",
+    view_dental_history: "Sorry, but you don't have any dental history yet.",
+    view_next_treatment_step:
+      "Sorry, but you don't have any upcoming treatment steps.",
+    check_appointment_procedures:
+      "Sorry, but this appointment doesn't have any procedures.",
+    view_completed_treatments:
+      "Sorry, but you don't have any completed treatments yet.",
+  };
+
+  const title = actionTitles[action] || "Response";
+  let data = null;
+
+  try {
+    switch (action) {
+      case "view_treatment_plan_details":
+        data = await prisma.treatmentPlan.findMany({
+          where: { patientId },
+          include: {
+            procedures: {
+              orderBy: { createdAt: "asc" },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+        break;
+
+      case "view_next_appointment":
+        data = await prisma.appointment.findFirst({
+          where: {
+            patientId,
+            datetime: { gte: new Date() },
+          },
+          orderBy: { datetime: "asc" },
+        });
+        break;
+
+      case "view_upcoming_appointments":
+        data = await prisma.appointment.findMany({
+          where: {
+            patientId,
+            datetime: { gte: new Date() },
+          },
+          orderBy: { datetime: "asc" },
+        });
+        break;
+
+      case "view_remaining_procedures":
+        const treatmentPlans = await prisma.treatmentPlan.findMany({
+          where: { patientId },
+          include: {
+            procedures: {
+              where: {
+                status: { not: "completed" },
+              },
+              orderBy: { scheduledDate: "asc" },
+            },
+          },
+        });
+        data = treatmentPlans.flatMap((plan) => plan.procedures);
+        break;
+
+      case "view_unpaid_invoices":
+        // Get all procedures for this patient's treatment plans
+        const patientProcedures = await prisma.procedure.findMany({
+          where: {
+            treatmentPlan: {
+              patientId,
+            },
+          },
+          select: {
+            id: true,
+          },
+        });
+        const procedureIds = patientProcedures.map((p) => p.id);
+
+        data = await prisma.invoice.findMany({
+          where: {
+            status: "unpaid",
+            procedureId: {
+              in: procedureIds,
+            },
+          },
+          include: {
+            procedure: {
+              include: {
+                treatmentPlan: true,
+              },
+            },
+          },
+        });
+        break;
+
+      case "view_past_invoices":
+        // Get all procedures for this patient's treatment plans
+        const patientProceduresPaid = await prisma.procedure.findMany({
+          where: {
+            treatmentPlan: {
+              patientId,
+            },
+          },
+          select: {
+            id: true,
+          },
+        });
+        const procedureIdsPaid = patientProceduresPaid.map((p) => p.id);
+
+        data = await prisma.invoice.findMany({
+          where: {
+            status: "paid",
+            procedureId: {
+              in: procedureIdsPaid,
+            },
+          },
+          include: {
+            procedure: {
+              include: {
+                treatmentPlan: true,
+              },
+            },
+          },
+          orderBy: { paidAt: "desc" },
+        });
+        break;
+
+      case "view_all_invoices":
+        // Get all procedures for this patient's treatment plans
+        const patientProceduresAll = await prisma.procedure.findMany({
+          where: {
+            treatmentPlan: {
+              patientId,
+            },
+          },
+          select: {
+            id: true,
+          },
+        });
+        const procedureIdsAll = patientProceduresAll.map((p) => p.id);
+
+        // Get both paid and unpaid invoices
+        data = await prisma.invoice.findMany({
+          where: {
+            procedureId: {
+              in: procedureIdsAll,
+            },
+          },
+          include: {
+            procedure: {
+              include: {
+                treatmentPlan: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+        break;
+
+      case "view_completed_treatments":
+        data = await prisma.procedure.findMany({
+          where: {
+            status: "completed",
+            treatmentPlan: {
+              patientId,
+            },
+          },
+          include: {
+            treatmentPlan: true,
+          },
+          orderBy: { completedDate: "desc" },
+        });
+        break;
+
+      case "view_next_procedure":
+        const nextProcedure = await prisma.procedure.findFirst({
+          where: {
+            status: { not: "completed" },
+            treatmentPlan: {
+              patientId,
+            },
+          },
+          include: {
+            treatmentPlan: true,
+          },
+          orderBy: { scheduledDate: "asc" },
+        });
+        data = nextProcedure;
+        break;
+
+      case "view_assigned_doctor":
+        const patient = await prisma.patient.findUnique({
+          where: { id: patientId },
+          include: {
+            doctorLinks: {
+              include: {
+                doctor: true,
+              },
+            },
+          },
+        });
+        data = patient?.doctorLinks.map((link) => link.doctor) || [];
+        break;
+
+      case "view_promotions":
+        // Promotions are hardcoded in frontend, return the same structure
+        data = [
+          {
+            id: 1,
+            title: "20% Off Teeth Whitening",
+            description:
+              "Get a brighter smile with our professional teeth whitening service. Limited time offer for existing patients.",
+            discount: "20% OFF",
+            validUntil: "Dec 31, 2025",
+            category: "Cosmetic",
+          },
+          {
+            id: 2,
+            title: "Free Dental Checkup",
+            description:
+              "Book your regular checkup this month and get a complimentary oral health assessment worth $150.",
+            discount: "FREE",
+            validUntil: "Nov 30, 2025",
+            category: "Checkup",
+          },
+          {
+            id: 3,
+            title: "Family Package - Save $500",
+            description:
+              "Bring your family for comprehensive dental care. Special package includes checkups, cleaning, and X-rays for up to 4 members.",
+            discount: "$500 OFF",
+            validUntil: "Jan 15, 2026",
+            category: "Package",
+          },
+        ];
+        break;
+
+      default:
+        data = null;
+    }
+  } catch (error) {
+    console.error(`[Server] Error fetching data for action ${action}:`, error);
+    data = null;
+  }
+
+  // Check if data is empty and use empty state message
+  const isEmpty = data === null || (Array.isArray(data) && data.length === 0);
+  const finalTitle =
+    isEmpty && emptyStateMessages[action] ? emptyStateMessages[action] : title;
+
+  return { title: finalTitle, data, action };
+}
 
 async function start() {
   await app.prepare();
@@ -79,20 +391,21 @@ async function start() {
           ack && ack({ ok: false, error: "invalid_payload" });
           return;
         }
-        
+
         // Save message to database
         const message = await prisma.message.create({
           data: { patientId, sender, content },
         });
-        
+
         // Send message to patient room (all sockets in room, including sender)
         io.to(`patient:${patientId}`).emit("message:new", { message });
-        
+
         // Send to admin room using broadcast to avoid sending to sender if they're in admin room
         socket.broadcast.to("admin").emit("message:new", { message });
-        
+
         // If message is from patient, send to AI and get action
         if (sender === "patient") {
+          console.log("[Server] Patient message received, calling AI...");
           try {
             // Get conversation history for context
             const recentMessages = await prisma.message.findMany({
@@ -100,18 +413,27 @@ async function start() {
               orderBy: { createdAt: "desc" },
               take: 10,
             });
-            
-            const conversationHistory = recentMessages
-              .reverse()
-              .map((m) => ({
-                role: m.sender === "patient" ? "user" : "assistant",
-                content: m.content,
-              }));
-            
+
+            const conversationHistory = recentMessages.reverse().map((m) => ({
+              role: m.sender === "patient" ? "user" : "assistant",
+              content: m.content,
+            }));
+
             // Call AI endpoint to get action
-            const port = process.env.PORT ? Number(process.env.PORT) : 3001;
-            const baseUrl = `http://localhost:${port}`;
-            
+            // Use environment variable for base URL, or construct from request
+            const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN
+              ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+              : process.env.ADMIN_BASE_URL
+              ? process.env.ADMIN_BASE_URL
+              : process.env.PORT
+              ? `http://localhost:${process.env.PORT}`
+              : "http://localhost:3001";
+
+            console.log(
+              "[Server] Calling AI endpoint:",
+              `${baseUrl}/api/ai/chat-action`
+            );
+
             const aiResponse = await fetch(`${baseUrl}/api/ai/chat-action`, {
               method: "POST",
               headers: {
@@ -123,32 +445,51 @@ async function start() {
                 conversationHistory,
               }),
             });
-            
+
             if (aiResponse.ok) {
               const actionData = await aiResponse.json();
               console.log("[Server] AI response received:", {
                 action: actionData.action,
                 data: actionData.data,
               });
-              
-              // Create a bot message with just the action name
+
+              // Map action to title and fetch data
+              const { title, data, action } = await getActionData(
+                actionData.action,
+                patientId
+              );
+
+              // Create structured message with action, title and data
+              const messageContent = JSON.stringify({ action, title, data });
+
               const botMessage = await prisma.message.create({
                 data: {
                   patientId,
                   sender: "doctor",
-                  content: actionData.action || "general_response",
+                  content: messageContent,
                 },
               });
-              
-              console.log("[Server] Created bot message with action:", botMessage.id, botMessage.content);
-              
+
+              console.log(
+                "[Server] Created bot message with structured data:",
+                botMessage.id,
+                title
+              );
+
               // Send bot message to patient room
-              io.to(`patient:${patientId}`).emit("message:new", { message: botMessage });
-              console.log("[Server] Emitted message:new to patient room:", `patient:${patientId}`);
-              
+              io.to(`patient:${patientId}`).emit("message:new", {
+                message: botMessage,
+              });
+              console.log(
+                "[Server] Emitted message:new to patient room:",
+                `patient:${patientId}`
+              );
+
               // Send to admin room using broadcast to avoid sending to sender
-              socket.broadcast.to("admin").emit("message:new", { message: botMessage });
-              
+              socket.broadcast
+                .to("admin")
+                .emit("message:new", { message: botMessage });
+
               // Also send action data for frontend to handle
               io.to(`patient:${patientId}`).emit("ai:action", {
                 action: actionData.action,
@@ -157,14 +498,19 @@ async function start() {
               });
             } else {
               const errorText = await aiResponse.text();
-              console.error("[Server] AI endpoint error:", errorText);
+              console.error(
+                "[Server] AI endpoint error:",
+                aiResponse.status,
+                errorText
+              );
             }
           } catch (aiError) {
-            console.error("Error calling AI:", aiError);
+            console.error("[Server] Error calling AI:", aiError);
+            console.error("[Server] AI error stack:", aiError.stack);
             // Don't fail the message send if AI fails
           }
         }
-        
+
         ack && ack({ ok: true, message });
       } catch (e) {
         console.error("Message send error:", e);

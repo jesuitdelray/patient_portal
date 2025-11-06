@@ -7,14 +7,21 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  Linking,
+  Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { Header } from "../components/Header";
 import { Loader } from "../components/Loader";
 import { colors } from "../lib/colors";
 import { API_BASE, connectSocket } from "../lib/api";
 import { useAuth } from "../lib/queries";
 import { sendSocketEvent } from "../lib/socket-utils";
+import { StructuredMessage } from "../components/chat/StructuredMessage";
+import { BookAppointmentModal } from "../components/chat/BookAppointmentModal";
+import { RescheduleAppointmentModal } from "../components/chat/RescheduleAppointmentModal";
 import Toast from "react-native-toast-message";
 
 type Message = {
@@ -33,13 +40,22 @@ type AIAction = {
 export default function ChatScreen() {
   const { data: authData } = useAuth();
   const patientId = authData?.role === "patient" ? authData.userId : null;
+  const navigation = useNavigation<any>();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [socketConnected, setSocketConnected] = useState(false);
+  // Socket connection is handled by connectSocket, no need to track state
   const [lastAction, setLastAction] = useState<AIAction | null>(null);
+  
+  // Modal states
+  const [showBookModal, setShowBookModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [showPriceListModal, setShowPriceListModal] = useState(false);
+  const [showPromotionsModal, setShowPromotionsModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [bookProcedureTitle, setBookProcedureTitle] = useState("");
   
   const messagesEndRef = useRef<ScrollView>(null);
   const socketRef = useRef<any>(null);
@@ -56,7 +72,84 @@ export default function ChatScreen() {
         });
         if (res.ok) {
           const data = await res.json();
-          setMessages(data.messages || []);
+          let messages = data.messages || [];
+          
+          // Validate and clean up messages with appointments
+          // Check if appointments in messages still exist
+          const validatedMessages = await Promise.all(
+            messages.map(async (msg: Message) => {
+              if (msg.sender === "doctor") {
+                try {
+                  const parsed = JSON.parse(msg.content);
+                  if (parsed.action && parsed.data) {
+                    // Check if this message contains appointments
+                    const appointmentActions = [
+                      "view_upcoming_appointments",
+                      "view_next_appointment",
+                    ];
+                    
+                    if (appointmentActions.includes(parsed.action)) {
+                      const appointmentIds = Array.isArray(parsed.data)
+                        ? parsed.data.map((apt: any) => apt.id).filter(Boolean)
+                        : parsed.data?.id
+                        ? [parsed.data.id]
+                        : [];
+                      
+                      if (appointmentIds.length > 0) {
+                        // Verify appointments still exist
+                        const appointmentsRes = await fetch(
+                          `${API_BASE}/appointments?patientId=${patientId}`,
+                          { credentials: "include" }
+                        ).catch(() => null);
+                        
+                        if (appointmentsRes?.ok) {
+                          const appointmentsData = await appointmentsRes.json();
+                          const existingAppointmentIds = new Set(
+                            (appointmentsData.appointments || []).map((apt: any) => apt.id)
+                          );
+                          
+                          // Filter out non-existent appointments
+                          const validData = Array.isArray(parsed.data)
+                            ? parsed.data.filter((apt: any) =>
+                                existingAppointmentIds.has(apt.id)
+                              )
+                            : existingAppointmentIds.has(parsed.data?.id)
+                            ? parsed.data
+                            : null;
+                          
+                          // If no valid appointments left, show empty state
+                          const isEmpty =
+                            !validData ||
+                            (Array.isArray(validData) && validData.length === 0);
+                          const emptyStateMessages: Record<string, string> = {
+                            view_upcoming_appointments: "No appointments found",
+                            view_next_appointment: "No appointments found",
+                          };
+                          
+                          return {
+                            ...msg,
+                            content: JSON.stringify({
+                              ...parsed,
+                              title:
+                                isEmpty && emptyStateMessages[parsed.action]
+                                  ? emptyStateMessages[parsed.action]
+                                  : parsed.title,
+                              data: validData,
+                            }),
+                          };
+                        }
+                      }
+                    }
+                  }
+                } catch (e) {
+                  // Not JSON or invalid, keep as is
+                }
+              }
+              return msg;
+            })
+          );
+          
+          setMessages(validatedMessages);
         }
       } catch (error) {
         console.error("Error loading messages:", error);
@@ -72,7 +165,7 @@ export default function ChatScreen() {
     loadMessages();
   }, [patientId]);
 
-  // Setup socket connection
+  // Setup socket connection - ensure it's connected immediately
   useEffect(() => {
     if (!patientId) return;
 
@@ -83,29 +176,24 @@ export default function ChatScreen() {
     socket.off("message:new");
     socket.off("messages:cleared");
     socket.off("ai:action");
-    socket.off("connect");
-    socket.off("disconnect");
+    socket.off("appointment:update");
+    socket.off("appointment:cancelled");
 
-    // Join patient room
-    socket.emit("join", { patientId }, (ack: any) => {
-      if (ack?.ok) {
-        setSocketConnected(true);
-        console.log("[Chat] Joined patient room");
-      }
-    });
-
-    // Listen for connection status
-    const connectHandler = () => {
-      setSocketConnected(true);
-      console.log("[Chat] Socket connected");
+    // Join patient room - ensure socket is connected first
+    const joinRoom = () => {
+      socket.emit("join", { patientId }, (ack: any) => {
+        if (ack?.ok) {
+          console.log("[Chat] Joined patient room");
+        }
+      });
     };
-    socket.on("connect", connectHandler);
 
-    const disconnectHandler = () => {
-      setSocketConnected(false);
-      console.log("[Chat] Socket disconnected");
-    };
-    socket.on("disconnect", disconnectHandler);
+    // If already connected, join immediately; otherwise wait for connection
+    if (socket.connected) {
+      joinRoom();
+    } else {
+      socket.once("connect", joinRoom);
+    }
 
     // Listen for new messages
     const messageHandler = ({ message: newMessage }: any) => {
@@ -118,6 +206,21 @@ export default function ChatScreen() {
             console.log("[Chat] Duplicate message ignored:", newMessage.id);
             return prev;
           }
+          
+          // If this is a patient message, check if we have an optimistic message with same content
+          // and replace it with the real one
+          if (newMessage.sender === "patient") {
+            const optimisticIndex = prev.findIndex(
+              (m) => m.id.startsWith("temp-") && m.content === newMessage.content && m.sender === "patient"
+            );
+            if (optimisticIndex !== -1) {
+              console.log("[Chat] Replacing optimistic message with real one:", newMessage.id);
+              const updated = [...prev];
+              updated[optimisticIndex] = newMessage;
+              return updated;
+            }
+          }
+          
           console.log("[Chat] Adding new message:", newMessage.id);
           return [...prev, newMessage];
         });
@@ -145,13 +248,110 @@ export default function ChatScreen() {
 
     socket.on("ai:action", actionHandler);
 
+    // Listen for appointment updates to refresh messages containing appointments
+    const appointmentUpdatedHandler = ({ appointment: updatedAppointment }: any) => {
+      console.log("[Chat] Appointment updated:", updatedAppointment);
+      if (updatedAppointment?.patientId === patientId) {
+        // Update messages that contain this appointment
+        setMessages((prev) => {
+          return prev.map((msg) => {
+            if (msg.sender === "doctor") {
+              try {
+                const parsed = JSON.parse(msg.content);
+                if (parsed.action && parsed.data) {
+                  // Check if this message contains the updated appointment
+                  const appointmentData = Array.isArray(parsed.data) 
+                    ? parsed.data.find((apt: any) => apt.id === updatedAppointment.id)
+                    : parsed.data?.id === updatedAppointment.id ? parsed.data : null;
+                  
+                  if (appointmentData) {
+                    // Update the appointment data in the message
+                    const updatedData = Array.isArray(parsed.data)
+                      ? parsed.data.map((apt: any) => 
+                          apt.id === updatedAppointment.id ? updatedAppointment : apt
+                        )
+                      : updatedAppointment;
+                    
+                    return {
+                      ...msg,
+                      content: JSON.stringify({
+                        ...parsed,
+                        data: updatedData,
+                      }),
+                    };
+                  }
+                }
+              } catch (e) {
+                // Not JSON, skip
+              }
+            }
+            return msg;
+          });
+        });
+      }
+    };
+
+    socket.on("appointment:update", appointmentUpdatedHandler);
+
+    const appointmentCancelledHandler = ({ appointmentId: cancelledId, patientId: cancelledPatientId }: any) => {
+      console.log("[Chat] Appointment cancelled:", cancelledId);
+      if (cancelledPatientId === patientId || !cancelledPatientId) {
+        // Update messages that contain this appointment - remove it
+        setMessages((prev) => {
+          return prev.map((msg) => {
+            if (msg.sender === "doctor") {
+              try {
+                const parsed = JSON.parse(msg.content);
+                if (parsed.action && parsed.data) {
+                  // Check if this message contains the cancelled appointment
+                  const appointmentData = Array.isArray(parsed.data) 
+                    ? parsed.data.find((apt: any) => apt.id === cancelledId)
+                    : parsed.data?.id === cancelledId ? parsed.data : null;
+                  
+                  if (appointmentData) {
+                    // Remove the cancelled appointment from the data
+                    const updatedData = Array.isArray(parsed.data)
+                      ? parsed.data.filter((apt: any) => apt.id !== cancelledId)
+                      : null;
+                    
+                    // If no appointments left, update title to empty state
+                    const isEmpty = !updatedData || (Array.isArray(updatedData) && updatedData.length === 0);
+                    const emptyStateMessages: Record<string, string> = {
+                      view_upcoming_appointments: "Sorry, but you don't have any upcoming appointments yet.",
+                      view_next_appointment: "Sorry, but you don't have any upcoming appointments yet.",
+                    };
+                    
+                    return {
+                      ...msg,
+                      content: JSON.stringify({
+                        ...parsed,
+                        title: isEmpty && emptyStateMessages[parsed.action] 
+                          ? emptyStateMessages[parsed.action]
+                          : parsed.title,
+                        data: updatedData,
+                      }),
+                    };
+                  }
+                }
+              } catch (e) {
+                // Not JSON, skip
+              }
+            }
+            return msg;
+          });
+        });
+      }
+    };
+
+    socket.on("appointment:cancelled", appointmentCancelledHandler);
+
     return () => {
       console.log("[Chat] Cleaning up socket listeners");
       socket.off("message:new", messageHandler);
       socket.off("messages:cleared", messagesClearedHandler);
       socket.off("ai:action", actionHandler);
-      socket.off("connect", connectHandler);
-      socket.off("disconnect", disconnectHandler);
+      socket.off("appointment:update", appointmentUpdatedHandler);
+      socket.off("appointment:cancelled", appointmentCancelledHandler);
       // Don't disconnect socket - it's managed globally
     };
   }, [patientId]);
@@ -172,6 +372,17 @@ export default function ChatScreen() {
     setMessage("");
     setIsSending(true);
 
+    // Create optimistic message - show immediately
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`,
+      content: messageContent,
+      sender: "patient",
+      createdAt: new Date().toISOString(),
+    };
+
+    // Add optimistic message immediately
+    setMessages((prev) => [...prev, optimisticMessage]);
+
     try {
       await sendSocketEvent(
         "message:send",
@@ -183,15 +394,20 @@ export default function ChatScreen() {
         { patientId },
         (ack: any) => {
           if (ack?.ok && ack?.message) {
-            // Message should already be added via websocket, but ensure it's there
+            // Replace optimistic message with real one from server
             setMessages((prev) => {
-              const exists = prev.some((m) => m.id === ack.message.id);
+              // Remove optimistic message
+              const withoutOptimistic = prev.filter((m) => m.id !== optimisticMessage.id);
+              // Add real message if not already present
+              const exists = withoutOptimistic.some((m) => m.id === ack.message.id);
               if (!exists) {
-                return [...prev, ack.message];
+                return [...withoutOptimistic, ack.message];
               }
-              return prev;
+              return withoutOptimistic;
             });
           } else {
+            // Remove optimistic message on error
+            setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
             Toast.show({
               type: "error",
               text1: "Failed to send message",
@@ -201,6 +417,8 @@ export default function ChatScreen() {
       );
     } catch (error) {
       console.error("Error sending message:", error);
+      // Remove optimistic message on error
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
       Toast.show({
         type: "error",
         text1: "Failed to send message",
@@ -213,6 +431,259 @@ export default function ChatScreen() {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const handleAction = async (action: string, data: any) => {
+    console.log("[Chat] Action triggered:", action, data);
+    
+    switch (action) {
+      case "book_appointment":
+        setBookProcedureTitle(data?.title || "");
+        setShowBookModal(true);
+        break;
+
+      case "reschedule_appointment":
+        setSelectedAppointment(data);
+        setShowRescheduleModal(true);
+        break;
+
+      case "cancel_appointment":
+        if (!data?.id) {
+          Toast.show({
+            type: "error",
+            text1: "Invalid appointment",
+          });
+          return;
+        }
+        
+        const confirmCancel = () => {
+        const cancelAppointment = async () => {
+          try {
+            const res = await fetch(`${API_BASE}/appointments/${data.id}`, {
+              method: "DELETE",
+              credentials: "include",
+            });
+            
+            if (res.ok) {
+              // Update messages immediately to remove cancelled appointment
+              setMessages((prev) => {
+                return prev.map((msg) => {
+                  if (msg.sender === "doctor") {
+                    try {
+                      const parsed = JSON.parse(msg.content);
+                      if (parsed.action && parsed.data) {
+                        const appointmentData = Array.isArray(parsed.data) 
+                          ? parsed.data.find((apt: any) => apt.id === data.id)
+                          : parsed.data?.id === data.id ? parsed.data : null;
+                        
+                        if (appointmentData) {
+                          const updatedData = Array.isArray(parsed.data)
+                            ? parsed.data.filter((apt: any) => apt.id !== data.id)
+                            : null;
+                          
+                          const isEmpty = !updatedData || (Array.isArray(updatedData) && updatedData.length === 0);
+                          const emptyStateMessages: Record<string, string> = {
+                            view_upcoming_appointments: "Sorry, but you don't have any upcoming appointments yet.",
+                            view_next_appointment: "Sorry, but you don't have any upcoming appointments yet.",
+                          };
+                          
+                          return {
+                            ...msg,
+                            content: JSON.stringify({
+                              ...parsed,
+                              title: isEmpty && emptyStateMessages[parsed.action] 
+                                ? emptyStateMessages[parsed.action]
+                                : parsed.title,
+                              data: updatedData,
+                            }),
+                          };
+                        }
+                      }
+                    } catch (e) {
+                      // Not JSON, skip
+                    }
+                  }
+                  return msg;
+                });
+              });
+              
+              Toast.show({
+                type: "success",
+                text1: "Appointment cancelled successfully",
+              });
+            } else {
+              throw new Error("Failed to cancel appointment");
+            }
+          } catch (error: any) {
+            console.error("[Chat] Cancel appointment error:", error);
+            Toast.show({
+              type: "error",
+              text1: error.message || "Failed to cancel appointment",
+            });
+          }
+        };
+          
+          cancelAppointment();
+        };
+        
+        if (Platform.OS === "web") {
+          if (confirm("Are you sure you want to cancel this appointment?")) {
+            confirmCancel();
+          }
+        } else {
+          Alert.alert(
+            "Cancel Appointment",
+            "Are you sure you want to cancel this appointment?",
+            [
+              {
+                text: "No",
+                style: "cancel",
+              },
+              {
+                text: "Yes",
+                style: "destructive",
+                onPress: confirmCancel,
+              },
+            ]
+          );
+        }
+        break;
+
+      case "download_invoice":
+        if (!data?.id) {
+          Toast.show({
+            type: "error",
+            text1: "Invalid invoice",
+          });
+          return;
+        }
+        
+        const downloadInvoice = async () => {
+          try {
+            const res = await fetch(`${API_BASE}/invoices/${data.id}/pdf`, {
+              credentials: "include",
+            });
+            
+            if (res.ok) {
+              if (Platform.OS === "web") {
+                // Web: download via blob URL
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `invoice-${data.id}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+              } else {
+                // Native: open in browser or use file system
+                const pdfUrl = `${API_BASE}/invoices/${data.id}/pdf`;
+                const canOpen = await Linking.canOpenURL(pdfUrl);
+                if (canOpen) {
+                  await Linking.openURL(pdfUrl);
+                } else {
+                  throw new Error("Cannot open PDF");
+                }
+              }
+              
+              Toast.show({
+                type: "success",
+                text1: "Invoice opened",
+              });
+            } else {
+              throw new Error("Failed to download invoice");
+            }
+          } catch (error: any) {
+            console.error("[Chat] Download invoice error:", error);
+            Toast.show({
+              type: "error",
+              text1: error.message || "Failed to download invoice",
+            });
+          }
+        };
+        
+        downloadInvoice();
+        break;
+
+      case "view_price_list":
+        setShowPriceListModal(true);
+        break;
+
+      case "view_promotions":
+        setShowPromotionsModal(true);
+        break;
+
+      default:
+        console.log("[Chat] Unhandled action:", action);
+    }
+  };
+
+  const handleBookSuccess = (bookedAppointment?: any) => {
+    // Add a message to chat with the booked appointment
+    if (bookedAppointment) {
+      const appointmentMessage: Message = {
+        id: `appointment-booked-${Date.now()}`,
+        content: JSON.stringify({
+          action: "view_upcoming_appointments",
+          title: "Appointment booked",
+          data: [bookedAppointment],
+        }),
+        sender: "doctor",
+        createdAt: new Date().toISOString(),
+      };
+      
+      setMessages((prev) => [...prev, appointmentMessage]);
+    }
+    
+    Toast.show({
+      type: "success",
+      text1: "Appointment booked!",
+    });
+  };
+
+  const handleRescheduleSuccess = (updatedAppointment?: any) => {
+    // Update messages immediately if we have the updated appointment
+    if (updatedAppointment) {
+      setMessages((prev) => {
+        return prev.map((msg) => {
+          if (msg.sender === "doctor") {
+            try {
+              const parsed = JSON.parse(msg.content);
+              if (parsed.action && parsed.data) {
+                const appointmentData = Array.isArray(parsed.data) 
+                  ? parsed.data.find((apt: any) => apt.id === updatedAppointment.id)
+                  : parsed.data?.id === updatedAppointment.id ? parsed.data : null;
+                
+                if (appointmentData) {
+                  const updatedData = Array.isArray(parsed.data)
+                    ? parsed.data.map((apt: any) => 
+                        apt.id === updatedAppointment.id ? updatedAppointment : apt
+                      )
+                    : updatedAppointment;
+                  
+                  return {
+                    ...msg,
+                    content: JSON.stringify({
+                      ...parsed,
+                      data: updatedData,
+                    }),
+                  };
+                }
+              }
+            } catch (e) {
+              // Not JSON, skip
+            }
+          }
+          return msg;
+        });
+      });
+    }
+    
+    Toast.show({
+      type: "success",
+      text1: "Appointment rescheduled!",
+    });
   };
 
   if (!patientId) {
@@ -230,19 +701,6 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.container}>
       <Header title="Chat" />
       <View style={styles.chatContainer}>
-        {/* Connection Status */}
-        <View style={styles.statusBar}>
-          <View
-            style={[
-              styles.statusIndicator,
-              socketConnected ? styles.statusConnected : styles.statusDisconnected,
-            ]}
-          />
-          <Text style={styles.statusText}>
-            {socketConnected ? "Connected" : "Connecting..."}
-          </Text>
-        </View>
-
         {/* Messages List */}
         {isLoading ? (
           <View style={styles.centerContainer}>
@@ -281,22 +739,41 @@ export default function ChatScreen() {
                         isPatient ? styles.bubblePatient : styles.bubbleDoctor,
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.messageText,
-                          isPatient ? styles.messageTextPatient : styles.messageTextDoctor,
-                        ]}
-                      >
-                        {msg.content}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.messageTime,
-                          isPatient ? styles.messageTimePatient : styles.messageTimeDoctor,
-                        ]}
-                      >
-                        {formatTime(msg.createdAt)}
-                      </Text>
+                      {isPatient ? (
+                        <>
+                          <Text
+                            style={[
+                              styles.messageText,
+                              styles.messageTextPatient,
+                            ]}
+                          >
+                            {msg.content}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.messageTime,
+                              styles.messageTimePatient,
+                            ]}
+                          >
+                            {formatTime(msg.createdAt)}
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <StructuredMessage
+                            content={msg.content}
+                            onAction={handleAction}
+                          />
+                          <Text
+                            style={[
+                              styles.messageTime,
+                              styles.messageTimeDoctor,
+                            ]}
+                          >
+                            {formatTime(msg.createdAt)}
+                          </Text>
+                        </>
+                      )}
                     </View>
                   </View>
                 );
@@ -315,15 +792,15 @@ export default function ChatScreen() {
             onChangeText={setMessage}
             multiline
             maxLength={1000}
-            editable={!isSending && socketConnected}
+            editable={!isSending}
           />
           <TouchableOpacity
             style={[
               styles.sendButton,
-              (!message.trim() || isSending || !socketConnected) && styles.sendButtonDisabled,
+              (!message.trim() || isSending) && styles.sendButtonDisabled,
             ]}
             onPress={handleSendMessage}
-            disabled={!message.trim() || isSending || !socketConnected}
+            disabled={!message.trim() || isSending}
           >
             <Text style={styles.sendButtonText}>
               {isSending ? "..." : "Send"}
@@ -331,6 +808,93 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Modals */}
+      <BookAppointmentModal
+        visible={showBookModal}
+        onClose={() => {
+          setShowBookModal(false);
+          setBookProcedureTitle("");
+        }}
+        onSuccess={handleBookSuccess}
+        procedureTitle={bookProcedureTitle}
+      />
+
+      <RescheduleAppointmentModal
+        visible={showRescheduleModal}
+        onClose={() => {
+          setShowRescheduleModal(false);
+          setSelectedAppointment(null);
+        }}
+        onSuccess={handleRescheduleSuccess}
+        appointment={selectedAppointment}
+      />
+
+      {/* Price List Redirect Modal */}
+      <Modal
+        visible={showPriceListModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPriceListModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModal}>
+            <Text style={styles.confirmModalTitle}>
+              You will be redirected to price list page
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalButtonCancel]}
+                onPress={() => setShowPriceListModal(false)}
+              >
+                <Text style={styles.confirmModalButtonTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalButtonProceed]}
+                onPress={() => {
+                  setShowPriceListModal(false);
+                  navigation.navigate("PriceList");
+                }}
+              >
+                <Text style={styles.confirmModalButtonTextProceed}>Proceed</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Promotions Redirect Modal */}
+      <Modal
+        visible={showPromotionsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPromotionsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModal}>
+            <Text style={styles.confirmModalTitle}>
+              You will be redirected to promotions page
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalButtonCancel]}
+                onPress={() => setShowPromotionsModal(false)}
+              >
+                <Text style={styles.confirmModalButtonTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalButtonProceed]}
+                onPress={() => {
+                  setShowPromotionsModal(false);
+                  navigation.navigate("Promotions");
+                }}
+              >
+                <Text style={styles.confirmModalButtonTextProceed}>Proceed</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -484,12 +1048,61 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: colors.greyscale300,
-    opacity: 0.5,
+    opacity: 0.4,
   },
   sendButtonText: {
     color: colors.primaryWhite,
     fontSize: 15,
     fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  confirmModal: {
+    backgroundColor: colors.primaryWhite,
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+  },
+  confirmModalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  confirmModalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  confirmModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  confirmModalButtonCancel: {
+    backgroundColor: colors.greyscale200,
+    borderWidth: 1,
+    borderColor: colors.greyscale300,
+  },
+  confirmModalButtonProceed: {
+    backgroundColor: colors.medicalBlue,
+  },
+  confirmModalButtonTextCancel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  confirmModalButtonTextProceed: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.primaryWhite,
   },
 });
 
