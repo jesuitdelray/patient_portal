@@ -58,6 +58,7 @@ export default function ChatScreen() {
   const [bookProcedureTitle, setBookProcedureTitle] = useState("");
   
   const messagesEndRef = useRef<ScrollView>(null);
+  const initialScrollHandled = useRef(false);
   const socketRef = useRef<any>(null);
 
   // Load existing messages
@@ -73,82 +74,104 @@ export default function ChatScreen() {
         if (res.ok) {
           const data = await res.json();
           let messages = data.messages || [];
-          
-          // Validate and clean up messages with appointments
-          // Check if appointments in messages still exist
+
+          const appointmentActions = [
+            "view_upcoming_appointments",
+            "view_next_appointment",
+          ];
+
+          let appointmentsFetched = false;
+          let cachedAppointments: any[] | null = null;
+
+          const fetchAppointmentsOnce = async () => {
+            if (appointmentsFetched) {
+              return cachedAppointments;
+            }
+            appointmentsFetched = true;
+            try {
+              const appointmentsRes = await fetch(
+                `${API_BASE}/appointments?patientId=${patientId}`,
+                { credentials: "include" }
+              );
+              if (appointmentsRes.ok) {
+                const appointmentsData = await appointmentsRes.json();
+                cachedAppointments = appointmentsData.appointments || [];
+              } else {
+                cachedAppointments = null;
+              }
+            } catch {
+              cachedAppointments = null;
+            }
+            return cachedAppointments;
+          };
+
           const validatedMessages = await Promise.all(
             messages.map(async (msg: Message) => {
-              if (msg.sender === "doctor") {
-                try {
-                  const parsed = JSON.parse(msg.content);
-                  if (parsed.action && parsed.data) {
-                    // Check if this message contains appointments
-                    const appointmentActions = [
-                      "view_upcoming_appointments",
-                      "view_next_appointment",
-                    ];
-                    
-                    if (appointmentActions.includes(parsed.action)) {
-                      const appointmentIds = Array.isArray(parsed.data)
-                        ? parsed.data.map((apt: any) => apt.id).filter(Boolean)
-                        : parsed.data?.id
-                        ? [parsed.data.id]
-                        : [];
-                      
-                      if (appointmentIds.length > 0) {
-                        // Verify appointments still exist
-                        const appointmentsRes = await fetch(
-                          `${API_BASE}/appointments?patientId=${patientId}`,
-                          { credentials: "include" }
-                        ).catch(() => null);
-                        
-                        if (appointmentsRes?.ok) {
-                          const appointmentsData = await appointmentsRes.json();
-                          const existingAppointmentIds = new Set(
-                            (appointmentsData.appointments || []).map((apt: any) => apt.id)
-                          );
-                          
-                          // Filter out non-existent appointments
-                          const validData = Array.isArray(parsed.data)
-                            ? parsed.data.filter((apt: any) =>
-                                existingAppointmentIds.has(apt.id)
-                              )
-                            : existingAppointmentIds.has(parsed.data?.id)
-                            ? parsed.data
-                            : null;
-                          
-                          // If no valid appointments left, show empty state
-                          const isEmpty =
-                            !validData ||
-                            (Array.isArray(validData) && validData.length === 0);
-                          const emptyStateMessages: Record<string, string> = {
-                            view_upcoming_appointments: "No appointments found",
-                            view_next_appointment: "No appointments found",
-                          };
-                          
-                          return {
-                            ...msg,
-                            content: JSON.stringify({
-                              ...parsed,
-                              title:
-                                isEmpty && emptyStateMessages[parsed.action]
-                                  ? emptyStateMessages[parsed.action]
-                                  : parsed.title,
-                              data: validData,
-                            }),
-                          };
-                        }
-                      }
-                    }
-                  }
-                } catch (e) {
-                  // Not JSON or invalid, keep as is
-                }
+              if (msg.sender !== "doctor") {
+                return msg;
               }
-              return msg;
+              try {
+                const parsed = JSON.parse(msg.content);
+                if (!parsed?.action || !parsed?.data) {
+                  return msg;
+                }
+
+                if (!appointmentActions.includes(parsed.action)) {
+                  return msg;
+                }
+
+                const appointmentIds = Array.isArray(parsed.data)
+                  ? parsed.data.map((apt: any) => apt.id).filter(Boolean)
+                  : parsed.data?.id
+                  ? [parsed.data.id]
+                  : [];
+
+                if (appointmentIds.length === 0) {
+                  return msg;
+                }
+
+                const appointmentsData = await fetchAppointmentsOnce();
+                if (!appointmentsData) {
+                  return msg;
+                }
+
+                const existingAppointmentIds = new Set(
+                  appointmentsData.map((apt: any) => apt.id)
+                );
+
+                const validData = Array.isArray(parsed.data)
+                  ? parsed.data.filter((apt: any) =>
+                      existingAppointmentIds.has(apt.id)
+                    )
+                  : existingAppointmentIds.has(parsed.data?.id)
+                  ? parsed.data
+                  : null;
+
+                const isEmpty =
+                  !validData ||
+                  (Array.isArray(validData) && validData.length === 0);
+                const emptyStateMessages: Record<string, string> = {
+                  view_upcoming_appointments: "No appointments found",
+                  view_next_appointment: "No appointments found",
+                };
+
+                return {
+                  ...msg,
+                  content: JSON.stringify({
+                    ...parsed,
+                    title:
+                      isEmpty && emptyStateMessages[parsed.action]
+                        ? emptyStateMessages[parsed.action]
+                        : parsed.title,
+                    data: validData,
+                  }),
+                };
+              } catch {
+                return msg;
+              }
             })
           );
-          
+
           setMessages(validatedMessages);
         }
       } catch (error) {
@@ -358,11 +381,12 @@ export default function ChatScreen() {
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
-    if (messages.length > 0 && messagesEndRef.current) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
+    if (messages.length === 0 || !messagesEndRef.current) return;
+    const animated = initialScrollHandled.current;
+    setTimeout(() => {
+      messagesEndRef.current?.scrollToEnd({ animated });
+    }, 50);
+    initialScrollHandled.current = true;
   }, [messages.length]);
 
   const handleSendMessage = async () => {

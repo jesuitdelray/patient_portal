@@ -17,6 +17,9 @@ import { initiateGoogleAuth, initiateAppleAuth, getAuthBase } from "../lib/api";
 import { Logo } from "../components/Logo";
 import { DebugLogs } from "../components/DebugLogs";
 import { storageSync } from "../lib/storage";
+import { useBranding } from "../lib/useBranding";
+import { useBrandingTheme } from "../lib/useBrandingTheme";
+import { colors } from "../lib/colors";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -25,6 +28,8 @@ export default function LoginScreen() {
   const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
   const queryClient = useQueryClient();
   const { data: authData } = useAuth();
+  const { branding } = useBranding();
+  const theme = useBrandingTheme();
 
   // If already authenticated, redirect to dashboard
   useEffect(() => {
@@ -203,20 +208,28 @@ export default function LoginScreen() {
           <Logo size={80} />
         </View>
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome</Text>
+          <Text style={[styles.title, { color: theme.primary }]}>
+            {branding.clinicName || "Welcome"}
+          </Text>
           <Text style={styles.subtitle}>
             Sign in to access your patient portal
           </Text>
         </View>
 
         <TouchableOpacity
-          style={styles.googleButton}
+          style={[
+            styles.googleButton,
+            { backgroundColor: theme.primary, borderColor: theme.primary },
+            isLoading && styles.buttonDisabled,
+          ]}
           onPress={handleGoogleLogin}
           disabled={isLoading}
         >
           <View style={styles.buttonContent}>
             <Text style={{ fontSize: 20, marginRight: 8 }}>🔐</Text>
-            <Text style={styles.buttonText}>Sign in with Google</Text>
+            <Text style={[styles.buttonText, { color: theme.primaryContrast }]}>
+              Sign in with Google
+            </Text>
           </View>
         </TouchableOpacity>
 
@@ -235,13 +248,22 @@ export default function LoginScreen() {
           />
         ) : (
           <TouchableOpacity
-            style={styles.appleButtonWeb}
+            style={[
+              styles.appleButtonWeb,
+              {
+                backgroundColor: theme.primarySoft,
+                borderColor: theme.primaryBorder,
+              },
+              isLoading && styles.buttonDisabled,
+            ]}
             onPress={handleAppleLogin}
             disabled={isLoading}
           >
             <View style={styles.buttonContent}>
               <Text style={{ fontSize: 18, marginRight: 8 }}>🍎</Text>
-              <Text style={styles.appleButtonText}>Sign in with Apple</Text>
+              <Text style={[styles.appleButtonText, { color: theme.primary }]}>
+                Sign in with Apple
+              </Text>
             </View>
           </TouchableOpacity>
         )}
@@ -250,7 +272,7 @@ export default function LoginScreen() {
           <Text style={styles.footerText}>
             By signing in, you agree to our{" "}
             <Text
-              style={styles.linkText}
+              style={[styles.linkText, { color: theme.primary }]}
               onPress={() => {
                 const termsUrl =
                   require("../../app.json").expo.extra?.termsOfServiceUrl ||
@@ -262,7 +284,7 @@ export default function LoginScreen() {
             </Text>{" "}
             and{" "}
             <Text
-              style={styles.linkText}
+              style={[styles.linkText, { color: theme.primary }]}
               onPress={() => {
                 const privacyUrl =
                   require("../../app.json").expo.extra?.privacyPolicyUrl ||
@@ -309,9 +331,8 @@ const styles = StyleSheet.create({
   googleButton: {
     width: "100%",
     maxWidth: 320,
-    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: colors.greyscale200,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -329,7 +350,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#000",
+    color: colors.textPrimary,
   },
   logoContainer: {
     marginBottom: 32,
@@ -344,10 +365,11 @@ const styles = StyleSheet.create({
   appleButtonWeb: {
     width: "100%",
     maxWidth: 320,
-    backgroundColor: "#000",
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
     marginTop: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -358,7 +380,7 @@ const styles = StyleSheet.create({
   appleButtonText: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#fff",
+    color: colors.textPrimary,
   },
   footer: {
     marginTop: 32,
@@ -370,7 +392,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   linkText: {
-    color: "#007AFF",
+    color: colors.primary,
     textDecorationLine: "underline",
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });

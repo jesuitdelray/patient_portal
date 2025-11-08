@@ -14,6 +14,7 @@ import { API_BASE, resolvePatientId } from "../lib/api";
 import { Header } from "../components/Header";
 import { colors } from "../lib/colors";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBrandingTheme } from "../lib/useBrandingTheme";
 
 type Invoice = {
   id: string;
@@ -34,6 +35,7 @@ export default function InvoicesScreen() {
   const [patientId, setPatientId] = useState<string | null>(null);
   const { data: authData } = useAuth();
   const queryClient = useQueryClient();
+  const theme = useBrandingTheme();
 
   useEffect(() => {
     (async () => {
@@ -89,10 +91,19 @@ export default function InvoicesScreen() {
         ) : (
           <View style={styles.invoicesList}>
             {invoices.map((invoice) => (
-              <View key={invoice.id} style={styles.invoiceCard}>
+              <View
+                key={invoice.id}
+                style={[
+                  styles.invoiceCard,
+                  {
+                    borderColor: theme.primaryBorder,
+                    shadowColor: theme.primary,
+                  },
+                ]}
+              >
                 <View style={styles.invoiceHeader}>
                   <View style={styles.invoiceTitleRow}>
-                    <Text style={styles.invoiceTitle}>
+                    <Text style={[styles.invoiceTitle, { color: theme.primary }]}>
                       {invoice.procedure?.title || "Unknown Procedure"}
                     </Text>
                     <View
@@ -101,6 +112,15 @@ export default function InvoicesScreen() {
                         invoice.status === "paid"
                           ? styles.statusBadgePaid
                           : styles.statusBadgeUnpaid,
+                        invoice.status === "paid"
+                          ? {
+                              backgroundColor: theme.accentSoft,
+                              borderColor: theme.accent,
+                            }
+                          : {
+                              backgroundColor: theme.primarySoft,
+                              borderColor: theme.primaryBorder,
+                            },
                       ]}
                     >
                       <Text
@@ -109,6 +129,9 @@ export default function InvoicesScreen() {
                           invoice.status === "paid"
                             ? styles.statusTextPaid
                             : styles.statusTextUnpaid,
+                          invoice.status === "paid"
+                            ? { color: theme.accentContrast }
+                            : { color: theme.primary },
                         ]}
                       >
                         {invoice.status.toUpperCase()}
@@ -125,7 +148,7 @@ export default function InvoicesScreen() {
                 <View style={styles.invoiceDetails}>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Amount:</Text>
-                    <Text style={styles.detailValue}>
+                    <Text style={[styles.detailValue, { color: theme.primary }]}>
                       ${invoice.amount.toFixed(2)}
                     </Text>
                   </View>
@@ -156,10 +179,20 @@ export default function InvoicesScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={styles.downloadButton}
+                  style={[
+                    styles.downloadButton,
+                    { backgroundColor: theme.primary },
+                  ]}
                   onPress={() => handleDownloadPDF(invoice.id)}
                 >
-                  <Text style={styles.downloadButtonText}>📥 Download PDF</Text>
+                  <Text
+                    style={[
+                      styles.downloadButtonText,
+                      { color: theme.primaryContrast },
+                    ]}
+                  >
+                    📥 Download PDF
+                  </Text>
                 </TouchableOpacity>
               </View>
             ))}

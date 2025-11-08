@@ -11,6 +11,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { colors } from "../../lib/colors";
 import { API_BASE } from "../../lib/api";
 import Toast from "react-native-toast-message";
+import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
 type Props = {
   visible: boolean;
@@ -31,6 +32,7 @@ export function RescheduleAppointmentModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newDateTime, setNewDateTime] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const theme = useBrandingTheme();
 
   React.useEffect(() => {
     if (visible && appointment?.datetime) {
@@ -167,6 +169,7 @@ export function RescheduleAppointmentModal({
               style={[
                 styles.button,
                 styles.buttonCancel,
+                { borderColor: theme.primary, backgroundColor: theme.primarySoft },
                 isSubmitting && styles.buttonDisabled,
               ]}
               onPress={onClose}
@@ -178,6 +181,7 @@ export function RescheduleAppointmentModal({
               style={[
                 styles.button,
                 styles.buttonSubmit,
+                { backgroundColor: theme.primary },
                 (isSubmitting || !newDateTime) && styles.buttonDisabled,
               ]}
               onPress={handleSubmit}

@@ -1,8 +1,10 @@
 import React from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Logo } from "./Logo";
 import { colors } from "../lib/colors";
+import { useBranding } from "../lib/useBranding";
+import { useBrandingTheme } from "../lib/useBrandingTheme";
 
 interface HeaderProps {
   title?: string;
@@ -10,6 +12,10 @@ interface HeaderProps {
 }
 
 export function Header({ title, showLogo = true }: HeaderProps) {
+  const { branding } = useBranding();
+  const theme = useBrandingTheme();
+  const displayTitle = branding.clinicName || title;
+
   return (
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <View style={styles.container}>
@@ -18,7 +24,9 @@ export function Header({ title, showLogo = true }: HeaderProps) {
             <Logo size={32} />
           </View>
         )}
-        {title && <Text style={styles.title}>{title}</Text>}
+        {displayTitle && (
+          <Text style={[styles.title, { color: theme.primary }]}>{displayTitle}</Text>
+        )}
       </View>
     </SafeAreaView>
   );

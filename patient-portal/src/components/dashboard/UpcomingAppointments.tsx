@@ -14,6 +14,7 @@ import { useAppointments } from "./AppointmentsContext";
 import { API_BASE } from "../../lib/api";
 import { useAuth } from "../../lib/queries";
 import { colors } from "../../lib/colors";
+import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
 export function UpcomingAppointments() {
   const { appointments, setAppointments } = useAppointments();
@@ -33,6 +34,7 @@ export function UpcomingAppointments() {
   const [newDateTime, setNewDateTime] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const theme = useBrandingTheme();
 
   const today = new Date();
   const todayString = today.toISOString().slice(0, 16);
@@ -138,10 +140,20 @@ export function UpcomingAppointments() {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          borderColor: theme.primaryBorder,
+          backgroundColor: theme.primarySoft,
+        },
+      ]}
+    >
       <View style={styles.header}>
         <Text style={{ fontSize: 18 }}>📅</Text>
-        <Text style={styles.title}>Upcoming Appointments</Text>
+        <Text style={[styles.title, { color: theme.primary }]}>
+          Upcoming Appointments
+        </Text>
       </View>
 
       <View style={styles.content}>
@@ -154,9 +166,22 @@ export function UpcomingAppointments() {
           </View>
         ) : (
           appointments.map((appointment) => (
-            <View key={appointment.id} style={styles.appointmentCard}>
+            <View
+              key={appointment.id}
+              style={[
+                styles.appointmentCard,
+                {
+                  borderColor: theme.primaryBorder,
+                  backgroundColor: colors.primaryWhite,
+                },
+              ]}
+            >
               <View style={styles.appointmentContent}>
-                <Text style={styles.appointmentTitle}>{appointment.title}</Text>
+                <Text
+                  style={[styles.appointmentTitle, { color: theme.primary }]}
+                >
+                  {appointment.title}
+                </Text>
                 {appointment.location ? (
                   <Text style={styles.appointmentDoctor}>
                     {appointment.location}
@@ -166,13 +191,17 @@ export function UpcomingAppointments() {
                 <View style={styles.appointmentDetails}>
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>📅</Text>
-                    <Text style={styles.detailText}>
+                    <Text
+                      style={[styles.detailText, { color: theme.primary }]}
+                    >
                       {new Date(appointment.datetime).toLocaleDateString()}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>⏰</Text>
-                    <Text style={styles.detailText}>
+                    <Text
+                      style={[styles.detailText, { color: theme.primary }]}
+                    >
                       {new Date(appointment.datetime).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -181,7 +210,9 @@ export function UpcomingAppointments() {
                   </View>
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>📍</Text>
-                    <Text style={styles.detailText}>
+                    <Text
+                      style={[styles.detailText, { color: theme.primary }]}
+                    >
                       {appointment.location || "Clinic"}
                     </Text>
                   </View>
@@ -191,17 +222,43 @@ export function UpcomingAppointments() {
               <View style={styles.actionButtons}>
                 {isAdmin ? (
                   <TouchableOpacity
-                    style={styles.rescheduleButton}
+                    style={[
+                      styles.rescheduleButton,
+                      {
+                        borderColor: theme.primary,
+                        backgroundColor: theme.primarySoft,
+                      },
+                    ]}
                     onPress={() => handleOpenEdit(appointment)}
                   >
-                    <Text style={styles.rescheduleButtonText}>Edit</Text>
+                    <Text
+                      style={[
+                        styles.rescheduleButtonText,
+                        { color: theme.primary },
+                      ]}
+                    >
+                      Edit
+                    </Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
-                    style={styles.rescheduleButton}
+                    style={[
+                      styles.rescheduleButton,
+                      {
+                        borderColor: theme.primary,
+                        backgroundColor: theme.primarySoft,
+                      },
+                    ]}
                     onPress={() => handleOpenReschedule(appointment)}
                   >
-                    <Text style={styles.rescheduleButtonText}>Reschedule</Text>
+                    <Text
+                      style={[
+                        styles.rescheduleButtonText,
+                        { color: theme.primary },
+                      ]}
+                    >
+                      Reschedule
+                    </Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
@@ -520,6 +577,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
   },
   header: {
     flexDirection: "row",
@@ -530,7 +589,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#000",
+    color: colors.textPrimary,
   },
   content: {
     gap: 12,
@@ -538,8 +597,8 @@ const styles = StyleSheet.create({
   appointmentCard: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
-    backgroundColor: "#F9F9F9",
+    borderColor: colors.greyscale200,
+    backgroundColor: colors.primaryWhite,
     padding: 12,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -551,12 +610,12 @@ const styles = StyleSheet.create({
   appointmentTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   appointmentDoctor: {
     fontSize: 14,
-    color: "#666",
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   appointmentDetails: {
@@ -569,7 +628,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    color: "#666",
+    color: colors.textSecondary,
   },
   emptyState: {
     padding: 24,
@@ -578,12 +637,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#666",
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 12,
-    color: "#999",
+    color: colors.textSecondary,
   },
   rescheduleButton: {
     paddingHorizontal: 12,
@@ -597,7 +656,7 @@ const styles = StyleSheet.create({
   },
   rescheduleButtonText: {
     fontSize: 14,
-    color: "#007AFF",
+    color: colors.primary,
     fontWeight: "500",
   },
   actionButtons: {

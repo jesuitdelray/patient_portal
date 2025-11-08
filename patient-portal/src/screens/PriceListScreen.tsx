@@ -17,6 +17,7 @@ import { colors } from "../lib/colors";
 import { API_BASE } from "../lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
+import { useBrandingTheme } from "../lib/useBrandingTheme";
 
 type PriceItem = {
   id: string;
@@ -36,6 +37,7 @@ export default function PriceListScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newDateTime, setNewDateTime] = useState("");
   const queryClient = useQueryClient();
+  const theme = useBrandingTheme();
 
   const today = new Date();
   // Minimum date is tomorrow
@@ -289,14 +291,17 @@ export default function PriceListScreen() {
             <TouchableOpacity
               style={[
                 styles.categoryChip,
-                selectedCategory === null && styles.categoryChipActive,
+                selectedCategory === null && {
+                  backgroundColor: theme.primarySoft,
+                  borderColor: theme.primaryBorder,
+                },
               ]}
               onPress={() => setSelectedCategory(null)}
             >
               <Text
                 style={[
                   styles.categoryChipText,
-                  selectedCategory === null && styles.categoryChipTextActive,
+                  selectedCategory === null && { color: theme.primary },
                 ]}
               >
                 All
@@ -308,14 +313,17 @@ export default function PriceListScreen() {
                   key={cat}
                   style={[
                     styles.categoryChip,
-                    selectedCategory === cat && styles.categoryChipActive,
+                    selectedCategory === cat && {
+                      backgroundColor: theme.primarySoft,
+                      borderColor: theme.primaryBorder,
+                    },
                   ]}
                   onPress={() => setSelectedCategory(cat)}
                 >
                   <Text
                     style={[
                       styles.categoryChipText,
-                      selectedCategory === cat && styles.categoryChipTextActive,
+                      selectedCategory === cat && { color: theme.primary },
                     ]}
                   >
                     {cat}
@@ -347,31 +355,48 @@ export default function PriceListScreen() {
             filteredList.map((item: PriceItem) => (
               <TouchableOpacity
                 key={item.id}
-                style={styles.priceItem}
+                style={[
+                  styles.priceItem,
+                  {
+                    borderColor: theme.primaryBorder,
+                    shadowColor: theme.primary,
+                  },
+                ]}
                 onPress={() => handleProcedureClick(item)}
                 activeOpacity={0.7}
               >
                 <View style={styles.priceItemContent}>
                   <View style={styles.priceItemHeader}>
-                    <Text style={styles.priceItemTitle}>{item.title}</Text>
-                    <Text style={styles.priceItemPrice}>${item.price.toFixed(2)}</Text>
+                    <Text style={[styles.priceItemTitle, { color: theme.primary }]}>
+                      {item.title}
+                    </Text>
+                    <Text style={[styles.priceItemPrice, { color: theme.primary }]}>
+                      ${item.price.toFixed(2)}
+                    </Text>
                   </View>
                   {item.description && (
                     <Text style={styles.priceItemDescription}>{item.description}</Text>
                   )}
                   <View style={styles.priceItemFooter}>
                     {item.duration && (
-                      <Text style={styles.priceItemDuration}>
+                      <Text
+                        style={[styles.priceItemDuration, { color: theme.primary }]}
+                      >
                         ⏱ {item.duration} min
                       </Text>
                     )}
-                    <Text style={styles.priceItemCategory}>
+                    <Text
+                      style={[
+                        styles.priceItemCategory,
+                        { backgroundColor: theme.primarySoft, color: theme.primary },
+                      ]}
+                    >
                       {item.category || "General"}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.priceItemArrow}>
-                  <Text style={styles.arrowText}>→</Text>
+                  <Text style={[styles.arrowText, { color: theme.primary }]}>→</Text>
                 </View>
               </TouchableOpacity>
             ))
@@ -387,15 +412,30 @@ export default function PriceListScreen() {
         onRequestClose={() => setShowAppointmentModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View
+            style={[
+              styles.modalContent,
+              { borderColor: theme.primaryBorder },
+            ]}
+          >
             <Text style={styles.modalTitle}>Book Appointment</Text>
             {selectedProcedure && (
               <>
-                <View style={styles.modalProcedureInfo}>
+                <View
+                  style={[
+                    styles.modalProcedureInfo,
+                    {
+                      borderColor: theme.primaryBorder,
+                      backgroundColor: theme.primarySoft,
+                    },
+                  ]}
+                >
                   <Text style={styles.modalProcedureTitle}>
                     {selectedProcedure.title}
                   </Text>
-                  <Text style={styles.modalProcedurePrice}>
+                  <Text
+                    style={[styles.modalProcedurePrice, { color: theme.primary }]}
+                  >
                     ${selectedProcedure.price.toFixed(2)}
                   </Text>
                 </View>
@@ -419,9 +459,9 @@ export default function PriceListScreen() {
                           width: "100%",
                           padding: "12px",
                           fontSize: "14px",
-                          border: `1px solid ${colors.greyscale200}`,
+                          border: `1px solid ${theme.primaryBorder}`,
                           borderRadius: "6px",
-                          backgroundColor: colors.greyscale100,
+                          backgroundColor: theme.primarySoft,
                           fontFamily: "inherit",
                           boxSizing: "border-box",
                           maxWidth: "100%",
@@ -460,7 +500,14 @@ export default function PriceListScreen() {
 
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
-                    style={[styles.modalButton, styles.modalButtonCancel]}
+                    style={[
+                      styles.modalButton,
+                      styles.modalButtonCancel,
+                      {
+                        backgroundColor: theme.primarySoft,
+                        borderColor: theme.primaryBorder,
+                      },
+                    ]}
                     onPress={() => setShowAppointmentModal(false)}
                   >
                     <Text style={styles.modalButtonCancelText}>Cancel</Text>
@@ -469,12 +516,18 @@ export default function PriceListScreen() {
                     style={[
                       styles.modalButton,
                       styles.modalButtonConfirm,
+                      { backgroundColor: theme.primary },
                       (createAppointmentMutation.isPending || !newDateTime) && styles.modalButtonDisabled,
                     ]}
                     onPress={handleCreateAppointment}
                     disabled={createAppointmentMutation.isPending || !newDateTime}
                   >
-                    <Text style={styles.modalButtonConfirmText}>
+                    <Text
+                      style={[
+                        styles.modalButtonConfirmText,
+                        { color: theme.primaryContrast },
+                      ]}
+                    >
                       {createAppointmentMutation.isPending
                         ? "Booking..."
                         : "Book Appointment"}
@@ -503,7 +556,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   searchInput: {
-    backgroundColor: colors.greyscale100,
+    backgroundColor: colors.primaryWhite,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -527,7 +580,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.greyscale100,
+    backgroundColor: colors.primaryWhite,
     borderWidth: 1,
     borderColor: colors.greyscale200,
     minWidth: 80,
@@ -599,7 +652,7 @@ const styles = StyleSheet.create({
   priceItemPrice: {
     fontSize: 20,
     fontWeight: "700",
-    color: colors.primary,
+    color: colors.textPrimary,
   },
   priceItemDescription: {
     fontSize: 14,
@@ -614,11 +667,11 @@ const styles = StyleSheet.create({
   },
   priceItemDuration: {
     fontSize: 12,
-    color: colors.greyscale500,
+    color: colors.textSecondary,
   },
   priceItemCategory: {
     fontSize: 12,
-    color: colors.greyscale500,
+    color: colors.textSecondary,
     backgroundColor: colors.greyscale100,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -629,7 +682,7 @@ const styles = StyleSheet.create({
   },
   arrowText: {
     fontSize: 24,
-    color: colors.primary,
+    color: colors.textPrimary,
   },
   modalOverlay: {
     flex: 1,
@@ -648,6 +701,8 @@ const styles = StyleSheet.create({
       maxHeight: "80vh",
       overflow: "auto",
     }),
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
   },
   modalTitle: {
     fontSize: 24,
@@ -661,6 +716,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
   },
   modalProcedureTitle: {
     fontSize: 18,

@@ -11,6 +11,7 @@ import { useAuth } from "../lib/queries";
 import { Header } from "../components/Header";
 import { Loader } from "../components/Loader";
 import { colors } from "../lib/colors";
+import { useBrandingTheme } from "../lib/useBrandingTheme";
 
 type TreatmentPlan = {
   id: string;
@@ -36,6 +37,7 @@ export default function TreatmentScreen() {
   const patientId = authData?.role === "patient" ? authData.userId : null;
   const [plans, setPlans] = useState<TreatmentPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const theme = useBrandingTheme();
 
   useEffect(() => {
     (async () => {
@@ -120,9 +122,13 @@ export default function TreatmentScreen() {
                     <View
                       style={[
                         styles.progressBar,
-                        { width: `${progress}%` },
-                        plan.status === "completed" &&
-                          styles.progressBarComplete,
+                        {
+                          width: `${progress}%`,
+                          backgroundColor: theme.primary,
+                        },
+                        plan.status === "completed" && {
+                          backgroundColor: theme.accent,
+                        },
                       ]}
                     />
                   </View>

@@ -12,6 +12,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { colors } from "../../lib/colors";
 import { API_BASE, fetchWithAuth } from "../../lib/api";
 import Toast from "react-native-toast-message";
+import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
 type Props = {
   visible: boolean;
@@ -31,6 +32,7 @@ export function BookAppointmentModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datetime, setDatetime] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const theme = useBrandingTheme();
 
   const today = new Date();
   const tomorrow = new Date(today);
@@ -125,14 +127,27 @@ export function BookAppointmentModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={styles.modal}>
-          <Text style={styles.title}>Book Appointment</Text>
+        <View
+          style={[
+            styles.modal,
+            { borderColor: theme.primaryBorder, backgroundColor: colors.primaryWhite },
+          ]}
+        >
+          <Text style={[styles.title, { color: theme.primary }]}>
+            Book Appointment
+          </Text>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Title</Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  {
+                    borderColor: theme.primaryBorder,
+                    backgroundColor: theme.primarySoft,
+                  },
+                ]}
                 placeholder="Appointment title"
                 placeholderTextColor={colors.textSecondary}
                 value={title}
@@ -157,7 +172,7 @@ export function BookAppointmentModal({
                   style={{
                     padding: 12,
                     borderRadius: 8,
-                    border: `1px solid ${colors.border}`,
+                    border: `1px solid ${theme.primaryBorder}`,
                     fontSize: 15,
                     fontFamily: "inherit",
                     color: colors.textPrimary,
@@ -166,7 +181,13 @@ export function BookAppointmentModal({
                 />
               ) : (
                 <TouchableOpacity
-                  style={styles.dateInput}
+                  style={[
+                    styles.dateInput,
+                    {
+                      borderColor: theme.primaryBorder,
+                      backgroundColor: theme.primarySoft,
+                    },
+                  ]}
                   onPress={() => setShowDatePicker(true)}
                 >
                   <Text style={styles.dateText}>
@@ -193,6 +214,10 @@ export function BookAppointmentModal({
               style={[
                 styles.button,
                 styles.buttonCancel,
+                {
+                  backgroundColor: theme.primarySoft,
+                  borderColor: theme.primaryBorder,
+                },
                 isSubmitting && styles.buttonDisabled,
               ]}
               onPress={onClose}
@@ -204,12 +229,18 @@ export function BookAppointmentModal({
               style={[
                 styles.button,
                 styles.buttonSubmit,
+                { backgroundColor: theme.primary },
                 (isSubmitting || !title.trim() || !datetime) && styles.buttonDisabled,
               ]}
               onPress={handleSubmit}
               disabled={isSubmitting || !title.trim() || !datetime}
             >
-              <Text style={styles.buttonTextSubmit}>
+              <Text
+                style={[
+                  styles.buttonTextSubmit,
+                  { color: theme.primaryContrast },
+                ]}
+              >
                 {isSubmitting ? "Booking..." : "Book Appointment"}
               </Text>
             </TouchableOpacity>
@@ -235,6 +266,8 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 500,
     maxHeight: "90%",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   title: {
     fontSize: 20,

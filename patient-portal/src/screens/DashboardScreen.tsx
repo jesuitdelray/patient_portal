@@ -11,12 +11,14 @@ import { AppointmentsProvider } from "../components/dashboard/AppointmentsContex
 import { useAuth, usePatient } from "../lib/queries";
 import { colors } from "../lib/colors";
 import { Header } from "../components/Header";
+import { useBrandingTheme } from "../lib/useBrandingTheme";
 
 export default function DashboardScreen() {
   const { data: authData } = useAuth();
   const patientId = authData?.role === "patient" ? authData.userId : null;
   const { data: patientData } = usePatient(patientId);
   const navigation = useNavigation<any>();
+  const theme = useBrandingTheme();
 
   const patientName = authData?.name || patientData?.patient?.name || "there";
 
@@ -42,11 +44,15 @@ export default function DashboardScreen() {
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.bookButton}
+              style={[styles.bookButton, { backgroundColor: theme.primary }]}
               onPress={handleBookAppointment}
               activeOpacity={0.8}
             >
-              <Text style={styles.bookButtonText}>Book Appointment</Text>
+              <Text
+                style={[styles.bookButtonText, { color: theme.primaryContrast }]}
+              >
+                Book Appointment
+              </Text>
             </TouchableOpacity>
           </View>
 

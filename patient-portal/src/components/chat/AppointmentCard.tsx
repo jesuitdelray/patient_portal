@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { colors } from "../../lib/colors";
+import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
 type Props = {
   appointment: any;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) {
+  const theme = useBrandingTheme();
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -22,12 +24,26 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
   };
 
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        { borderColor: theme.primaryBorder, backgroundColor: theme.primarySoft },
+      ]}
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>{appointment.title || "Appointment"}</Text>
+        <Text style={[styles.title, { color: theme.primary }]}>
+          {appointment.title || "Appointment"}
+        </Text>
         {appointment.type && (
-          <View style={styles.typeBadge}>
-            <Text style={styles.typeText}>{appointment.type}</Text>
+          <View
+            style={[
+              styles.typeBadge,
+              { backgroundColor: theme.primaryOverlay },
+            ]}
+          >
+            <Text style={[styles.typeText, { color: theme.primary }]}>
+              {appointment.type}
+            </Text>
           </View>
         )}
       </View>
@@ -35,7 +51,9 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
       <View style={styles.content}>
         <View style={styles.row}>
           <Text style={styles.label}>📅 Date & Time:</Text>
-          <Text style={styles.value}>{formatDate(appointment.datetime)}</Text>
+          <Text style={[styles.value, { color: theme.primary }]}>
+            {formatDate(appointment.datetime)}
+          </Text>
         </View>
         
         {appointment.location && (
@@ -50,10 +68,21 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
         <View style={styles.actions}>
           {onReschedule && (
             <TouchableOpacity
-              style={[styles.button, styles.buttonSecondary]}
+              style={[
+                styles.button,
+                styles.buttonSecondary,
+                {
+                  borderColor: theme.primary,
+                  backgroundColor: theme.primarySoft,
+                },
+              ]}
               onPress={onReschedule}
             >
-              <Text style={styles.buttonTextSecondary}>Reschedule</Text>
+              <Text
+                style={[styles.buttonTextSecondary, { color: theme.primary }]}
+              >
+                Reschedule
+              </Text>
             </TouchableOpacity>
           )}
           {onCancel && (
@@ -76,7 +105,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.greyscale200,
     marginBottom: 8,
   },
   header: {
@@ -92,14 +121,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   typeBadge: {
-    backgroundColor: colors.medicalBlueBg,
+    backgroundColor: colors.greyscale100,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   typeText: {
     fontSize: 12,
-    color: colors.medicalBlue,
+    color: colors.textSecondary,
     fontWeight: "500",
   },
   content: {

@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model Doctor {
@@ -17,6 +18,7 @@ model Doctor {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
   patients  DoctorPatient[]
+  branding  ClinicBranding?
 }
 
 model Patient {
@@ -150,4 +152,21 @@ model PriceList {
 
   @@index([category])
   @@index([isActive])
+}
+
+model ClinicBranding {
+  id            String   @id @default(cuid())
+  doctorId      String   @unique
+  clinicName    String?
+  logoUrl       String?
+  primaryColor  String?
+  secondaryColor String?
+  accentColor   String?
+  faviconUrl    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
 }

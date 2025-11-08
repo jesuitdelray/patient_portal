@@ -1,8 +1,10 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Logo } from "./Logo";
 import { colors } from "../lib/colors";
+import { useBranding } from "../lib/useBranding";
+import { useBrandingTheme } from "../lib/useBrandingTheme";
 
 const menuItems = [
   { title: "Dashboard", screen: "Dashboard", icon: "🏠" },
@@ -17,6 +19,8 @@ const menuItems = [
 export function Sidebar() {
   const navigation = useNavigation<any>();
   const [currentRoute, setCurrentRoute] = React.useState("Dashboard");
+  const { branding } = useBranding();
+  const theme = useBrandingTheme();
 
   React.useEffect(() => {
     const unsubscribe = navigation.addListener("state", () => {
@@ -38,22 +42,37 @@ export function Sidebar() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Logo size={32} />
-        <Text style={styles.title}>Patient Portal</Text>
-      </View>
+      {Platform.OS === "web" && (
+        <View style={styles.header}>
+          <Logo size={32} />
+          <Text style={[styles.title, { color: theme.primary }]}>
+            {branding.clinicName || "Patient Portal"}
+          </Text>
+        </View>
+      )}
       <View style={styles.menu}>
         {menuItems.map((item) => {
           const isActive = currentRoute === item.screen;
           return (
             <TouchableOpacity
               key={item.screen}
-              style={[styles.menuItem, isActive && styles.menuItemActive]}
+              style={[
+                styles.menuItem,
+                isActive && {
+                  backgroundColor: theme.primarySoft,
+                  borderColor: theme.primaryBorder,
+                },
+              ]}
               onPress={() => navigation.navigate(item.screen)}
             >
               <Text style={styles.menuIcon}>{item.icon}</Text>
               <Text
-                style={[styles.menuText, isActive && styles.menuTextActive]}
+                style={[
+                  styles.menuText,
+                  isActive
+                    ? { color: theme.primary, fontWeight: "600" }
+                    : { color: colors.textSecondary },
+                ]}
               >
                 {item.title}
               </Text>
@@ -99,19 +118,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 8,
-  },
-  menuItemActive: {
-    backgroundColor: "#E3F2FD",
+    borderWidth: 1,
+    borderColor: "transparent",
   },
   menuIcon: {
     fontSize: 20,
   },
   menuText: {
     fontSize: 15,
-    color: "#666",
-  },
-  menuTextActive: {
-    color: "#007AFF",
-    fontWeight: "500",
+    color: colors.textSecondary,
   },
 });

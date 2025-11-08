@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { Header } from "../components/Header";
 import { colors } from "../lib/colors";
+import { useBrandingTheme } from "../lib/useBrandingTheme";
 import { storage } from "../lib/storage";
 
 const promotions = [
@@ -46,6 +47,7 @@ export default function PromotionsScreen() {
   const [claimedOffers, setClaimedOffers] = useState<number[]>([]);
   const [loadingOffers, setLoadingOffers] = useState<number[]>([]);
   const [activeDiscount, setActiveDiscount] = useState<number | null>(null);
+  const theme = useBrandingTheme();
 
   // Load claimed offers and active discount from storage
   useEffect(() => {
@@ -107,26 +109,60 @@ export default function PromotionsScreen() {
 
         <View style={styles.grid}>
           {promotions.map((promo) => (
-            <View key={promo.id} style={styles.card}>
+            <View
+              key={promo.id}
+              style={[
+                styles.card,
+                {
+                  borderColor: theme.primaryBorder,
+                  shadowColor: theme.primary,
+                },
+              ]}
+            >
               <View style={styles.cardHeader}>
                 <View style={styles.badgeContainer}>
-                  <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>
+                  <View
+                    style={[
+                      styles.categoryBadge,
+                      {
+                        backgroundColor: theme.secondarySoft,
+                        borderColor: theme.secondary,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.categoryBadgeText,
+                        { color: theme.secondary },
+                      ]}
+                    >
                       {promo.category}
                     </Text>
                   </View>
-                  <View style={styles.discountBadge}>
-                    <Text style={styles.discountBadgeText}>
+                  <View
+                    style={[
+                      styles.discountBadge,
+                      { backgroundColor: theme.primary },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.discountBadgeText,
+                        { color: theme.primaryContrast },
+                      ]}
+                    >
                       {promo.discount}
                     </Text>
                   </View>
                 </View>
               </View>
               <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{promo.title}</Text>
+                <Text style={[styles.cardTitle, { color: theme.primary }]}>
+                  {promo.title}
+                </Text>
                 <Text style={styles.cardDescription}>{promo.description}</Text>
                 <View style={styles.validUntilRow}>
-                  <Feather name="clock" size={14} color="#666" />
+                  <Feather name="clock" size={14} color={theme.primary} />
                   <Text style={styles.validUntilText}>
                     Valid until {promo.validUntil}
                   </Text>
@@ -134,10 +170,14 @@ export default function PromotionsScreen() {
                 <TouchableOpacity
                   style={[
                     styles.claimButton,
-                    claimedOffers.includes(promo.id) &&
+                    {
+                      backgroundColor: theme.primary,
+                    },
+                    claimedOffers.includes(promo.id) && [
                       styles.claimButtonClaimed,
-                    loadingOffers.includes(promo.id) &&
-                      styles.claimButtonLoading,
+                      { backgroundColor: theme.primarySoft },
+                    ],
+                    loadingOffers.includes(promo.id) && styles.claimButtonLoading,
                   ]}
                   onPress={() => handleClaimOffer(promo.id, promo.title)}
                   disabled={
@@ -146,14 +186,35 @@ export default function PromotionsScreen() {
                   }
                 >
                   {loadingOffers.includes(promo.id) ? (
-                    <Text style={styles.claimButtonText}>Claiming...</Text>
+                    <Text
+                      style={[
+                        styles.claimButtonText,
+                        { color: theme.primaryContrast },
+                      ]}
+                    >
+                      Claiming...
+                    </Text>
                   ) : claimedOffers.includes(promo.id) ? (
                     <>
-                      <Feather name="check-circle" size={16} color="#666" />
-                      <Text style={styles.claimButtonTextClaimed}>Claimed</Text>
+                      <Feather name="check-circle" size={16} color={theme.primary} />
+                      <Text
+                        style={[
+                          styles.claimButtonTextClaimed,
+                          { color: theme.primary },
+                        ]}
+                      >
+                        Claimed
+                      </Text>
                     </>
                   ) : (
-                    <Text style={styles.claimButtonText}>Claim Offer</Text>
+                    <Text
+                      style={[
+                        styles.claimButtonText,
+                        { color: theme.primaryContrast },
+                      ]}
+                    >
+                      Claim Offer
+                    </Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -219,6 +280,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
+    borderWidth: 1,
   },
   categoryBadgeText: {
     fontSize: 12,

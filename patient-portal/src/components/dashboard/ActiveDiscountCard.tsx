@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Platform } from "react-native";
 import { colors } from "../../lib/colors";
 import { storage } from "../../lib/storage";
+import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
 const promotions = [
   {
@@ -26,6 +27,7 @@ const promotions = [
 
 export function ActiveDiscountCard() {
   const [claimedOffers, setClaimedOffers] = useState<number[]>([]);
+  const theme = useBrandingTheme();
 
   useEffect(() => {
     const loadDiscounts = async () => {
@@ -80,18 +82,53 @@ export function ActiveDiscountCard() {
   return (
     <View style={styles.container}>
       {activePromotions.map((promotion) => (
-        <View key={promotion.id} style={styles.card}>
+        <View
+          key={promotion.id}
+          style={[
+            styles.card,
+            {
+              backgroundColor: theme.primary,
+              shadowColor: theme.primary,
+            },
+          ]}
+        >
           <View style={styles.content}>
-            <View style={styles.iconContainer}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: theme.primaryOverlay },
+              ]}
+            >
               <Text style={styles.icon}>🏷️</Text>
             </View>
             <View style={styles.textContainer}>
-              <Text style={styles.label}>Active Discount</Text>
-              <Text style={styles.title}>{promotion.title}</Text>
-              <Text style={styles.discount}>{promotion.discount}</Text>
+              <Text
+                style={[styles.label, { color: theme.primaryContrast }]}
+              >
+                Active Discount
+              </Text>
+              <Text
+                style={[styles.title, { color: theme.primaryContrast }]}
+              >
+                {promotion.title}
+              </Text>
+              <Text
+                style={[styles.discount, { color: theme.primaryContrast }]}
+              >
+                {promotion.discount}
+              </Text>
             </View>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{promotion.category}</Text>
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: theme.primaryOverlay },
+              ]}
+            >
+              <Text
+                style={[styles.badgeText, { color: theme.primaryContrast }]}
+              >
+                {promotion.category}
+              </Text>
             </View>
           </View>
         </View>

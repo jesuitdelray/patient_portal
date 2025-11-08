@@ -49,6 +49,7 @@ import Toast from "react-native-toast-message";
 // Import DebugLogs early to capture console logs
 import "./src/components/DebugLogs";
 import { DebugLogs } from "./src/components/DebugLogs";
+import { BrandingGate } from "./src/components/BrandingGate";
 
 const Stack = createNativeStackNavigator();
 
@@ -745,7 +746,11 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
     };
   }, [isAuthenticated, authData, queryClient]);
 
-  return <MainNavigator isAuthenticated={isAuthenticated} />;
+  return (
+    <BrandingGate>
+      <MainNavigator isAuthenticated={isAuthenticated} />
+    </BrandingGate>
+  );
 }
 
 const styles = StyleSheet.create({

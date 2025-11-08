@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { API_BASE, resolvePatientId } from "../../lib/api";
 import { colors } from "../../lib/colors";
+import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
 type Procedure = {
   id: string;
@@ -18,6 +19,7 @@ type Plan = {
 
 export function TreatmentOverview() {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const theme = useBrandingTheme();
 
   useEffect(() => {
     (async () => {
@@ -87,8 +89,13 @@ export function TreatmentOverview() {
                   <View
                     style={[
                       styles.progressBar,
-                      { width: `${percentage}%` },
-                      isCompleted && styles.progressBarComplete,
+                      {
+                        width: `${percentage}%`,
+                        backgroundColor: theme.primary,
+                      },
+                      isCompleted && {
+                        backgroundColor: theme.accent,
+                      },
                     ]}
                   />
                 </View>
