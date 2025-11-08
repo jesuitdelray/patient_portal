@@ -41,11 +41,19 @@ export function Sidebar() {
   }, [navigation]);
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.navBg,
+          borderRightColor: theme.borderSubtle,
+        },
+      ]}
+    >
       {Platform.OS === "web" && (
         <View style={styles.header}>
           <Logo size={32} />
-          <Text style={[styles.title, { color: theme.primary }]}>
+          <Text style={[styles.title, { color: theme.brand }]}>
             {branding.clinicName || "Patient Portal"}
           </Text>
         </View>
@@ -59,19 +67,28 @@ export function Sidebar() {
               style={[
                 styles.menuItem,
                 isActive && {
-                  backgroundColor: theme.primarySoft,
-                  borderColor: theme.primaryBorder,
+                  backgroundColor: theme.navActiveBg,
+                  borderColor: theme.navActiveBg,
                 },
               ]}
               onPress={() => navigation.navigate(item.screen)}
             >
-              <Text style={styles.menuIcon}>{item.icon}</Text>
+              <Text
+                style={[
+                  styles.menuIcon,
+                  {
+                    color: isActive ? theme.navActiveIcon : theme.navIcon,
+                  },
+                ]}
+              >
+                {item.icon}
+              </Text>
               <Text
                 style={[
                   styles.menuText,
                   isActive
-                    ? { color: theme.primary, fontWeight: "600" }
-                    : { color: colors.textSecondary },
+                    ? { color: theme.navActiveIcon, fontWeight: "600" }
+                    : { color: theme.navText },
                 ]}
               >
                 {item.title}

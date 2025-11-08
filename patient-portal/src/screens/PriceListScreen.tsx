@@ -292,8 +292,8 @@ export default function PriceListScreen() {
               style={[
                 styles.categoryChip,
                 selectedCategory === null && {
-                  backgroundColor: theme.primarySoft,
-                  borderColor: theme.primaryBorder,
+                  backgroundColor: theme.brandSoft,
+                  borderColor: theme.borderSubtle,
                 },
               ]}
               onPress={() => setSelectedCategory(null)}
@@ -301,7 +301,7 @@ export default function PriceListScreen() {
               <Text
                 style={[
                   styles.categoryChipText,
-                  selectedCategory === null && { color: theme.primary },
+                  selectedCategory === null && { color: theme.brand },
                 ]}
               >
                 All
@@ -314,8 +314,8 @@ export default function PriceListScreen() {
                   style={[
                     styles.categoryChip,
                     selectedCategory === cat && {
-                      backgroundColor: theme.primarySoft,
-                      borderColor: theme.primaryBorder,
+                      backgroundColor: theme.brandSoft,
+                      borderColor: theme.borderSubtle,
                     },
                   ]}
                   onPress={() => setSelectedCategory(cat)}
@@ -323,7 +323,7 @@ export default function PriceListScreen() {
                   <Text
                     style={[
                       styles.categoryChipText,
-                      selectedCategory === cat && { color: theme.primary },
+                      selectedCategory === cat && { color: theme.brand },
                     ]}
                   >
                     {cat}
@@ -358,8 +358,8 @@ export default function PriceListScreen() {
                 style={[
                   styles.priceItem,
                   {
-                    borderColor: theme.primaryBorder,
-                    shadowColor: theme.primary,
+                    borderColor: theme.borderSubtle,
+                    shadowColor: theme.brand,
                   },
                 ]}
                 onPress={() => handleProcedureClick(item)}
@@ -367,10 +367,10 @@ export default function PriceListScreen() {
               >
                 <View style={styles.priceItemContent}>
                   <View style={styles.priceItemHeader}>
-                    <Text style={[styles.priceItemTitle, { color: theme.primary }]}>
+                    <Text style={[styles.priceItemTitle, { color: theme.brand }]}>
                       {item.title}
                     </Text>
-                    <Text style={[styles.priceItemPrice, { color: theme.primary }]}>
+                    <Text style={[styles.priceItemPrice, { color: theme.brand }]}>
                       ${item.price.toFixed(2)}
                     </Text>
                   </View>
@@ -380,7 +380,7 @@ export default function PriceListScreen() {
                   <View style={styles.priceItemFooter}>
                     {item.duration && (
                       <Text
-                        style={[styles.priceItemDuration, { color: theme.primary }]}
+                        style={[styles.priceItemDuration, { color: theme.brand }]}
                       >
                         ⏱ {item.duration} min
                       </Text>
@@ -388,7 +388,7 @@ export default function PriceListScreen() {
                     <Text
                       style={[
                         styles.priceItemCategory,
-                        { backgroundColor: theme.primarySoft, color: theme.primary },
+                        { backgroundColor: theme.brandSoft, color: theme.brand },
                       ]}
                     >
                       {item.category || "General"}
@@ -396,7 +396,7 @@ export default function PriceListScreen() {
                   </View>
                 </View>
                 <View style={styles.priceItemArrow}>
-                  <Text style={[styles.arrowText, { color: theme.primary }]}>→</Text>
+                  <Text style={[styles.arrowText, { color: theme.brand }]}>→</Text>
                 </View>
               </TouchableOpacity>
             ))
@@ -415,7 +415,7 @@ export default function PriceListScreen() {
           <View
             style={[
               styles.modalContent,
-              { borderColor: theme.primaryBorder },
+              { borderColor: theme.borderSubtle, backgroundColor: theme.surface },
             ]}
           >
             <Text style={styles.modalTitle}>Book Appointment</Text>
@@ -425,8 +425,8 @@ export default function PriceListScreen() {
                   style={[
                     styles.modalProcedureInfo,
                     {
-                      borderColor: theme.primaryBorder,
-                      backgroundColor: theme.primarySoft,
+                      borderColor: theme.borderSubtle,
+                      backgroundColor: theme.brandSoft,
                     },
                   ]}
                 >
@@ -434,7 +434,7 @@ export default function PriceListScreen() {
                     {selectedProcedure.title}
                   </Text>
                   <Text
-                    style={[styles.modalProcedurePrice, { color: theme.primary }]}
+                    style={[styles.modalProcedurePrice, { color: theme.brand }]}
                   >
                     ${selectedProcedure.price.toFixed(2)}
                   </Text>
@@ -459,13 +459,13 @@ export default function PriceListScreen() {
                           width: "100%",
                           padding: "12px",
                           fontSize: "14px",
-                          border: `1px solid ${theme.primaryBorder}`,
+                          border: `1px solid ${theme.borderSubtle}`,
                           borderRadius: "6px",
-                          backgroundColor: theme.primarySoft,
+                          backgroundColor: theme.brandSoft,
                           fontFamily: "inherit",
                           boxSizing: "border-box",
                           maxWidth: "100%",
-                          color: colors.textPrimary,
+                          color: theme.textPrimary,
                           outline: "none",
                           cursor: "pointer",
                           marginTop: 8,
@@ -504,8 +504,8 @@ export default function PriceListScreen() {
                       styles.modalButton,
                       styles.modalButtonCancel,
                       {
-                        backgroundColor: theme.primarySoft,
-                        borderColor: theme.primaryBorder,
+                        backgroundColor: theme.brandSoft,
+                        borderColor: theme.borderSubtle,
                       },
                     ]}
                     onPress={() => setShowAppointmentModal(false)}
@@ -516,7 +516,7 @@ export default function PriceListScreen() {
                     style={[
                       styles.modalButton,
                       styles.modalButtonConfirm,
-                      { backgroundColor: theme.primary },
+                      { backgroundColor: theme.ctaBg },
                       (createAppointmentMutation.isPending || !newDateTime) && styles.modalButtonDisabled,
                     ]}
                     onPress={handleCreateAppointment}
@@ -525,7 +525,7 @@ export default function PriceListScreen() {
                     <Text
                       style={[
                         styles.modalButtonConfirmText,
-                        { color: theme.primaryContrast },
+                        { color: theme.ctaText },
                       ]}
                     >
                       {createAppointmentMutation.isPending

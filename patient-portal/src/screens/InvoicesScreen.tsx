@@ -96,42 +96,39 @@ export default function InvoicesScreen() {
                 style={[
                   styles.invoiceCard,
                   {
-                    borderColor: theme.primaryBorder,
-                    shadowColor: theme.primary,
+                    borderColor: theme.borderSubtle,
+                    shadowColor: theme.brand,
                   },
                 ]}
               >
                 <View style={styles.invoiceHeader}>
                   <View style={styles.invoiceTitleRow}>
-                    <Text style={[styles.invoiceTitle, { color: theme.primary }]}>
+                    <Text style={[styles.invoiceTitle, { color: theme.brand }]}>
                       {invoice.procedure?.title || "Unknown Procedure"}
                     </Text>
                     <View
                       style={[
                         styles.statusBadge,
                         invoice.status === "paid"
-                          ? styles.statusBadgePaid
-                          : styles.statusBadgeUnpaid,
-                        invoice.status === "paid"
                           ? {
-                              backgroundColor: theme.accentSoft,
-                              borderColor: theme.accent,
+                              backgroundColor: theme.success,
+                              borderColor: theme.success,
                             }
                           : {
-                              backgroundColor: theme.primarySoft,
-                              borderColor: theme.primaryBorder,
+                              backgroundColor: theme.highlightBg,
+                              borderColor: theme.borderSubtle,
                             },
                       ]}
                     >
                       <Text
                         style={[
                           styles.statusText,
-                          invoice.status === "paid"
-                            ? styles.statusTextPaid
-                            : styles.statusTextUnpaid,
-                          invoice.status === "paid"
-                            ? { color: theme.accentContrast }
-                            : { color: theme.primary },
+                          {
+                            color:
+                              invoice.status === "paid"
+                                ? "#FFFFFF"
+                                : theme.textPrimary,
+                          },
                         ]}
                       >
                         {invoice.status.toUpperCase()}
@@ -148,7 +145,7 @@ export default function InvoicesScreen() {
                 <View style={styles.invoiceDetails}>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Amount:</Text>
-                    <Text style={[styles.detailValue, { color: theme.primary }]}>
+                      <Text style={[styles.detailValue, { color: theme.brand }]}>
                       ${invoice.amount.toFixed(2)}
                     </Text>
                   </View>
@@ -181,14 +178,14 @@ export default function InvoicesScreen() {
                 <TouchableOpacity
                   style={[
                     styles.downloadButton,
-                    { backgroundColor: theme.primary },
+                    { backgroundColor: theme.ctaBg },
                   ]}
                   onPress={() => handleDownloadPDF(invoice.id)}
                 >
                   <Text
                     style={[
                       styles.downloadButtonText,
-                      { color: theme.primaryContrast },
+                      { color: theme.ctaText },
                     ]}
                   >
                     📥 Download PDF

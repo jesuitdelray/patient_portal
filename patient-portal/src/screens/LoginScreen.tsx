@@ -208,7 +208,7 @@ export default function LoginScreen() {
           <Logo size={80} />
         </View>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.primary }]}>
+          <Text style={[styles.title, { color: theme.brand }]}>
             {branding.clinicName || "Welcome"}
           </Text>
           <Text style={styles.subtitle}>
@@ -219,7 +219,7 @@ export default function LoginScreen() {
         <TouchableOpacity
           style={[
             styles.googleButton,
-            { backgroundColor: theme.primary, borderColor: theme.primary },
+            { backgroundColor: theme.ctaBg, borderColor: theme.ctaBg },
             isLoading && styles.buttonDisabled,
           ]}
           onPress={handleGoogleLogin}
@@ -227,7 +227,7 @@ export default function LoginScreen() {
         >
           <View style={styles.buttonContent}>
             <Text style={{ fontSize: 20, marginRight: 8 }}>🔐</Text>
-            <Text style={[styles.buttonText, { color: theme.primaryContrast }]}>
+            <Text style={[styles.buttonText, { color: theme.ctaText }]}>
               Sign in with Google
             </Text>
           </View>
@@ -251,8 +251,8 @@ export default function LoginScreen() {
             style={[
               styles.appleButtonWeb,
               {
-                backgroundColor: theme.primarySoft,
-                borderColor: theme.primaryBorder,
+                backgroundColor: theme.brandSoft,
+                borderColor: theme.borderSubtle,
               },
               isLoading && styles.buttonDisabled,
             ]}
@@ -261,7 +261,7 @@ export default function LoginScreen() {
           >
             <View style={styles.buttonContent}>
               <Text style={{ fontSize: 18, marginRight: 8 }}>🍎</Text>
-              <Text style={[styles.appleButtonText, { color: theme.primary }]}>
+              <Text style={[styles.appleButtonText, { color: theme.brand }]}>
                 Sign in with Apple
               </Text>
             </View>
@@ -272,7 +272,7 @@ export default function LoginScreen() {
           <Text style={styles.footerText}>
             By signing in, you agree to our{" "}
             <Text
-              style={[styles.linkText, { color: theme.primary }]}
+              style={[styles.linkText, { color: theme.brand }]}
               onPress={() => {
                 const termsUrl =
                   require("../../app.json").expo.extra?.termsOfServiceUrl ||
@@ -284,7 +284,7 @@ export default function LoginScreen() {
             </Text>{" "}
             and{" "}
             <Text
-              style={[styles.linkText, { color: theme.primary }]}
+              style={[styles.linkText, { color: theme.brand }]}
               onPress={() => {
                 const privacyUrl =
                   require("../../app.json").expo.extra?.privacyPolicyUrl ||

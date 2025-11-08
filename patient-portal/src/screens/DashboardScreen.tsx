@@ -28,7 +28,9 @@ export default function DashboardScreen() {
 
   return (
     <AppointmentsProvider>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.pageBg }]}
+      >
         <Header title="Dashboard" />
         <ScrollView
           style={styles.scrollView}
@@ -36,20 +38,20 @@ export default function DashboardScreen() {
         >
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <Text style={styles.title}>
+              <Text style={[styles.title, { color: theme.textPrimary }]}>
                 Welcome back{patientName ? `, ${patientName}` : ""}
               </Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
                 Here's an overview of your dental health journey
               </Text>
             </View>
             <TouchableOpacity
-              style={[styles.bookButton, { backgroundColor: theme.primary }]}
+              style={[styles.bookButton, { backgroundColor: theme.ctaBg }]}
               onPress={handleBookAppointment}
               activeOpacity={0.8}
             >
               <Text
-                style={[styles.bookButtonText, { color: theme.primaryContrast }]}
+                style={[styles.bookButtonText, { color: theme.ctaText }]}
               >
                 Book Appointment
               </Text>

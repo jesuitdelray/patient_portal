@@ -114,8 +114,9 @@ export default function PromotionsScreen() {
               style={[
                 styles.card,
                 {
-                  borderColor: theme.primaryBorder,
-                  shadowColor: theme.primary,
+                  borderColor: theme.borderSubtle,
+                  backgroundColor: theme.promoBg,
+                  shadowColor: theme.brand,
                 },
               ]}
             >
@@ -125,15 +126,15 @@ export default function PromotionsScreen() {
                     style={[
                       styles.categoryBadge,
                       {
-                        backgroundColor: theme.secondarySoft,
-                        borderColor: theme.secondary,
+                        backgroundColor: theme.brandSoft,
+                        borderColor: theme.brand,
                       },
                     ]}
                   >
                     <Text
                       style={[
                         styles.categoryBadgeText,
-                        { color: theme.secondary },
+                        { color: theme.brand },
                       ]}
                     >
                       {promo.category}
@@ -142,13 +143,13 @@ export default function PromotionsScreen() {
                   <View
                     style={[
                       styles.discountBadge,
-                      { backgroundColor: theme.primary },
+                      { backgroundColor: theme.promoBg },
                     ]}
                   >
                     <Text
                       style={[
                         styles.discountBadgeText,
-                        { color: theme.primaryContrast },
+                        { color: theme.promoText },
                       ]}
                     >
                       {promo.discount}
@@ -157,13 +158,19 @@ export default function PromotionsScreen() {
                 </View>
               </View>
               <View style={styles.cardContent}>
-                <Text style={[styles.cardTitle, { color: theme.primary }]}>
+                <Text style={[styles.cardTitle, { color: theme.brand }]}>
                   {promo.title}
                 </Text>
-                <Text style={styles.cardDescription}>{promo.description}</Text>
+                <Text
+                  style={[styles.cardDescription, { color: theme.textSecondary }]}
+                >
+                  {promo.description}
+                </Text>
                 <View style={styles.validUntilRow}>
-                  <Feather name="clock" size={14} color={theme.primary} />
-                  <Text style={styles.validUntilText}>
+                  <Feather name="clock" size={14} color={theme.brand} />
+                  <Text
+                    style={[styles.validUntilText, { color: theme.textSecondary }]}
+                  >
                     Valid until {promo.validUntil}
                   </Text>
                 </View>
@@ -171,11 +178,11 @@ export default function PromotionsScreen() {
                   style={[
                     styles.claimButton,
                     {
-                      backgroundColor: theme.primary,
+                      backgroundColor: theme.ctaBg,
                     },
                     claimedOffers.includes(promo.id) && [
                       styles.claimButtonClaimed,
-                      { backgroundColor: theme.primarySoft },
+                      { backgroundColor: theme.promoBg },
                     ],
                     loadingOffers.includes(promo.id) && styles.claimButtonLoading,
                   ]}
@@ -189,18 +196,18 @@ export default function PromotionsScreen() {
                     <Text
                       style={[
                         styles.claimButtonText,
-                        { color: theme.primaryContrast },
+                        { color: theme.ctaText },
                       ]}
                     >
                       Claiming...
                     </Text>
                   ) : claimedOffers.includes(promo.id) ? (
                     <>
-                      <Feather name="check-circle" size={16} color={theme.primary} />
+                      <Feather name="check-circle" size={16} color={theme.brand} />
                       <Text
                         style={[
                           styles.claimButtonTextClaimed,
-                          { color: theme.primary },
+                          { color: theme.brand },
                         ]}
                       >
                         Claimed
@@ -210,7 +217,7 @@ export default function PromotionsScreen() {
                     <Text
                       style={[
                         styles.claimButtonText,
-                        { color: theme.primaryContrast },
+                        { color: theme.ctaText },
                       ]}
                     >
                       Claim Offer

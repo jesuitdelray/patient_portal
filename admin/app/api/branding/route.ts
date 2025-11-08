@@ -1,34 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { requireDoctor, getAuthPayload } from "@/lib/auth";
+import {
+  buildClinicTheme,
+  clinicBrandingToInput,
+  mapInputToPrismaData,
+  validateBrandingInput,
+  defaultBrandingInput,
+} from "@/lib/branding";
 
 const prisma = new PrismaClient();
-
-const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-
-function serializeBranding(branding: any) {
-  if (!branding) {
-    return {
-      clinicName: null,
-      logoUrl: null,
-      primaryColor: null,
-      secondaryColor: null,
-      accentColor: null,
-      faviconUrl: null,
-      updatedAt: null,
-    };
-  }
-
-  return {
-    clinicName: branding.clinicName || null,
-    logoUrl: branding.logoUrl || null,
-    primaryColor: branding.primaryColor || null,
-    secondaryColor: branding.secondaryColor || null,
-    accentColor: branding.accentColor || null,
-    faviconUrl: branding.faviconUrl || null,
-    updatedAt: branding.updatedAt ? branding.updatedAt.toISOString() : null,
-  };
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,7 +25,21 @@ export async function GET(request: NextRequest) {
       where: { doctorId: authPayload.userId },
     });
 
-    return NextResponse.json(serializeBranding(branding));
+    const input = branding
+      ? clinicBrandingToInput(branding)
+      : defaultBrandingInput;
+    const theme = buildClinicTheme(input);
+
+    return NextResponse.json({
+      clinicName: input.clinicName,
+      logoUrl: input.logoUrl,
+      faviconUrl: input.faviconUrl,
+      colors: input.colors,
+      theme,
+      updatedAt: branding?.updatedAt
+        ? branding.updatedAt.toISOString()
+        : null,
+    });
   } catch (error) {
     console.error("[Branding] GET failed:", error);
     return NextResponse.json(
@@ -59,54 +54,55 @@ export async function PUT(request: NextRequest) {
     const doctorId = await requireDoctor(request);
     const body = await request.json();
 
-    const {
-      clinicName,
-      logoUrl,
-      primaryColor,
-      secondaryColor,
-      accentColor,
-      faviconUrl,
-    } = body;
-
-    if (clinicName !== undefined && clinicName !== null && clinicName.length > 50) {
+    if (
+      body.clinicName !== undefined &&
+      body.clinicName !== null &&
+      body.clinicName.length > 50
+    ) {
       return NextResponse.json(
         { error: "Clinic name must be 50 characters or less" },
         { status: 400 }
       );
     }
 
-    const colorsToValidate = [
-      { value: primaryColor, label: "primaryColor" },
-      { value: secondaryColor, label: "secondaryColor" },
-      { value: accentColor, label: "accentColor" },
-    ];
+    const input = validateBrandingInput({
+      clinicName: body.clinicName ?? null,
+      logoUrl: body.logoUrl ?? null,
+      faviconUrl: body.faviconUrl ?? null,
+      colors: {
+        brand: body?.colors?.brand ?? defaultBrandingInput.colors.brand,
+        nav: body?.colors?.nav ?? undefined,
+        cta:
+          body?.colors?.cta ??
+          body?.colors?.brand ??
+          defaultBrandingInput.colors.cta,
+        highlight: body?.colors?.highlight ?? undefined,
+        promo: body?.colors?.promo ?? undefined,
+        danger: body?.colors?.danger ?? undefined,
+      },
+    });
 
-    for (const { value, label } of colorsToValidate) {
-      if (value && !hexColorRegex.test(value)) {
-        return NextResponse.json(
-          { error: `${label} must be a valid hex color` },
-          { status: 400 }
-        );
-      }
-    }
-
-    const data: Record<string, string | null | undefined> = {};
-    if (clinicName !== undefined) data.clinicName = clinicName || null;
-    if (logoUrl !== undefined) data.logoUrl = logoUrl || null;
-    if (primaryColor !== undefined) data.primaryColor = primaryColor || null;
-    if (secondaryColor !== undefined) data.secondaryColor = secondaryColor || null;
-    if (accentColor !== undefined) data.accentColor = accentColor || null;
-    if (faviconUrl !== undefined) data.faviconUrl = faviconUrl || null;
+    const prismaData = mapInputToPrismaData(input);
 
     const branding = await prisma.clinicBranding.upsert({
       where: { doctorId },
-      create: { doctorId, ...data },
-      update: { ...data, updatedAt: new Date() },
+      create: { doctorId, ...prismaData },
+      update: { ...prismaData, updatedAt: new Date() },
     });
+
+    const updatedInput = clinicBrandingToInput(branding);
+    const theme = buildClinicTheme(updatedInput);
 
     return NextResponse.json({
       success: true,
-      branding: serializeBranding(branding),
+      branding: {
+        clinicName: updatedInput.clinicName,
+        logoUrl: updatedInput.logoUrl,
+        faviconUrl: updatedInput.faviconUrl,
+        colors: updatedInput.colors,
+        theme,
+        updatedAt: branding.updatedAt.toISOString(),
+      },
     });
   } catch (error) {
     console.error("[Branding] PUT failed:", error);

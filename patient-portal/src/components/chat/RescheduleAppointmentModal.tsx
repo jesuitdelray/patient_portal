@@ -8,9 +8,9 @@ import {
   Platform,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { colors } from "../../lib/colors";
 import { API_BASE } from "../../lib/api";
 import Toast from "react-native-toast-message";
+import { colors } from "../../lib/colors";
 import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
 type Props = {
@@ -169,7 +169,10 @@ export function RescheduleAppointmentModal({
               style={[
                 styles.button,
                 styles.buttonCancel,
-                { borderColor: theme.primary, backgroundColor: theme.primarySoft },
+                {
+                  borderColor: theme.brand,
+                  backgroundColor: theme.brandSoft,
+                },
                 isSubmitting && styles.buttonDisabled,
               ]}
               onPress={onClose}
@@ -181,13 +184,13 @@ export function RescheduleAppointmentModal({
               style={[
                 styles.button,
                 styles.buttonSubmit,
-                { backgroundColor: theme.primary },
+                { backgroundColor: theme.ctaBg },
                 (isSubmitting || !newDateTime) && styles.buttonDisabled,
               ]}
               onPress={handleSubmit}
               disabled={isSubmitting || !newDateTime}
             >
-              <Text style={styles.buttonTextSubmit}>
+              <Text style={[styles.buttonTextSubmit, { color: theme.ctaText }]}>
                 {isSubmitting ? "Rescheduling..." : "Reschedule"}
               </Text>
             </TouchableOpacity>

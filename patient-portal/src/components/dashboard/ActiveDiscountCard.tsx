@@ -87,8 +87,8 @@ export function ActiveDiscountCard() {
           style={[
             styles.card,
             {
-              backgroundColor: theme.primary,
-              shadowColor: theme.primary,
+              backgroundColor: theme.promoBg,
+              shadowColor: theme.brand,
             },
           ]}
         >
@@ -96,24 +96,24 @@ export function ActiveDiscountCard() {
             <View
               style={[
                 styles.iconContainer,
-                { backgroundColor: theme.primaryOverlay },
+                { backgroundColor: theme.brandSoft },
               ]}
             >
               <Text style={styles.icon}>🏷️</Text>
             </View>
             <View style={styles.textContainer}>
               <Text
-                style={[styles.label, { color: theme.primaryContrast }]}
+                style={[styles.label, { color: theme.promoText }]}
               >
                 Active Discount
               </Text>
               <Text
-                style={[styles.title, { color: theme.primaryContrast }]}
+                style={[styles.title, { color: theme.promoText }]}
               >
                 {promotion.title}
               </Text>
               <Text
-                style={[styles.discount, { color: theme.primaryContrast }]}
+                style={[styles.discount, { color: theme.promoText }]}
               >
                 {promotion.discount}
               </Text>
@@ -121,11 +121,11 @@ export function ActiveDiscountCard() {
             <View
               style={[
                 styles.badge,
-                { backgroundColor: theme.primaryOverlay },
+                { backgroundColor: theme.brandSoft },
               ]}
             >
               <Text
-                style={[styles.badgeText, { color: theme.primaryContrast }]}
+                style={[styles.badgeText, { color: theme.brand }]}
               >
                 {promotion.category}
               </Text>

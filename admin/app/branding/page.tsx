@@ -1,30 +1,105 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+/* eslint-disable @next/next/no-img-element */
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE } from "@/lib/api";
 import { Loader } from "@/app/components/Loader";
 
+type BrandingColors = {
+  brand: string;
+  nav: string;
+  cta: string;
+  highlight: string;
+  promo: string;
+  danger: string;
+};
+
 type BrandingData = {
   clinicName: string | null;
   logoUrl: string | null;
-  primaryColor: string | null;
-  secondaryColor: string | null;
-  accentColor: string | null;
   faviconUrl: string | null;
+  colors: BrandingColors;
+  theme?: Record<string, string>;
   updatedAt: string | null;
+};
+
+const DEFAULT_COLORS: BrandingColors = {
+  brand: "#2563EB",
+  nav: "#FFFFFF",
+  cta: "#2563EB",
+  highlight: "#2563EB",
+  promo: "#2563EB",
+  danger: "#EF4444",
 };
 
 const DEFAULT_BRANDING: BrandingData = {
   clinicName: null,
   logoUrl: null,
-  primaryColor: "#3B82F6",
-  secondaryColor: "#64748B",
-  accentColor: "#10B981",
   faviconUrl: null,
+  colors: { ...DEFAULT_COLORS },
+  theme: undefined,
   updatedAt: null,
 };
+
+const COLOR_FIELDS: Array<{
+  key: keyof BrandingColors;
+  label: string;
+  description: string;
+  optional?: boolean;
+}> = [
+  {
+    key: "brand",
+    label: "Brand Color",
+    description: "Лого, название клиники, небольшие акценты.",
+  },
+  {
+    key: "nav",
+    label: "Navigation / Sidebar Color",
+    description: "Фон левого меню, иконки, hover. По умолчанию светлый.",
+    optional: true,
+  },
+  {
+    key: "cta",
+    label: "Primary Action Color",
+    description: "Основные CTA: «Записаться», «Сохранить».",
+    optional: true,
+  },
+  {
+    key: "highlight",
+    label: "Highlight / Banner Color",
+    description: "Баннеры, пустые состояния, Upcoming Appointment.",
+    optional: true,
+  },
+  {
+    key: "promo",
+    label: "Promo Color",
+    description: "Акции, скидки, бейджи «20% OFF».",
+    optional: true,
+  },
+  {
+    key: "danger",
+    label: "Danger Color",
+    description: "Ошибки и критичные предупреждения.",
+    optional: true,
+  },
+];
+
+function normalizeHex(value: string) {
+  if (!value) return "";
+  let hex = value.trim();
+  if (!hex.startsWith("#")) {
+    hex = `#${hex}`;
+  }
+  return hex.slice(0, 7).toUpperCase();
+}
+
+function ensureColorOrNull(value: string) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return normalizeHex(trimmed);
+}
 
 export default function BrandingPage() {
   const [branding, setBranding] = useState<BrandingData>(DEFAULT_BRANDING);
@@ -52,13 +127,24 @@ export default function BrandingPage() {
           throw new Error("Failed to load branding");
         }
         const data = await res.json();
+        const mergedColors: BrandingColors = {
+          brand: normalizeHex(data.colors?.brand ?? DEFAULT_COLORS.brand),
+          nav: normalizeHex(data.colors?.nav ?? DEFAULT_COLORS.nav),
+          cta: normalizeHex(data.colors?.cta ?? data.colors?.brand ?? DEFAULT_COLORS.cta),
+          highlight: normalizeHex(
+            data.colors?.highlight ?? data.colors?.brand ?? DEFAULT_COLORS.highlight
+          ),
+          promo: normalizeHex(
+            data.colors?.promo ?? data.colors?.brand ?? DEFAULT_COLORS.promo
+          ),
+          danger: normalizeHex(data.colors?.danger ?? DEFAULT_COLORS.danger),
+        };
         setBranding({
-          clinicName: data.clinicName,
-          logoUrl: data.logoUrl,
-          primaryColor: data.primaryColor || DEFAULT_BRANDING.primaryColor,
-          secondaryColor: data.secondaryColor || DEFAULT_BRANDING.secondaryColor,
-          accentColor: data.accentColor || DEFAULT_BRANDING.accentColor,
-          faviconUrl: data.faviconUrl,
+          clinicName: data.clinicName ?? null,
+          logoUrl: data.logoUrl ?? null,
+          faviconUrl: data.faviconUrl ?? null,
+          colors: mergedColors,
+          theme: data.theme,
           updatedAt: data.updatedAt || null,
         });
         if (data.logoUrl) {
@@ -87,11 +173,25 @@ export default function BrandingPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const payload = {
+        clinicName: branding.clinicName,
+        logoUrl: branding.logoUrl,
+        faviconUrl: branding.faviconUrl,
+        colors: {
+          brand: branding.colors.brand,
+          nav: ensureColorOrNull(branding.colors.nav),
+          cta: ensureColorOrNull(branding.colors.cta),
+          highlight: ensureColorOrNull(branding.colors.highlight),
+          promo: ensureColorOrNull(branding.colors.promo),
+          danger: ensureColorOrNull(branding.colors.danger),
+        },
+      };
+
       const res = await fetch("/api/branding", {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(branding),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
@@ -175,6 +275,20 @@ export default function BrandingPage() {
     }
   };
 
+  const themePreview = useMemo(() => {
+    return {
+      navBg: branding.colors.nav || DEFAULT_COLORS.nav,
+      navText: "#111827",
+      brand: branding.colors.brand || DEFAULT_COLORS.brand,
+      ctaBg: branding.colors.cta || branding.colors.brand || DEFAULT_COLORS.cta,
+      highlightBg:
+        branding.colors.highlight || branding.colors.brand || DEFAULT_COLORS.highlight,
+      promoBg:
+        branding.colors.promo || branding.colors.brand || DEFAULT_COLORS.promo,
+      danger: branding.colors.danger || DEFAULT_COLORS.danger,
+    };
+  }, [branding.colors]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -184,210 +298,239 @@ export default function BrandingPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-10 px-6 space-y-8">
+    <div className="max-w-4xl mx-auto py-10 px-6 space-y-8">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Clinic Branding</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Update the logo, clinic name, and brand colors for the patient portal.
+          Настрой цвета клиники. Мы автоматически построим тему и распределим её по
+          интерфейсу портала.
         </p>
       </div>
 
-      <div className="space-y-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Clinic Name
-          </label>
-          <input
-            type="text"
-            value={branding.clinicName ?? ""}
-            onChange={(event) =>
-              setBranding((prev) => ({
-                ...prev,
-                clinicName: event.target.value || null,
-              }))
-            }
-            placeholder="Enter clinic name"
-            maxLength={50}
-            className="w-full border rounded-lg px-3 py-2 text-sm"
-          />
+      <div className="grid gap-6 lg:grid-cols-[1.4fr,1fr]">
+        <div className="space-y-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Clinic Name
+            </label>
+            <input
+              type="text"
+              value={branding.clinicName ?? ""}
+              onChange={(event) =>
+                setBranding((prev) => ({
+                  ...prev,
+                  clinicName: event.target.value || null,
+                }))
+              }
+              placeholder="Enter clinic name"
+              maxLength={50}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="space-y-4">
+            <section>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Logo
+              </label>
+              <p className="text-xs text-slate-500 mb-3">
+                PNG / JPG / SVG / WEBP · max 2&nbsp;MB · квадратное изображение
+                (≥256 × 256px).
+              </p>
+              <div className="flex items-center gap-4">
+                {logoPreview && (
+                  <div className="w-32 h-32 border rounded-lg p-2 bg-slate-50 flex items-center justify-center">
+                    <img
+                      src={logoPreview}
+                      alt="Logo preview"
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                    onChange={handleLogoChange}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => logoInputRef.current?.click()}
+                    className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-950 text-sm"
+                  >
+                    {logoPreview ? "Change Logo" : "Upload Logo"}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Favicon
+              </label>
+              <p className="text-xs text-slate-500 mb-3">
+                PNG / SVG · max 1&nbsp;MB. Рекомендуемый размер 32 × 32px.
+              </p>
+              <div className="flex items-center gap-4">
+                {faviconPreview && (
+                  <div className="w-16 h-16 border rounded-lg p-2 bg-slate-50 flex items-center justify-center">
+                    <img
+                      src={faviconPreview}
+                      alt="Favicon preview"
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    ref={faviconInputRef}
+                    type="file"
+                    accept="image/png,image/svg+xml"
+                    onChange={handleFaviconChange}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => faviconInputRef.current?.click()}
+                    className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-950 text-sm"
+                  >
+                    {faviconPreview ? "Change Favicon" : "Upload Favicon"}
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div className="space-y-6">
+            {COLOR_FIELDS.map((field) => {
+              const value = branding.colors[field.key] ?? "";
+              return (
+                <div key={field.key} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">
+                        {field.label}{" "}
+                        {field.optional && (
+                          <span className="text-xs text-slate-400">(optional)</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {field.description}
+                      </p>
+                    </div>
+                    <input
+                      type="color"
+                      value={value || "#FFFFFF"}
+                      onChange={(event) => {
+                        const hex = normalizeHex(event.target.value);
+                        setBranding((prev) => ({
+                          ...prev,
+                          colors: { ...prev.colors, [field.key]: hex },
+                        }));
+                      }}
+                      className="w-16 h-10 border rounded cursor-pointer"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(event) => {
+                      const hex = event.target.value;
+                      setBranding((prev) => ({
+                        ...prev,
+                        colors: {
+                          ...prev.colors,
+                          [field.key]: hex.toUpperCase(),
+                        },
+                      }));
+                    }}
+                    onBlur={(event) => {
+                      const normalized = normalizeHex(event.target.value);
+                      setBranding((prev) => ({
+                        ...prev,
+                        colors: { ...prev.colors, [field.key]: normalized },
+                      }));
+                    }}
+                    placeholder={DEFAULT_COLORS[field.key]}
+                    className="w-full border rounded-lg px-3 py-2 text-sm font-mono"
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-end border-t border-slate-200 pt-4">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-5 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-950 text-sm disabled:opacity-60"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Logo
-          </label>
-          <p className="text-xs text-slate-500 mb-3">
-            PNG / JPG / SVG / WEBP · max 2&nbsp;MB · square image recommended (≥256
-            × 256px). Transparent background works best.
-          </p>
-          <div className="flex items-center gap-4">
-            {logoPreview && (
-              <div className="w-32 h-32 border rounded-lg p-2 bg-slate-50 flex items-center justify-center">
-                <img
-                  src={logoPreview}
-                  alt="Logo preview"
-                  className="max-w-full max-h-full object-contain"
-                />
+        <aside className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-800 mb-3">
+              Live Preview
+            </h2>
+            <div
+              className="rounded-lg border p-4 mb-4"
+              style={{ backgroundColor: themePreview.navBg }}
+            >
+              <p className="text-xs font-medium uppercase tracking-wide mb-2">
+                Sidebar
+              </p>
+              <div className="space-y-2">
+                {["Dashboard", "Treatment", "Price List"].map((item, index) => (
+                  <div
+                    key={item}
+                    className={`px-3 py-2 rounded-md text-sm ${
+                      index === 0 ? "font-semibold" : ""
+                    }`}
+                    style={{
+                      backgroundColor:
+                        index === 0 ? themePreview.brand + "1A" : "transparent",
+                      color:
+                        index === 0 ? themePreview.brand : "#111827",
+                    }}
+                  >
+                    {item}
+                  </div>
+                ))}
               </div>
-            )}
-            <div className="flex-1">
-              <input
-                ref={logoInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                onChange={handleLogoChange}
-                className="hidden"
-              />
-              <button
-                onClick={() => logoInputRef.current?.click()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+            </div>
+
+            <div className="space-y-3">
+              <div
+                className="rounded-lg px-4 py-3 text-sm font-medium"
+                style={{ backgroundColor: themePreview.highlightBg }}
               >
-                {logoPreview ? "Change Logo" : "Upload Logo"}
+                Upcoming Appointment Banner
+              </div>
+              <button
+                className="w-full rounded-md px-4 py-2 text-sm font-medium shadow-sm"
+                style={{ backgroundColor: themePreview.ctaBg, color: "#111827" }}
+              >
+                Primary CTA
               </button>
+              <div
+                className="rounded-lg px-4 py-3 text-sm border"
+                style={{ backgroundColor: themePreview.promoBg }}
+              >
+                Promo Card
+              </div>
+              <div
+                className="rounded-lg px-4 py-2 text-xs font-medium text-white"
+                style={{ backgroundColor: themePreview.danger }}
+              >
+                Danger example
+              </div>
             </div>
           </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Primary Color
-          </label>
-          <div className="flex items-center gap-4">
-            <input
-              type="color"
-              value={branding.primaryColor || "#3B82F6"}
-              onChange={(event) =>
-                setBranding((prev) => ({
-                  ...prev,
-                  primaryColor: event.target.value,
-                }))
-              }
-              className="w-20 h-10 border rounded cursor-pointer"
-            />
-            <input
-              type="text"
-              value={branding.primaryColor ?? ""}
-              onChange={(event) =>
-                setBranding((prev) => ({
-                  ...prev,
-                  primaryColor: event.target.value || null,
-                }))
-              }
-              placeholder="#3B82F6"
-              className="flex-1 border rounded-lg px-3 py-2 text-sm font-mono"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Secondary Color (Optional)
-          </label>
-          <div className="flex items-center gap-4">
-            <input
-              type="color"
-              value={branding.secondaryColor || "#64748B"}
-              onChange={(event) =>
-                setBranding((prev) => ({
-                  ...prev,
-                  secondaryColor: event.target.value || null,
-                }))
-              }
-              className="w-20 h-10 border rounded cursor-pointer"
-            />
-            <input
-              type="text"
-              value={branding.secondaryColor ?? ""}
-              onChange={(event) =>
-                setBranding((prev) => ({
-                  ...prev,
-                  secondaryColor: event.target.value || null,
-                }))
-              }
-              placeholder="#64748B"
-              className="flex-1 border rounded-lg px-3 py-2 text-sm font-mono"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Accent Color (Optional)
-          </label>
-          <div className="flex items-center gap-4">
-            <input
-              type="color"
-              value={branding.accentColor || "#10B981"}
-              onChange={(event) =>
-                setBranding((prev) => ({
-                  ...prev,
-                  accentColor: event.target.value || null,
-                }))
-              }
-              className="w-20 h-10 border rounded cursor-pointer"
-            />
-            <input
-              type="text"
-              value={branding.accentColor ?? ""}
-              onChange={(event) =>
-                setBranding((prev) => ({
-                  ...prev,
-                  accentColor: event.target.value || null,
-                }))
-              }
-              placeholder="#10B981"
-              className="flex-1 border rounded-lg px-3 py-2 text-sm font-mono"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Favicon
-          </label>
-          <p className="text-xs text-slate-500 mb-3">
-            PNG / SVG · max 1&nbsp;MB. Square image recommended (32 × 32px or
-            higher).
-          </p>
-          <div className="flex items-center gap-4">
-            {faviconPreview && (
-              <div className="w-16 h-16 border rounded-lg p-2 bg-slate-50 flex items-center justify-center">
-                <img
-                  src={faviconPreview}
-                  alt="Favicon preview"
-                  className="max-w-full max-h-full object-contain"
-                />
-              </div>
-            )}
-            <div className="flex-1">
-              <input
-                ref={faviconInputRef}
-                type="file"
-                accept="image/png,image/svg+xml"
-                onChange={handleFaviconChange}
-                className="hidden"
-              />
-              <button
-                onClick={() => faviconInputRef.current?.click()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-              >
-                {faviconPreview ? "Change Favicon" : "Upload Favicon"}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end border-t border-slate-200 pt-4">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
+        </aside>
       </div>
     </div>
   );
 }
-

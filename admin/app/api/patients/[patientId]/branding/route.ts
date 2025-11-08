@@ -1,34 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { getAuthPayload } from "@/lib/auth";
+import {
+  buildClinicTheme,
+  clinicBrandingToInput,
+  defaultBrandingInput,
+} from "@/lib/branding";
 
 const prisma = new PrismaClient();
-
-const EMPTY_BRANDING = {
-  clinicName: null,
-  logoUrl: null,
-  primaryColor: null,
-  secondaryColor: null,
-  accentColor: null,
-  faviconUrl: null,
-  updatedAt: null,
-};
-
-function serializeBranding(branding: any) {
-  if (!branding) {
-    return EMPTY_BRANDING;
-  }
-
-  return {
-    clinicName: branding.clinicName || null,
-    logoUrl: branding.logoUrl || null,
-    primaryColor: branding.primaryColor || null,
-    secondaryColor: branding.secondaryColor || null,
-    accentColor: branding.accentColor || null,
-    faviconUrl: branding.faviconUrl || null,
-    updatedAt: branding.updatedAt ? branding.updatedAt.toISOString() : null,
-  };
-}
 
 async function getBrandingForPatient(patientId: string) {
   const doctorLink = await prisma.doctorPatient.findFirst({
@@ -43,14 +22,12 @@ async function getBrandingForPatient(patientId: string) {
   });
 
   if (doctorLink?.doctor?.branding) {
-    return serializeBranding(doctorLink.doctor.branding);
+    return doctorLink.doctor.branding;
   }
 
-  const fallback = await prisma.clinicBranding.findFirst({
+  return await prisma.clinicBranding.findFirst({
     orderBy: { updatedAt: "desc" },
   });
-
-  return serializeBranding(fallback);
 }
 
 export async function GET(
@@ -65,18 +42,42 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (!patientId || patientId === "public") {
-      const fallback = await prisma.clinicBranding.findFirst({
+    let brandingRecord = null;
+
+    if (patientId && patientId !== "public") {
+      brandingRecord = await getBrandingForPatient(patientId);
+    } else {
+      brandingRecord = await prisma.clinicBranding.findFirst({
         orderBy: { updatedAt: "desc" },
       });
-      return NextResponse.json(serializeBranding(fallback));
     }
 
-    const branding = await getBrandingForPatient(patientId);
-    return NextResponse.json(branding);
+    const brandingInput = brandingRecord
+      ? clinicBrandingToInput(brandingRecord)
+      : defaultBrandingInput;
+    const theme = buildClinicTheme(brandingInput);
+
+    return NextResponse.json({
+      clinicName: brandingInput.clinicName,
+      logoUrl: brandingInput.logoUrl,
+      faviconUrl: brandingInput.faviconUrl,
+      colors: brandingInput.colors,
+      theme,
+      updatedAt: brandingRecord?.updatedAt
+        ? brandingRecord.updatedAt.toISOString()
+        : null,
+    });
   } catch (error) {
     console.error("[Patient Branding] GET failed:", error);
-    return NextResponse.json(EMPTY_BRANDING);
+    const theme = buildClinicTheme(defaultBrandingInput);
+    return NextResponse.json({
+      clinicName: defaultBrandingInput.clinicName,
+      logoUrl: defaultBrandingInput.logoUrl,
+      faviconUrl: defaultBrandingInput.faviconUrl,
+      colors: defaultBrandingInput.colors,
+      theme,
+      updatedAt: null,
+      error: "Failed to fetch branding",
+    });
   }
 }
-

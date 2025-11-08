@@ -27,21 +27,24 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
     <View
       style={[
         styles.card,
-        { borderColor: theme.primaryBorder, backgroundColor: theme.primarySoft },
+        {
+          borderColor: theme.borderSubtle,
+          backgroundColor: theme.surface,
+        },
       ]}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.primary }]}>
+        <Text style={[styles.title, { color: theme.brand }]}>
           {appointment.title || "Appointment"}
         </Text>
         {appointment.type && (
           <View
             style={[
               styles.typeBadge,
-              { backgroundColor: theme.primaryOverlay },
+              { backgroundColor: theme.brandSoft },
             ]}
           >
-            <Text style={[styles.typeText, { color: theme.primary }]}>
+            <Text style={[styles.typeText, { color: theme.brand }]}>
               {appointment.type}
             </Text>
           </View>
@@ -51,7 +54,7 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
       <View style={styles.content}>
         <View style={styles.row}>
           <Text style={styles.label}>📅 Date & Time:</Text>
-          <Text style={[styles.value, { color: theme.primary }]}>
+          <Text style={[styles.value, { color: theme.brand }]}>
             {formatDate(appointment.datetime)}
           </Text>
         </View>
@@ -72,14 +75,14 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
                 styles.button,
                 styles.buttonSecondary,
                 {
-                  borderColor: theme.primary,
-                  backgroundColor: theme.primarySoft,
+                  borderColor: theme.ctaBg,
+                  backgroundColor: theme.brandSoft,
                 },
               ]}
               onPress={onReschedule}
             >
               <Text
-                style={[styles.buttonTextSecondary, { color: theme.primary }]}
+                style={[styles.buttonTextSecondary, { color: theme.ctaBg }]}
               >
                 Reschedule
               </Text>

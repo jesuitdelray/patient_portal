@@ -118,16 +118,21 @@ export default function TreatmentScreen() {
                     </View>
                   </View>
 
-                  <View style={styles.progressBarContainer}>
+                  <View
+                    style={[
+                      styles.progressBarContainer,
+                      { backgroundColor: theme.brandSoft },
+                    ]}
+                  >
                     <View
                       style={[
                         styles.progressBar,
                         {
                           width: `${progress}%`,
-                          backgroundColor: theme.primary,
+                          backgroundColor: theme.ctaBg,
                         },
                         plan.status === "completed" && {
-                          backgroundColor: theme.accent,
+                          backgroundColor: theme.success,
                         },
                       ]}
                     />

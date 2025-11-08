@@ -130,10 +130,13 @@ export function BookAppointmentModal({
         <View
           style={[
             styles.modal,
-            { borderColor: theme.primaryBorder, backgroundColor: colors.primaryWhite },
+            {
+              borderColor: theme.borderSubtle,
+              backgroundColor: theme.surface,
+            },
           ]}
         >
-          <Text style={[styles.title, { color: theme.primary }]}>
+          <Text style={[styles.title, { color: theme.brand }]}>
             Book Appointment
           </Text>
 
@@ -144,12 +147,12 @@ export function BookAppointmentModal({
                 style={[
                   styles.input,
                   {
-                    borderColor: theme.primaryBorder,
-                    backgroundColor: theme.primarySoft,
+                    borderColor: theme.borderSubtle,
+                    backgroundColor: theme.brandSoft,
                   },
                 ]}
                 placeholder="Appointment title"
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={theme.textSecondary}
                 value={title}
                 onChangeText={setTitle}
                 editable={!isSubmitting}
@@ -172,10 +175,10 @@ export function BookAppointmentModal({
                   style={{
                     padding: 12,
                     borderRadius: 8,
-                    border: `1px solid ${theme.primaryBorder}`,
+                    border: `1px solid ${theme.borderSubtle}`,
                     fontSize: 15,
                     fontFamily: "inherit",
-                    color: colors.textPrimary,
+                    color: theme.textPrimary,
                   }}
                   className="datetime-input"
                 />
@@ -184,8 +187,8 @@ export function BookAppointmentModal({
                   style={[
                     styles.dateInput,
                     {
-                      borderColor: theme.primaryBorder,
-                      backgroundColor: theme.primarySoft,
+                      borderColor: theme.borderSubtle,
+                      backgroundColor: theme.brandSoft,
                     },
                   ]}
                   onPress={() => setShowDatePicker(true)}
@@ -215,8 +218,8 @@ export function BookAppointmentModal({
                 styles.button,
                 styles.buttonCancel,
                 {
-                  backgroundColor: theme.primarySoft,
-                  borderColor: theme.primaryBorder,
+                  backgroundColor: theme.brandSoft,
+                  borderColor: theme.borderSubtle,
                 },
                 isSubmitting && styles.buttonDisabled,
               ]}
@@ -229,7 +232,7 @@ export function BookAppointmentModal({
               style={[
                 styles.button,
                 styles.buttonSubmit,
-                { backgroundColor: theme.primary },
+                { backgroundColor: theme.ctaBg },
                 (isSubmitting || !title.trim() || !datetime) && styles.buttonDisabled,
               ]}
               onPress={handleSubmit}
@@ -238,7 +241,7 @@ export function BookAppointmentModal({
               <Text
                 style={[
                   styles.buttonTextSubmit,
-                  { color: theme.primaryContrast },
+                  { color: theme.ctaText },
                 ]}
               >
                 {isSubmitting ? "Booking..." : "Book Appointment"}

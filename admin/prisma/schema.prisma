@@ -159,9 +159,12 @@ model ClinicBranding {
   doctorId      String   @unique
   clinicName    String?
   logoUrl       String?
-  primaryColor  String?
-  secondaryColor String?
-  accentColor   String?
+  brandColor    String?
+  navColor      String?
+  ctaColor      String?
+  highlightColor String?
+  promoColor    String?
+  dangerColor   String?
   faviconUrl    String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

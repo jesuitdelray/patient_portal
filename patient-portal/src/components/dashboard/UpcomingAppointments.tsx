@@ -144,14 +144,14 @@ export function UpcomingAppointments() {
       style={[
         styles.container,
         {
-          borderColor: theme.primaryBorder,
-          backgroundColor: theme.primarySoft,
+          borderColor: theme.borderSubtle,
+          backgroundColor: theme.highlightBg,
         },
       ]}
     >
       <View style={styles.header}>
         <Text style={{ fontSize: 18 }}>📅</Text>
-        <Text style={[styles.title, { color: theme.primary }]}>
+        <Text style={[styles.title, { color: theme.brand }]}>
           Upcoming Appointments
         </Text>
       </View>
@@ -171,14 +171,14 @@ export function UpcomingAppointments() {
               style={[
                 styles.appointmentCard,
                 {
-                  borderColor: theme.primaryBorder,
+                  borderColor: theme.borderSubtle,
                   backgroundColor: colors.primaryWhite,
                 },
               ]}
             >
               <View style={styles.appointmentContent}>
                 <Text
-                  style={[styles.appointmentTitle, { color: theme.primary }]}
+                  style={[styles.appointmentTitle, { color: theme.brand }]}
                 >
                   {appointment.title}
                 </Text>
@@ -192,7 +192,7 @@ export function UpcomingAppointments() {
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>📅</Text>
                     <Text
-                      style={[styles.detailText, { color: theme.primary }]}
+                      style={[styles.detailText, { color: theme.brand }]}
                     >
                       {new Date(appointment.datetime).toLocaleDateString()}
                     </Text>
@@ -200,7 +200,7 @@ export function UpcomingAppointments() {
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>⏰</Text>
                     <Text
-                      style={[styles.detailText, { color: theme.primary }]}
+                      style={[styles.detailText, { color: theme.brand }]}
                     >
                       {new Date(appointment.datetime).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -211,7 +211,7 @@ export function UpcomingAppointments() {
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>📍</Text>
                     <Text
-                      style={[styles.detailText, { color: theme.primary }]}
+                      style={[styles.detailText, { color: theme.brand }]}
                     >
                       {appointment.location || "Clinic"}
                     </Text>
@@ -225,8 +225,8 @@ export function UpcomingAppointments() {
                     style={[
                       styles.rescheduleButton,
                       {
-                        borderColor: theme.primary,
-                        backgroundColor: theme.primarySoft,
+                        borderColor: theme.ctaBg,
+                        backgroundColor: theme.brandSoft,
                       },
                     ]}
                     onPress={() => handleOpenEdit(appointment)}
@@ -234,7 +234,7 @@ export function UpcomingAppointments() {
                     <Text
                       style={[
                         styles.rescheduleButtonText,
-                        { color: theme.primary },
+                        { color: theme.ctaBg },
                       ]}
                     >
                       Edit
@@ -245,8 +245,8 @@ export function UpcomingAppointments() {
                     style={[
                       styles.rescheduleButton,
                       {
-                        borderColor: theme.primary,
-                        backgroundColor: theme.primarySoft,
+                        borderColor: theme.ctaBg,
+                        backgroundColor: theme.brandSoft,
                       },
                     ]}
                     onPress={() => handleOpenReschedule(appointment)}
@@ -254,7 +254,7 @@ export function UpcomingAppointments() {
                     <Text
                       style={[
                         styles.rescheduleButtonText,
-                        { color: theme.primary },
+                        { color: theme.ctaBg },
                       ]}
                     >
                       Reschedule
@@ -377,15 +377,20 @@ export function UpcomingAppointments() {
               <TouchableOpacity
                 style={[
                   styles.saveButton,
+                  { backgroundColor: theme.ctaBg },
                   (isRescheduling || !newDateTime) && styles.saveButtonDisabled,
                 ]}
                 onPress={handleReschedule}
                 disabled={isRescheduling || !newDateTime}
               >
                 {isRescheduling ? (
-                  <Text style={styles.saveButtonText}>Rescheduling...</Text>
+                  <Text style={[styles.saveButtonText, { color: theme.ctaText }]}>
+                    Rescheduling...
+                  </Text>
                 ) : (
-                  <Text style={styles.saveButtonText}>Reschedule</Text>
+                  <Text style={[styles.saveButtonText, { color: theme.ctaText }]}>
+                    Reschedule
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -546,6 +551,7 @@ export function UpcomingAppointments() {
               <TouchableOpacity
                 style={[
                   styles.saveButton,
+                  { backgroundColor: theme.ctaBg },
                   (!editData.title || !editData.datetime || isEditing) &&
                     styles.saveButtonDisabled,
                 ]}
@@ -553,9 +559,13 @@ export function UpcomingAppointments() {
                 disabled={!editData.title || !editData.datetime || isEditing}
               >
                 {isEditing ? (
-                  <Text style={styles.saveButtonText}>Saving...</Text>
+                  <Text style={[styles.saveButtonText, { color: theme.ctaText }]}>
+                    Saving...
+                  </Text>
                 ) : (
-                  <Text style={styles.saveButtonText}>Save</Text>
+                  <Text style={[styles.saveButtonText, { color: theme.ctaText }]}>
+                    Save
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>

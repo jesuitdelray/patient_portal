@@ -44,10 +44,20 @@ export function TreatmentOverview() {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.surface,
+          borderColor: theme.borderSubtle,
+        },
+      ]}
+    >
       <View style={styles.header}>
         <Text style={{ fontSize: 18 }}>🩺</Text>
-        <Text style={styles.title}>Treatment Overview</Text>
+        <Text style={[styles.title, { color: theme.textPrimary }]}>
+          Treatment Overview
+        </Text>
       </View>
 
       <View style={styles.content}>
@@ -67,8 +77,14 @@ export function TreatmentOverview() {
               <View key={plan.id} style={styles.treatmentCard}>
                 <View style={styles.treatmentHeader}>
                   <View style={styles.treatmentInfo}>
-                    <Text style={styles.treatmentName}>{plan.title}</Text>
-                    <Text style={styles.treatmentStep}>
+                    <Text
+                      style={[styles.treatmentName, { color: theme.textPrimary }]}
+                    >
+                      {plan.title}
+                    </Text>
+                    <Text
+                      style={[styles.treatmentStep, { color: theme.textSecondary }]}
+                    >
                       {plan.status === "completed"
                         ? "Completed"
                         : plan.status === "active"
@@ -80,27 +96,36 @@ export function TreatmentOverview() {
                     <Text style={{ fontSize: 16 }}>
                       {isCompleted ? "✅" : "⏰"}
                     </Text>
-                    <Text style={styles.progressText}>
+                    <Text
+                      style={[styles.progressText, { color: theme.brand }]}
+                    >
                       {percentage}%
                     </Text>
                   </View>
                 </View>
-                <View style={styles.progressBarContainer}>
+                <View
+                  style={[
+                    styles.progressBarContainer,
+                    { backgroundColor: theme.brandSoft },
+                  ]}
+                >
                   <View
                     style={[
                       styles.progressBar,
                       {
                         width: `${percentage}%`,
-                        backgroundColor: theme.primary,
+                        backgroundColor: theme.ctaBg,
                       },
                       isCompleted && {
-                        backgroundColor: theme.accent,
+                        backgroundColor: theme.success,
                       },
                     ]}
                   />
                 </View>
                 {total > 0 && (
-                  <Text style={styles.progressLabel}>
+                  <Text
+                    style={[styles.progressLabel, { color: theme.textSecondary }]}
+                  >
                     {completed} of {total} procedures completed
                   </Text>
                 )}

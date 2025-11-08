@@ -16,16 +16,16 @@ export function AppointmentBanner() {
       style={[
         styles.container,
         {
-          backgroundColor: theme.primarySoft,
-          borderColor: theme.primaryBorder,
+          backgroundColor: theme.highlightBg,
+          borderColor: theme.borderSubtle,
         },
       ]}
     >
       <View style={styles.content}>
-        <Text style={[styles.title, { color: theme.primary }]}>
+        <Text style={[styles.title, { color: theme.highlightText }]}>
           Upcoming Appointment!
         </Text>
-        <Text style={[styles.text, { color: theme.primary }]}>
+        <Text style={[styles.text, { color: theme.highlightText }]}>
           You have a {firstAppointment.title.toLowerCase()} on{" "}
           {new Date(firstAppointment.datetime).toLocaleString()}
           {firstAppointment.location ? ` at ${firstAppointment.location}` : ""}.
