@@ -90,7 +90,7 @@ export function Sidebar() {
                 style={[
                   styles.menuIcon,
                   {
-                    color: isActive ? theme.navActiveIcon : theme.navIcon,
+                    color: isActive ? theme.navText : theme.navIcon,
                   },
                 ]}
               >
@@ -99,9 +99,10 @@ export function Sidebar() {
               <Text
                 style={[
                   styles.menuText,
-                  isActive
-                    ? { color: theme.navActiveIcon, fontWeight: "600" }
-                    : { color: theme.navText },
+                  {
+                    color: isActive ? theme.navText : theme.navText,
+                    fontWeight: isActive ? "600" : "400",
+                  },
                 ]}
               >
                 {item.title}

@@ -431,24 +431,24 @@ export default function PriceListScreen() {
                     styles.modalProcedureInfo,
                     {
                       borderColor: theme.borderSubtle,
-                      backgroundColor: theme.brandSoft,
+                      backgroundColor: theme.brand,
                     },
                   ]}
                 >
                   <Text
                     style={[
                       styles.modalProcedureTitle,
-                      { color: theme.brandSoftText },
+                      { color: theme.brandText },
                     ]}
                   >
                     {selectedProcedure.title}
                   </Text>
-                <Text
-                  style={[
-                    styles.modalProcedurePrice,
-                    { color: theme.brandSoftText },
-                  ]}
-                >
+                  <Text
+                    style={[
+                      styles.modalProcedurePrice,
+                      { color: theme.brandText },
+                    ]}
+                  >
                     ${selectedProcedure.price.toFixed(2)}
                   </Text>
                 </View>

@@ -138,6 +138,9 @@ export function RescheduleAppointmentModal({
                     border: `1px solid ${colors.border}`,
                     fontSize: 15,
                     fontFamily: "inherit",
+                    backgroundColor: colors.primaryWhite,
+                    color: colors.textPrimary,
+                    outline: "none",
                   }}
                 />
               ) : (

@@ -308,7 +308,7 @@ export default function BrandingPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-6 space-y-8">
+    <div className="relative max-w-6xl mx-auto py-10 px-6 space-y-8">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Clinic Branding</h1>
         <p className="text-sm text-slate-500 mt-1">
@@ -317,7 +317,7 @@ export default function BrandingPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr,1fr]">
+      <div className="grid gap-6 lg:grid-cols-[1.35fr,1fr]">
         <div className="space-y-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -411,12 +411,15 @@ export default function BrandingPage() {
             </section>
           </div>
 
-          <div className="space-y-6">
+          <div className="grid gap-6 sm:grid-cols-2">
             {COLOR_FIELDS.map((field) => {
               const value = branding.colors[field.key] ?? "";
               return (
-                <div key={field.key} className="space-y-3">
-                  <div className="flex items-center justify-between">
+                <div
+                  key={field.key}
+                  className="space-y-3 rounded-xl border border-slate-200 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-slate-700">
                         {field.label}{" "}
@@ -424,7 +427,7 @@ export default function BrandingPage() {
                           <span className="text-xs text-slate-400">(optional)</span>
                         )}
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                         {field.description}
                       </p>
                     </div>
@@ -438,7 +441,7 @@ export default function BrandingPage() {
                           colors: { ...prev.colors, [field.key]: hex },
                         }));
                       }}
-                      className="w-16 h-10 border rounded cursor-pointer"
+                      className="w-14 h-10 border rounded cursor-pointer"
                     />
                   </div>
                   <input
@@ -488,7 +491,7 @@ export default function BrandingPage() {
           </div>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-800 mb-3">
               Live Preview

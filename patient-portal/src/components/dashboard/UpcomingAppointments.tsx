@@ -336,7 +336,19 @@ export function UpcomingAppointments() {
                       }
                     }}
                     min={todayString}
-                    className="date-time-input-native"
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      fontSize: "14px",
+                      border: `1px solid ${theme.borderSubtle}`,
+                      borderRadius: "8px",
+                      backgroundColor: colors.primaryWhite,
+                      fontFamily: "inherit",
+                      boxSizing: "border-box",
+                      color: theme.textPrimary,
+                      outline: "none",
+                      cursor: "pointer",
+                    }}
                   />
                 </View>
               ) : (
@@ -468,7 +480,20 @@ export function UpcomingAppointments() {
                           input.showPicker?.();
                         }
                       }}
-                      className="date-time-input-native"
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        fontSize: "14px",
+                        border: `1px solid ${theme.borderSubtle}`,
+                        borderRadius: "8px",
+                        backgroundColor: colors.primaryWhite,
+                        color: theme.textPrimary,
+                        outline: "none",
+                        boxSizing: "border-box",
+                        cursor: "pointer",
+                        marginTop: 8,
+                        fontFamily: "inherit",
+                      }}
                     />
                   </View>
                 ) : (
