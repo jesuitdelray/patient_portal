@@ -40,6 +40,7 @@ import PromotionsScreen from "./src/screens/PromotionsScreen";
 import TreatmentScreen from "./src/screens/TreatmentScreen";
 import InvoicesScreen from "./src/screens/InvoicesScreen";
 import PriceListScreen from "./src/screens/PriceListScreen";
+import AppointmentsScreen from "./src/screens/AppointmentsScreen";
 import ChatScreen from "./src/screens/ChatScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import { BottomNavigation } from "./src/components/BottomNavigation";
@@ -50,6 +51,7 @@ import Toast from "react-native-toast-message";
 import "./src/components/DebugLogs";
 import { DebugLogs } from "./src/components/DebugLogs";
 import { BrandingGate } from "./src/components/BrandingGate";
+import { AppointmentsProvider } from "./src/components/dashboard/AppointmentsContext";
 
 const Stack = createNativeStackNavigator();
 
@@ -221,9 +223,10 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
 
   return (
-    <View style={styles.appContainer}>
-      {isDesktop && <Sidebar />}
-      <View style={{ flex: 1 }}>
+    <AppointmentsProvider>
+      <View style={styles.appContainer}>
+        {isDesktop && <Sidebar />}
+        <View style={{ flex: 1 }}>
         <Stack.Navigator
           key={isAuthenticated ? "authenticated" : "login"}
           initialRouteName="Dashboard"
@@ -295,13 +298,15 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Promotions" component={PromotionsScreen} />
           <Stack.Screen name="Treatment" component={TreatmentScreen} />
+          <Stack.Screen name="Appointments" component={AppointmentsScreen} />
           <Stack.Screen name="PriceList" component={PriceListScreen} />
           <Stack.Screen name="Invoices" component={InvoicesScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
         </Stack.Navigator>
-        {!isDesktop && <BottomNavigation />}
+          {!isDesktop && <BottomNavigation />}
+        </View>
       </View>
-    </View>
+    </AppointmentsProvider>
   );
 }
 

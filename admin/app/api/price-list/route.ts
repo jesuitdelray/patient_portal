@@ -58,7 +58,10 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("Price list API error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch price list" },
+      {
+        error: "Failed to fetch price list",
+        details: error?.message || String(error),
+      },
       { status: 500 }
     );
   }

@@ -3,7 +3,12 @@ const http = require("http");
 const { Server } = require("socket.io");
 const { PrismaClient } = require("@prisma/client");
 
-const prisma = new PrismaClient();
+const datasourceUrl =
+  process.env.DIRECT_DATABASE_URL || process.env.DATABASE_URL;
+const prisma = new PrismaClient({
+  log: ["error", "warn"],
+  ...(datasourceUrl ? { datasourceUrl } : {}),
+});
 
 const server = http.createServer();
 const io = new Server(server, {

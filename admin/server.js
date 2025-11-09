@@ -49,7 +49,12 @@ const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-const prisma = new PrismaClient();
+const datasourceUrl =
+  process.env.DIRECT_DATABASE_URL || process.env.DATABASE_URL;
+const prisma = new PrismaClient({
+  log: ["error", "warn"],
+  ...(datasourceUrl ? { datasourceUrl } : {}),
+});
 
 // Map actions to titles and fetch data from database
 async function getActionData(action, patientId) {
@@ -84,7 +89,8 @@ async function getActionData(action, patientId) {
     view_assigned_doctor: "Assigned doctor",
     check_appointment_procedures: "Appointment procedures",
     view_weekend_slots: "Weekend available slots",
-    general_response: "I understand. How can I help you?",
+    general_response:
+      "I’m here to help! Tell me what you’d like to do.\n\nExamples:\n• “Provide me the invoices list”\n• “Show my upcoming appointments”\n• “Update my contact information”",
   };
 
   const emptyStateMessages = {
@@ -124,25 +130,29 @@ async function getActionData(action, patientId) {
         });
         break;
 
-      case "view_next_appointment":
+      case "view_next_appointment": {
+        const now = new Date();
         data = await prisma.appointment.findFirst({
           where: {
             patientId,
-            datetime: { gte: new Date() },
+            datetime: { gte: now },
           },
           orderBy: { datetime: "asc" },
         });
         break;
+      }
 
-      case "view_upcoming_appointments":
+      case "view_upcoming_appointments": {
+        const now = new Date();
         data = await prisma.appointment.findMany({
           where: {
             patientId,
-            datetime: { gte: new Date() },
+            datetime: { gte: now },
           },
           orderBy: { datetime: "asc" },
         });
         break;
+      }
 
       case "view_remaining_procedures":
         const treatmentPlans = await prisma.treatmentPlan.findMany({

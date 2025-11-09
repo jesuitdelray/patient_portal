@@ -35,6 +35,12 @@ export function UpcomingAppointments() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const theme = useBrandingTheme();
+  const upcomingAppointments = (appointments || []).filter((appointment: any) => {
+    if (!appointment?.datetime) return false;
+    const appointmentDate = new Date(appointment.datetime);
+    const now = new Date();
+    return appointmentDate.getTime() >= now.getTime();
+  });
 
   const today = new Date();
   const todayString = today.toISOString().slice(0, 16);
@@ -139,6 +145,10 @@ export function UpcomingAppointments() {
     }
   };
 
+  if (upcomingAppointments.length === 0) {
+    return null;
+  }
+
   return (
     <View
       style={[
@@ -157,7 +167,7 @@ export function UpcomingAppointments() {
       </View>
 
       <View style={styles.content}>
-        {appointments.length === 0 ? (
+        {upcomingAppointments.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No upcoming appointments</Text>
             <Text style={styles.emptySubtext}>
@@ -165,7 +175,7 @@ export function UpcomingAppointments() {
             </Text>
           </View>
         ) : (
-          appointments.map((appointment) => (
+          upcomingAppointments.map((appointment) => (
             <View
               key={appointment.id}
               style={[
@@ -326,21 +336,7 @@ export function UpcomingAppointments() {
                       }
                     }}
                     min={todayString}
-                    style={{
-                      width: "100%",
-                      padding: "12px",
-                      fontSize: "14px",
-                      border: `1px solid ${colors.greyscale200}`,
-                      borderRadius: "6px",
-                      backgroundColor: colors.greyscale100,
-                      fontFamily: "inherit",
-                      boxSizing: "border-box",
-                      maxWidth: "100%",
-                      color: colors.textPrimary,
-                      outline: "none",
-                      cursor: "pointer",
-                      marginTop: 8,
-                    }}
+                    className="date-time-input-native"
                   />
                 </View>
               ) : (
@@ -472,19 +468,7 @@ export function UpcomingAppointments() {
                           input.showPicker?.();
                         }
                       }}
-                      style={{
-                        width: "100%",
-                        padding: "12px",
-                        fontSize: "14px",
-                        border: `1px solid ${colors.greyscale200}`,
-                        borderRadius: "6px",
-                        backgroundColor: colors.greyscale100,
-                        color: colors.textPrimary,
-                        outline: "none",
-                        boxSizing: "border-box",
-                        cursor: "pointer",
-                        marginTop: 8,
-                      }}
+                      className="date-time-input-native"
                     />
                   </View>
                 ) : (

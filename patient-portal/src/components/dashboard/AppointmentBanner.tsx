@@ -6,7 +6,11 @@ import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
 export function AppointmentBanner() {
   const { appointments } = useAppointments();
-  const firstAppointment = appointments[0];
+  const upcomingAppointments = (appointments || []).filter((appointment) => {
+    if (!appointment?.datetime) return false;
+    return new Date(appointment.datetime).getTime() >= Date.now();
+  });
+  const firstAppointment = upcomingAppointments[0];
   const theme = useBrandingTheme();
 
   if (!firstAppointment) return null;

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db";
 import { getAuthPayload } from "@/lib/auth";
 import {
   buildClinicTheme,
   clinicBrandingToInput,
   defaultBrandingInput,
 } from "@/lib/branding";
-
-const prisma = new PrismaClient();
 
 async function getBrandingForPatient(patientId: string) {
   const doctorLink = await prisma.doctorPatient.findFirst({

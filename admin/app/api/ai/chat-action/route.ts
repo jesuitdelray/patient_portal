@@ -80,6 +80,62 @@ export async function POST(req: NextRequest) {
     const aiSettings = await prisma.aISettings.findFirst();
     const systemPrompt = aiSettings?.prompt || "";
 
+    // Pull last assistant action/data from history
+    let lastAssistantAction: string | null = null;
+    let lastAssistantData: any = null;
+    let lastAssistantResponse: string | null = null;
+    for (let i = conversationHistory.length - 1; i >= 0; i--) {
+      const entry = conversationHistory[i];
+      const role = entry.role || (entry.sender === "patient" ? "user" : "assistant");
+      if (role !== "assistant") continue;
+      const content = entry.content || entry.message;
+      if (!content || typeof content !== "string") continue;
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed?.action) {
+          lastAssistantAction = parsed.action;
+          lastAssistantData = parsed.data ?? null;
+          lastAssistantResponse = parsed.title || parsed.response || null;
+          break;
+        }
+      } catch {
+        // Not a structured response, continue searching
+        continue;
+      }
+    }
+
+    const normalizedMessage = typeof message === "string" ? message.trim().toLowerCase() : "";
+    const schedulePhrases = [
+      "давай",
+      "давай сделаем",
+      "го",
+      "го сделаем",
+      "погнали",
+      "let's do it",
+      "let's schedule",
+      "go ahead",
+      "schedule it",
+      "book it",
+      "make it",
+      "сделаем",
+      "запиши меня",
+    ];
+    const wantsToSchedule =
+      lastAssistantAction &&
+      ["view_next_appointment", "view_upcoming_appointments"].includes(
+        lastAssistantAction
+      ) &&
+      schedulePhrases.some((phrase) => normalizedMessage.includes(phrase));
+
+    if (wantsToSchedule) {
+      return NextResponse.json({
+        action: "book_appointment",
+        data: {},
+        response: "Sure, let me help you schedule an appointment.",
+        rawResponse: JSON.stringify({ forced: true, reason: "follow_up_booking" }),
+      });
+    }
+
     // Build context for AI
     const patientContext = patient
       ? `
@@ -106,6 +162,15 @@ ${
 `
       : "";
 
+    const conversationContext = lastAssistantAction
+      ? `
+LAST ASSISTANT ACTION: ${lastAssistantAction}
+${lastAssistantResponse ? `Assistant said: "${lastAssistantResponse}"` : ""}
+This action returned ${Array.isArray(lastAssistantData) ? `${lastAssistantData.length} item(s)` : lastAssistantData ? "data" : "no data"}.
+Use this context to interpret short follow-up replies (e.g., "go", "давай") as requests to continue the previous topic instead of starting over.
+`
+      : "";
+
     // Create enhanced system prompt with action requirement
     const enhancedPrompt = `${systemPrompt}
 
@@ -115,6 +180,8 @@ CRITICAL: You MUST respond with ONLY a valid JSON object. The JSON must have thi
   "data": {},
   "response": "A natural, conversational response to the user's message"
 }
+
+${conversationContext}
 
 CRITICAL ACTION MAPPING RULES:
 1. Analyze the user's question carefully and match it to the MOST SPECIFIC action from the list above
@@ -127,6 +194,7 @@ CRITICAL ACTION MAPPING RULES:
 5. Questions about procedures → use "view_remaining_procedures", "view_next_procedure", etc.
 6. ONLY use "general_response" if the question truly doesn't match any specific action
 7. The "action" field is what the frontend will use to display the correct UI - choose it carefully!
+8. Pay attention to short follow-up replies like "давай", "го", "let's do it", "ok", "go ahead". They usually mean the user wants to proceed with the previous action (e.g., after showing appointments, such replies should trigger "book_appointment" if there were none).
 
 IMPORTANT: The "response" field is REQUIRED but will NOT be used - the frontend only uses the "action" field. You can put any text here, but focus on getting the "action" field correct.
 
@@ -256,7 +324,8 @@ STRICTLY return ONLY valid JSON, no other text before or after.`;
         check_appointment_procedures:
           "Let me check what procedures are included in that appointment.",
         view_weekend_slots: "Let me check for weekend availability.",
-        general_response: "I understand. How can I help you further?",
+      general_response:
+        "I’m ready to help! Let me know what you’d like to do.\n\nExamples:\n• “Provide me the invoices list”\n• “Show my upcoming appointments”\n• “Update my contact information”",
       };
       responseText =
         actionResponses[actionData.action] ||

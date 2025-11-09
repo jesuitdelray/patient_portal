@@ -421,7 +421,9 @@ export default function PriceListScreen() {
               { borderColor: theme.borderSubtle, backgroundColor: theme.surface },
             ]}
           >
-            <Text style={styles.modalTitle}>Book Appointment</Text>
+            <Text style={[styles.modalTitle, { color: theme.brand }]}>
+              Book Appointment
+            </Text>
             {selectedProcedure && (
               <>
                 <View
@@ -433,7 +435,12 @@ export default function PriceListScreen() {
                     },
                   ]}
                 >
-                  <Text style={styles.modalProcedureTitle}>
+                  <Text
+                    style={[
+                      styles.modalProcedureTitle,
+                      { color: theme.brandSoftText },
+                    ]}
+                  >
                     {selectedProcedure.title}
                   </Text>
                 <Text
@@ -447,7 +454,9 @@ export default function PriceListScreen() {
                 </View>
 
                 <View style={styles.modalForm}>
-                  <Text style={styles.modalLabel}>Date & Time</Text>
+                  <Text style={[styles.modalLabel, { color: theme.textPrimary }]}>
+                    Date & Time
+                  </Text>
                   {Platform.OS === "web" ? (
                     <View style={styles.dateTimeInputWrapper}>
                       <input
@@ -467,7 +476,7 @@ export default function PriceListScreen() {
                           fontSize: "14px",
                           border: `1px solid ${theme.borderSubtle}`,
                           borderRadius: "6px",
-                          backgroundColor: theme.brandSoft,
+                          backgroundColor: colors.primaryWhite,
                           fontFamily: "inherit",
                           boxSizing: "border-box",
                           maxWidth: "100%",
@@ -481,10 +490,16 @@ export default function PriceListScreen() {
                   ) : (
                     <>
                       <TouchableOpacity
-                        style={styles.dateTimeInput}
+                        style={[
+                          styles.dateTimeInput,
+                          {
+                            borderColor: theme.borderSubtle,
+                            backgroundColor: colors.primaryWhite,
+                          },
+                        ]}
                         onPress={() => setShowDatePicker(!showDatePicker)}
                       >
-                        <Text style={styles.dateTimeText}>
+                        <Text style={[styles.dateTimeText, { color: theme.textPrimary }]}>
                           {selectedDate.toLocaleString()}
                         </Text>
                         <Text style={{ fontSize: 20 }}>📅</Text>
@@ -516,7 +531,14 @@ export default function PriceListScreen() {
                     ]}
                     onPress={() => setShowAppointmentModal(false)}
                   >
-                    <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                    <Text
+                      style={[
+                        styles.modalButtonCancelText,
+                        { color: theme.brandSoftText },
+                      ]}
+                    >
+                      Cancel
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[

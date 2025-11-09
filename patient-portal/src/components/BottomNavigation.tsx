@@ -6,6 +6,7 @@ import { colors } from "../lib/colors";
 
 const menuItems = [
   { title: "Dashboard", screen: "Dashboard", icon: "🏠" },
+  { title: "Appointments", screen: "Appointments", icon: "📅" },
   { title: "Treatment", screen: "Treatment", icon: "🩺" },
   { title: "Price List", screen: "PriceList", icon: "💰" },
   { title: "Chat", screen: "Chat", icon: "💬" },
@@ -44,6 +45,7 @@ export function BottomNavigation() {
               key={item.screen}
               style={styles.menuItem}
               onPress={() => navigation.navigate(item.screen)}
+              activeOpacity={0.8}
             >
               <Text style={{ fontSize: 18 }}>{item.icon}</Text>
               <Text style={[styles.menuText, isActive && styles.menuTextActive]}>

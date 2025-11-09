@@ -8,6 +8,7 @@ import { useBrandingTheme } from "../lib/useBrandingTheme";
 
 const menuItems = [
   { title: "Dashboard", screen: "Dashboard", icon: "🏠" },
+  { title: "Appointments", screen: "Appointments", icon: "📅" },
   { title: "Treatment", screen: "Treatment", icon: "🩺" },
   { title: "Price List", screen: "PriceList", icon: "💰" },
   { title: "Chat", screen: "Chat", icon: "💬" },
@@ -50,13 +51,28 @@ export function Sidebar() {
         },
       ]}
     >
-      {Platform.OS === "web" && (
-        <View style={styles.header}>
+      {Platform.OS === "web" ? (
+        <TouchableOpacity
+          style={styles.headerWeb}
+          onPress={() => navigation.navigate("Dashboard")}
+          activeOpacity={0.8}
+        >
+          <Logo size={36} />
+          <Text style={[styles.title, { color: theme.brand }]}>
+            {branding.clinicName || "Patient Portal"}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={styles.header}
+          onPress={() => navigation.navigate("Dashboard")}
+          activeOpacity={0.8}
+        >
           <Logo size={32} />
           <Text style={[styles.title, { color: theme.brand }]}>
             {branding.clinicName || "Patient Portal"}
           </Text>
-        </View>
+        </TouchableOpacity>
       )}
       <View style={styles.menu}>
         {menuItems.map((item) => {
@@ -66,10 +82,7 @@ export function Sidebar() {
               key={item.screen}
               style={[
                 styles.menuItem,
-                isActive && {
-                  backgroundColor: theme.navActiveBg,
-                  borderColor: theme.navActiveBg,
-                },
+                isActive && styles.menuItemActive,
               ]}
               onPress={() => navigation.navigate(item.screen)}
             >
@@ -120,6 +133,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.greyscale200,
   },
+  headerWeb: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 32,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.greyscale200,
+    justifyContent: "center",
+  },
   title: {
     fontSize: 18,
     fontWeight: "600",
@@ -137,6 +160,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "transparent",
+  },
+  menuItemActive: {
+    backgroundColor: colors.greyscale900,
+    borderColor: colors.greyscale900,
   },
   menuIcon: {
     fontSize: 20,
