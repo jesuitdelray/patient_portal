@@ -57,7 +57,7 @@ const prisma = new PrismaClient({
 });
 
 // Map actions to titles and fetch data from database
-async function getActionData(action, patientId) {
+async function getActionData(action, patientId, actionPayload = {}, context = {}) {
   const actionTitles = {
     view_next_appointment: "Next appointment",
     reschedule_appointment: "Reschedule appointment",
@@ -76,12 +76,12 @@ async function getActionData(action, patientId) {
     view_next_procedure: "Next procedure",
     view_completed_treatments: "Completed treatments",
     remind_appointment: "Appointment reminder sent",
-    cancel_appointment: "Appointment cancelled",
+    cancel_appointment: "Select appointment to cancel",
     view_promotions: "", // No title - button will show the action
     view_available_slots: "Available time slots",
     add_to_calendar: "Added to calendar",
     view_messages: "Messages",
-    update_contact_info: "Contact information updated",
+    update_contact_info: "Your contact information",
     view_procedure_details: "Procedure details",
     download_invoice: "Invoice download",
     view_dental_history: "Dental history",
@@ -107,7 +107,10 @@ async function getActionData(action, patientId) {
     view_promotions: "No promotions available",
     view_available_slots: "No available time slots",
     view_messages: "No messages found",
-    view_dental_history: "No dental history",
+    cancel_appointment: "You don't have any appointments to cancel.",
+    update_contact_info: "We could not load your contact information.",
+    view_procedure_details: "No procedures found",
+    view_dental_history: "No dental history on file",
     view_next_treatment_step: "No upcoming treatment steps",
     check_appointment_procedures: "No procedures in this appointment",
     view_completed_treatments: "No completed treatments",
@@ -118,6 +121,146 @@ async function getActionData(action, patientId) {
 
   try {
     switch (action) {
+      case "view_procedure_price": {
+        const queryFromPayload =
+          actionPayload?.procedureName ||
+          actionPayload?.procedure ||
+          actionPayload?.name ||
+          actionPayload?.title ||
+          actionPayload?.query ||
+          "";
+        const queryFromMessage = extractProcedureQuery(context.message);
+        const searchTerm = (queryFromPayload || queryFromMessage || "").trim();
+
+        const where = searchTerm
+          ? {
+              isActive: true,
+              OR: [
+                {
+                  title: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  description: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            }
+          : {
+              isActive: true,
+            };
+
+        const matches = await prisma.priceList.findMany({
+          where,
+          orderBy: [{ order: "asc" }, { title: "asc" }],
+          take: searchTerm ? 5 : 10,
+        });
+
+        // If nothing matched but we have a search term, do a secondary fuzzy match by scanning all titles
+        let results = matches;
+        if (searchTerm && matches.length === 0) {
+          const allItems = await prisma.priceList.findMany({
+            where: { isActive: true },
+            orderBy: [{ order: "asc" }, { title: "asc" }],
+          });
+          const lowerTerm = searchTerm.toLowerCase();
+          results = allItems.filter((item) =>
+            lowerTerm.split(/\s+/).every((token) =>
+              item.title.toLowerCase().includes(token)
+            )
+          );
+        }
+
+        data = {
+          query: searchTerm || null,
+          matches: results,
+        };
+        break;
+      }
+
+      case "view_available_slots": {
+        const preferredDate = actionPayload?.preferredDate
+          ? new Date(actionPayload.preferredDate)
+          : null;
+        data = await generateAvailableSlots(preferredDate);
+        break;
+      }
+
+      case "cancel_appointment": {
+        const now = new Date();
+        const appointmentToCancel = await prisma.appointment.findFirst({
+          where: {
+            patientId,
+            datetime: { gte: now },
+          },
+          orderBy: { datetime: "asc" },
+          include: {
+            procedures: true,
+          },
+        });
+        data = appointmentToCancel ? [appointmentToCancel] : [];
+        break;
+      }
+
+      case "update_contact_info": {
+        const contact = await prisma.patient.findUnique({
+          where: { id: patientId },
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
+        });
+        data = contact
+          ? {
+              ...contact,
+              instructions:
+                "Let us know if anything is outdated and we will update it for you.",
+            }
+          : null;
+        break;
+      }
+
+      case "view_procedure_details": {
+        const procedures = await prisma.procedure.findMany({
+          where: {
+            treatmentPlan: {
+              patientId,
+            },
+          },
+          include: {
+            treatmentPlan: true,
+          },
+          orderBy: [
+            { status: "asc" },
+            { scheduledDate: "asc" },
+            { createdAt: "asc" },
+          ],
+        });
+        data = procedures;
+        break;
+      }
+
+      case "view_dental_history": {
+        const history = await prisma.procedure.findMany({
+          where: {
+            treatmentPlan: {
+              patientId,
+            },
+          },
+          include: {
+            treatmentPlan: true,
+          },
+          orderBy: { completedDate: "desc" },
+        });
+        data = history;
+        break;
+      }
+
       case "view_treatment_plan_details":
         data = await prisma.treatmentPlan.findMany({
           where: { patientId },
@@ -358,6 +501,165 @@ async function getActionData(action, patientId) {
   return { title: finalTitle, data, action };
 }
 
+function extractProcedureQuery(message) {
+  if (!message || typeof message !== "string") return "";
+  const patterns = [
+    /(price|cost)\s+(?:for|of)\s+(.+?)(\?|$)/i,
+    /how much(?: is| does)?(?: the)?\s+(.+?)(?:\s+cost|\?|$)/i,
+    /what(?:'s| is)?(?: the)?\s+price\s+of\s+(.+?)(\?|$)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = message.match(pattern);
+    if (match) {
+      const group = match[2] || match[1];
+      if (group) {
+        return sanitizeQuery(group);
+      }
+    }
+  }
+
+  return "";
+}
+
+function sanitizeQuery(value) {
+  return value ? value.replace(/[\?\.,!\n\r]/g, " ").trim() : "";
+}
+
+async function generateAvailableSlots(preferredDate) {
+  const SLOT_DURATION_MINUTES = 60;
+  const WORKING_HOURS = [9, 11, 13, 15, 17];
+  const MAX_SLOTS = 6;
+  const SEARCH_DAYS = 14;
+
+  const now = new Date();
+  const baseStart =
+    preferredDate instanceof Date && !Number.isNaN(preferredDate.valueOf())
+      ? new Date(preferredDate)
+      : new Date();
+  if (baseStart < now) {
+    baseStart.setTime(now.getTime());
+  }
+  baseStart.setSeconds(0, 0);
+
+  const horizon = new Date(baseStart);
+  horizon.setDate(horizon.getDate() + SEARCH_DAYS);
+
+  const existingAppointments = await prisma.appointment.findMany({
+    where: {
+      datetime: {
+        gte: baseStart,
+        lt: horizon,
+      },
+    },
+    select: {
+      datetime: true,
+    },
+  });
+
+  const busySlots = existingAppointments.map((apt) => new Date(apt.datetime));
+
+  const slots = [];
+
+  for (
+    let dayOffset = 0;
+    dayOffset < SEARCH_DAYS && slots.length < MAX_SLOTS;
+    dayOffset++
+  ) {
+    const currentDay = new Date(baseStart);
+    currentDay.setHours(0, 0, 0, 0);
+    currentDay.setDate(currentDay.getDate() + dayOffset);
+
+    const weekday = currentDay.getDay();
+    if (weekday === 0) {
+      // Skip Sundays
+      continue;
+    }
+
+    for (const hour of WORKING_HOURS) {
+      const slotStart = new Date(currentDay);
+      slotStart.setHours(hour, 0, 0, 0);
+
+      if (slotStart <= now) {
+        continue;
+      }
+
+      const slotEnd = new Date(slotStart);
+      slotEnd.setMinutes(slotEnd.getMinutes() + SLOT_DURATION_MINUTES);
+
+      const overlaps = busySlots.some((busy) => {
+        const diff = Math.abs(busy.getTime() - slotStart.getTime());
+        return diff < SLOT_DURATION_MINUTES * 60 * 1000;
+      });
+
+      if (overlaps) {
+        continue;
+      }
+
+      const dateLabel = slotStart.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+      const timeLabel = slotStart.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      slots.push({
+        start: slotStart.toISOString(),
+        end: slotEnd.toISOString(),
+        dateLabel,
+        timeLabel,
+        durationMinutes: SLOT_DURATION_MINUTES,
+      });
+
+      if (slots.length >= MAX_SLOTS) {
+        break;
+      }
+    }
+  }
+
+  if (slots.length === 0) {
+    for (let i = 1; i <= Math.min(5, MAX_SLOTS); i++) {
+      const fallbackDay = new Date(baseStart);
+      fallbackDay.setDate(fallbackDay.getDate() + i);
+      fallbackDay.setHours(10, 0, 0, 0);
+
+      const fallbackEnd = new Date(fallbackDay);
+      fallbackEnd.setMinutes(fallbackEnd.getMinutes() + SLOT_DURATION_MINUTES);
+
+      slots.push({
+        start: fallbackDay.toISOString(),
+        end: fallbackEnd.toISOString(),
+        dateLabel: fallbackDay.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }),
+        timeLabel: fallbackDay.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        durationMinutes: SLOT_DURATION_MINUTES,
+        isEstimated: true,
+      });
+
+      if (slots.length >= MAX_SLOTS) {
+        break;
+      }
+    }
+  }
+
+  return {
+    slots,
+    generatedAt: new Date().toISOString(),
+    preferredDate: preferredDate
+      ? preferredDate.toISOString()
+      : null,
+  };
+}
+
 async function start() {
   await app.prepare();
   const server = http.createServer((req, res) => handle(req, res));
@@ -386,9 +688,17 @@ async function start() {
     });
 
     socket.on("message:send", async ({ patientId, sender, content }, ack) => {
+      let ackSent = false;
+      const safeAck = (payload) => {
+        if (ack && !ackSent) {
+          ack(payload);
+          ackSent = true;
+        }
+      };
+
       try {
         if (!patientId || !sender || !content) {
-          ack && ack({ ok: false, error: "invalid_payload" });
+          safeAck({ ok: false, error: "invalid_payload" });
           return;
         }
 
@@ -402,6 +712,9 @@ async function start() {
 
         // Send to admin room using broadcast to avoid sending to sender if they're in admin room
         socket.broadcast.to("admin").emit("message:new", { message });
+
+        // Immediately acknowledge receipt to client before longer AI processing
+        safeAck({ ok: true, message });
 
         // If message is from patient, send to AI and get action
         if (sender === "patient") {
@@ -456,7 +769,9 @@ async function start() {
               // Map action to title and fetch data
               const { title, data, action } = await getActionData(
                 actionData.action,
-                patientId
+                patientId,
+                actionData.data,
+                { message: content }
               );
 
               // Create structured message with action, title and data
@@ -510,11 +825,9 @@ async function start() {
             // Don't fail the message send if AI fails
           }
         }
-
-        ack && ack({ ok: true, message });
       } catch (e) {
         console.error("Message send error:", e);
-        ack && ack({ ok: false, error: "server_error" });
+        safeAck({ ok: false, error: "server_error" });
       }
     });
 

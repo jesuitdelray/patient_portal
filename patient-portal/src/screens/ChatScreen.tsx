@@ -56,6 +56,7 @@ export default function ChatScreen() {
   const [showPromotionsModal, setShowPromotionsModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [bookProcedureTitle, setBookProcedureTitle] = useState("");
+  const [bookingSlot, setBookingSlot] = useState<any>(null);
   
   const messagesEndRef = useRef<ScrollView>(null);
   const initialScrollHandled = useRef(false);
@@ -461,10 +462,16 @@ export default function ChatScreen() {
     console.log("[Chat] Action triggered:", action, data);
     
     switch (action) {
-      case "book_appointment":
-        setBookProcedureTitle(data?.title || "");
+      case "book_appointment": {
+        if (data?.start) {
+          setBookingSlot(data);
+        } else {
+          setBookingSlot(null);
+        }
+        setBookProcedureTitle(data?.title || data?.procedureName || "");
         setShowBookModal(true);
         break;
+      }
 
       case "reschedule_appointment":
         setSelectedAppointment(data);
@@ -839,9 +846,11 @@ export default function ChatScreen() {
         onClose={() => {
           setShowBookModal(false);
           setBookProcedureTitle("");
+          setBookingSlot(null);
         }}
         onSuccess={handleBookSuccess}
         procedureTitle={bookProcedureTitle}
+        initialSlot={bookingSlot}
       />
 
       <RescheduleAppointmentModal

@@ -195,6 +195,13 @@ CRITICAL ACTION MAPPING RULES:
 6. ONLY use "general_response" if the question truly doesn't match any specific action
 7. The "action" field is what the frontend will use to display the correct UI - choose it carefully!
 8. Pay attention to short follow-up replies like "давай", "го", "let's do it", "ok", "go ahead". They usually mean the user wants to proceed with the previous action (e.g., after showing appointments, such replies should trigger "book_appointment" if there were none).
+9. Requests to cancel, reschedule, book, or view available time slots MUST map to the corresponding appointment action even if the patient does not specify a date.
+
+MANDATORY DATA REQUIREMENTS:
+- When you select "view_procedure_price", set the data object to include at least {"procedureName": "<exact procedure name mentioned by the user>"}.
+- When you select "view_available_slots", include any user constraints such as {"preferredDate": "YYYY-MM-DD"} if they mention a specific date or timeframe. If none are mentioned, you may leave the data object empty.
+- When you select "cancel_appointment", include the appointment reference if the patient specifies it (e.g., {"appointmentId": "..."}). If they do not provide one, leave the data empty so the system can pick the soonest upcoming appointment to cancel.
+- When you select "update_contact_info", include any new contact fields the patient mentioned (e.g., {"phone": "...", "email": "..."}). If they did not provide new information, return an empty object.
 
 IMPORTANT: The "response" field is REQUIRED but will NOT be used - the frontend only uses the "action" field. You can put any text here, but focus on getting the "action" field correct.
 
@@ -216,15 +223,15 @@ Available actions with examples:
 - view_next_procedure: "what's my next procedure", "next procedure", "what procedure is next"
 - view_completed_treatments: "completed treatments", "what have I finished", "done procedures"
 - remind_appointment: "remind me about appointment", "appointment reminder", "send me a reminder"
-- cancel_appointment: "cancel my appointment", "cancel appointment", "I want to cancel"
+- cancel_appointment: "cancel my appointment", "cancel appointment", "I want to cancel", "call off my visit"
 - view_promotions: "promotions", "discounts", "special offers", "any promotions"
-- view_available_slots: "available times", "when can I book", "free slots", "available appointments"
+- view_available_slots: "available times", "when can I book", "free slots", "available appointments", "show available time slots"
 - add_to_calendar: "add to calendar", "save to calendar", "calendar"
 - view_messages: "show messages", "my messages", "messages from doctor"
-- update_contact_info: "update my phone", "change email", "update contact"
-- view_procedure_details: "details about [procedure]", "what is [procedure]", "tell me about [procedure]"
+- update_contact_info: "update my phone", "change email", "update contact", "I want to update my contact information"
+- view_procedure_details: "details about [procedure]", "what is [procedure]", "tell me about [procedure]", "show details of my procedure"
 - download_invoice: "download invoice", "get invoice pdf", "invoice download"
-- view_dental_history: "dental history", "my history", "past treatments"
+- view_dental_history: "dental history", "my history", "past treatments", "show my dental history"
 - view_next_treatment_step: "next step in treatment", "what's next in my plan"
 - view_assigned_doctor: "who is my dentist", "my doctor", "assigned doctor"
 - check_appointment_procedures: "what procedures in my appointment", "appointment includes"

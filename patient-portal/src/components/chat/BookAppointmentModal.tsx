@@ -14,11 +14,20 @@ import { API_BASE, fetchWithAuth } from "../../lib/api";
 import Toast from "react-native-toast-message";
 import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
+type SuggestedSlot = {
+  start?: string;
+  end?: string;
+  title?: string;
+  dateLabel?: string;
+  timeLabel?: string;
+};
+
 type Props = {
   visible: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   procedureTitle?: string;
+  initialSlot?: SuggestedSlot | null;
 };
 
 export function BookAppointmentModal({
@@ -26,6 +35,7 @@ export function BookAppointmentModal({
   onClose,
   onSuccess,
   procedureTitle,
+  initialSlot,
 }: Props) {
   const [title, setTitle] = useState(procedureTitle || "");
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -41,17 +51,30 @@ export function BookAppointmentModal({
   const tomorrowString = tomorrow.toISOString().slice(0, 16);
 
   React.useEffect(() => {
-    if (visible) {
-      const initialDate = new Date();
+    if (!visible) return;
+
+    let initialDate = new Date();
+    if (initialSlot?.start) {
+      const slotDate = new Date(initialSlot.start);
+      if (!Number.isNaN(slotDate.valueOf())) {
+        initialDate = slotDate;
+      }
+    } else {
       initialDate.setDate(initialDate.getDate() + 1);
       initialDate.setHours(10, 0, 0, 0);
-      setSelectedDate(initialDate);
-      setDatetime(initialDate.toISOString().slice(0, 16));
-      if (procedureTitle) {
-        setTitle(procedureTitle);
-      }
     }
-  }, [visible, procedureTitle]);
+
+    setSelectedDate(initialDate);
+    setDatetime(initialDate.toISOString().slice(0, 16));
+
+    if (procedureTitle) {
+      setTitle(procedureTitle);
+    } else if (initialSlot?.title) {
+      setTitle(initialSlot.title);
+    } else {
+      setTitle("");
+    }
+  }, [visible, procedureTitle, initialSlot]);
 
   const handleDateChange = (event: any, date?: Date) => {
     if (Platform.OS === "android") {

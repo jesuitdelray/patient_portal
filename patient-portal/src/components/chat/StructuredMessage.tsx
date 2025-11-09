@@ -82,6 +82,7 @@ function renderDataByAction(
 
     case "view_next_appointment":
     case "view_upcoming_appointments":
+    case "cancel_appointment":
       if (Array.isArray(data)) {
         return data.map((apt: any, index: number) => (
           <AppointmentCard
@@ -119,6 +120,8 @@ function renderDataByAction(
     case "view_remaining_procedures":
     case "view_completed_treatments":
     case "view_next_procedure":
+    case "view_procedure_details":
+    case "view_dental_history":
       if (Array.isArray(data)) {
         return data.map((procedure: any, index: number) => (
           <ProcedureCard key={procedure.id || index} procedure={procedure} />
@@ -144,6 +147,155 @@ function renderDataByAction(
       }
       return null;
 
+    case "update_contact_info":
+      if (!data) {
+        return null;
+      }
+      return (
+        <View style={styles.infoContainer}>
+          <Text style={styles.infoText}>
+            Please verify your contact details below.
+          </Text>
+          {data.name ? (
+            <Text style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Name: </Text>
+              {data.name}
+            </Text>
+          ) : null}
+          {data.email ? (
+            <Text style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Email: </Text>
+              {data.email}
+            </Text>
+          ) : null}
+          {data.phone ? (
+            <Text style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Phone: </Text>
+              {data.phone}
+            </Text>
+          ) : null}
+          {data.address ? (
+            <Text style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Address: </Text>
+              {data.address}
+            </Text>
+          ) : null}
+          <Text style={styles.infoSubtext}>
+            {data.instructions ||
+              "Reply with the updated details and we will take care of it."}
+          </Text>
+        </View>
+      );
+
+    case "view_procedure_price": {
+      const matches = Array.isArray(data?.matches)
+        ? data.matches
+        : Array.isArray(data)
+        ? data
+        : [];
+      const query = data?.query;
+
+      if (matches.length === 0) {
+        return (
+          <View style={styles.infoContainer}>
+            <Text style={styles.infoText}>
+              {query
+                ? `No procedures found for “${query}”.`
+                : "No matching procedures found."}
+            </Text>
+            <Text style={styles.infoSubtext}>
+              You can check the full price list for more procedures.
+            </Text>
+          </View>
+        );
+      }
+
+      return (
+        <View style={styles.infoContainer}>
+          {matches.map((item: any, index: number) => {
+            const price =
+              typeof item.price === "number"
+                ? item.price
+                : Number(item.price ?? 0);
+
+            return (
+              <View key={item.id || index} style={styles.priceListItem}>
+                <Text style={styles.priceListTitle}>{item.title}</Text>
+                <Text style={styles.priceListLine}>
+                  <Text style={styles.infoLabel}>Price: </Text>${price.toFixed(2)}
+                </Text>
+                {item.duration ? (
+                  <Text style={styles.priceListLine}>
+                    <Text style={styles.infoLabel}>Duration: </Text>
+                    {item.duration} min
+                  </Text>
+                ) : null}
+                {item.category ? (
+                  <Text style={styles.priceListLine}>
+                    <Text style={styles.infoLabel}>Category: </Text>
+                    {item.category}
+                  </Text>
+                ) : null}
+                {item.description ? (
+                  <Text style={styles.priceListDescription}>
+                    {item.description}
+                  </Text>
+                ) : null}
+                {index < matches.length - 1 ? (
+                  <View style={styles.priceDivider} />
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
+      );
+    }
+
+    case "view_available_slots": {
+      const slots = Array.isArray(data?.slots)
+        ? data.slots
+        : Array.isArray(data)
+        ? data
+        : [];
+
+      if (slots.length === 0) {
+        return (
+          <View style={styles.infoContainer}>
+            <Text style={styles.infoText}>
+              No available time slots for the requested period.
+            </Text>
+            <Text style={styles.infoSubtext}>
+              Tap the button below to request a booking and we will find the
+              next open time for you.
+            </Text>
+          </View>
+        );
+      }
+
+      return (
+        <View style={styles.slotGrid}>
+          {slots.map((slot: any, index: number) => (
+            <TouchableOpacity
+              key={slot.start || index}
+              style={styles.slotPill}
+              onPress={() =>
+                onAction?.("book_appointment", {
+                  ...slot,
+                  source: "suggested_slot",
+                })
+              }
+            >
+              <Text style={styles.slotDate}>{slot.dateLabel}</Text>
+              <Text style={styles.slotTime}>{slot.timeLabel}</Text>
+              {slot.isEstimated ? (
+                <Text style={styles.slotMeta}>Estimated availability</Text>
+              ) : null}
+            </TouchableOpacity>
+          ))}
+        </View>
+      );
+    }
+
     default:
       // For other actions, display data as formatted JSON
       return (
@@ -161,18 +313,54 @@ function renderActionButton(
 ) {
   const actionButtons: Record<
     string,
-    { label: string; variant?: "primary" | "secondary" }
+    {
+      label: string;
+      variant?: "primary" | "secondary";
+      onPress?: (data: any, handler?: (action: string, data: any) => void) => void;
+    }
   > = {
     book_appointment: { label: "Book Appointment", variant: "primary" },
     reschedule_appointment: { label: "Reschedule", variant: "secondary" },
-    cancel_appointment: { label: "Cancel Appointment", variant: "secondary" },
+    cancel_appointment: {
+      label: "Cancel Appointment",
+      variant: "secondary",
+      onPress: (payload, handler) => {
+        const appointment = Array.isArray(payload) ? payload[0] : payload;
+        if (appointment) {
+          handler?.("cancel_appointment", appointment);
+        }
+      },
+    },
     download_invoice: { label: "Download PDF", variant: "primary" },
     view_price_list: { label: "View Price List", variant: "primary" },
     view_promotions: { label: "View Promotions", variant: "primary" },
+    view_available_slots: {
+      label: "Book Appointment",
+      variant: "primary",
+      onPress: (slotsData, handler) => {
+        const firstSlot = Array.isArray(slotsData?.slots)
+          ? slotsData.slots[0]
+          : Array.isArray(slotsData)
+          ? slotsData[0]
+          : null;
+        handler?.("book_appointment", {
+          ...(firstSlot || {}),
+          source: "available_slots_button",
+        });
+      },
+    },
   };
 
   const buttonConfig = actionButtons[action];
   if (!buttonConfig || !onAction) return null;
+
+  const handlePress = () => {
+    if (buttonConfig.onPress) {
+      buttonConfig.onPress(data, onAction);
+    } else {
+      onAction(action, data);
+    }
+  };
 
   return (
     <TouchableOpacity
@@ -182,7 +370,7 @@ function renderActionButton(
           ? styles.actionButtonPrimary
           : styles.actionButtonSecondary,
       ]}
-      onPress={() => onAction(action, data)}
+      onPress={handlePress}
     >
       <Text
         style={[
@@ -228,6 +416,81 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Platform.OS === "web" ? "monospace" : "monospace",
     color: colors.textSecondary,
+  },
+  infoContainer: {
+    backgroundColor: colors.greyscale100,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
+    gap: 4,
+  },
+  infoText: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    fontWeight: "500",
+  },
+  infoRow: {
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  infoLabel: {
+    fontWeight: "600",
+  },
+  infoSubtext: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  priceListItem: {
+    gap: 4,
+  },
+  priceListTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  priceListLine: {
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  priceListDescription: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  priceDivider: {
+    height: 1,
+    backgroundColor: colors.greyscale200,
+    marginVertical: 8,
+  },
+  slotGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  slotPill: {
+    backgroundColor: colors.medicalBlueBg,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.medicalBlue,
+    minWidth: 120,
+  },
+  slotDate: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.medicalBlue,
+  },
+  slotTime: {
+    fontSize: 12,
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  slotMeta: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    marginTop: 4,
   },
   actionButton: {
     paddingVertical: 10,
