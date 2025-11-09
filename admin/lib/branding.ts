@@ -20,6 +20,10 @@ const DEFAULT_DANGER = "#EF4444";
 const DEFAULT_SUCCESS = "#16A34A";
 const BLUE = "#2563EB";
 
+const DEFAULT_BRAND_SOFT = softColor(BLUE, 0.22);
+const DEFAULT_HIGHLIGHT_BG = softColor(BLUE, 0.35);
+const DEFAULT_PROMO_BG = softColor(BLUE, 0.45);
+
 const defaultThemeTokens: ClinicTheme = {
   "--rem-bg-page": "#F5F5F7",
   "--rem-bg-surface": "#FFFFFF",
@@ -30,27 +34,41 @@ const defaultThemeTokens: ClinicTheme = {
 
   // Brand
   "--rem-brand": BLUE,
-  "--rem-brand-soft": softColor(BLUE, 0.08),
+  "--rem-brand-text": readableColor(BLUE, "#FFFFFF", "#0F172A"),
+  "--rem-brand-soft": DEFAULT_BRAND_SOFT,
+  "--rem-brand-soft-text": readableColor(
+    DEFAULT_BRAND_SOFT,
+    "#0F172A",
+    "#FFFFFF"
+  ),
 
   // Sidebar
   "--rem-nav-bg": "#FFFFFF",
   "--rem-nav-text": "#111827",
   "--rem-nav-icon": BLUE,
-  "--rem-nav-active-bg": softColor(BLUE, 0.06),
+  "--rem-nav-active-bg": softColor(BLUE, 0.12),
   "--rem-nav-active-icon": BLUE,
 
   // Primary CTA
   "--rem-cta-bg": BLUE,
   "--rem-cta-bg-hover": darken(BLUE, 0.08),
-  "--rem-cta-text": "#FFFFFF",
+  "--rem-cta-text": readableColor(BLUE, "#FFFFFF", "#0F172A"),
 
-  // Highlight banners (Upcoming Appointment и т.п.)
-  "--rem-highlight-bg": softColor(BLUE, 0.04),
-  "--rem-highlight-text": "#111827",
+  // Highlight banners
+  "--rem-highlight-bg": DEFAULT_HIGHLIGHT_BG,
+  "--rem-highlight-text": readableColor(
+    DEFAULT_HIGHLIGHT_BG,
+    "#0F172A",
+    "#FFFFFF"
+  ),
 
   // Promotions
-  "--rem-promo-bg": softColor(BLUE, 0.06),
-  "--rem-promo-text": "#111827",
+  "--rem-promo-bg": DEFAULT_PROMO_BG,
+  "--rem-promo-text": readableColor(
+    DEFAULT_PROMO_BG,
+    "#0F172A",
+    "#FFFFFF"
+  ),
 
   // Status
   "--rem-danger": DEFAULT_DANGER,
@@ -68,29 +86,39 @@ export function buildClinicTheme(input: ClinicBrandingInput): ClinicTheme {
   const promo = normalizeHex(input.colors.promo ?? brand);
   const danger = normalizeHex(input.colors.danger ?? DEFAULT_DANGER);
 
+  const brandSoft = softColor(brand, 0.22);
+  const highlightBg = softColor(highlight, 0.35);
+  const promoBg = softColor(promo, 0.45);
+
   const theme: ClinicTheme = {
     ...defaultThemeTokens,
     "--rem-brand": brand,
-    "--rem-brand-soft": softColor(brand, 0.12),
+    "--rem-brand-text": readableColor(brand, "#FFFFFF", "#0F172A"),
+    "--rem-brand-soft": brandSoft,
+    "--rem-brand-soft-text": readableColor(
+      brandSoft,
+      "#0F172A",
+      "#FFFFFF"
+    ),
     "--rem-nav-bg": nav,
     "--rem-nav-text": readableColor(nav),
     "--rem-nav-icon": brand,
-    "--rem-nav-active-bg": softColor(brand, 0.1),
+    "--rem-nav-active-bg": softColor(brand, 0.12),
     "--rem-nav-active-icon": brand,
     "--rem-cta-bg": cta,
     "--rem-cta-bg-hover": darken(cta, 0.08),
     "--rem-cta-text": readableColor(cta, "#111827", "#FFFFFF"),
-    "--rem-highlight-bg": softColor(highlight, 0.14),
+    "--rem-highlight-bg": highlightBg,
     "--rem-highlight-text": readableColor(
-      softColor(highlight, 0.14),
-      "#111827",
-      "#0F172A"
+      highlightBg,
+      "#0F172A",
+      "#FFFFFF"
     ),
-    "--rem-promo-bg": softColor(promo, 0.16),
+    "--rem-promo-bg": promoBg,
     "--rem-promo-text": readableColor(
-      softColor(promo, 0.16),
-      "#111827",
-      "#0F172A"
+      promoBg,
+      "#0F172A",
+      "#FFFFFF"
     ),
     "--rem-danger": danger,
   };
@@ -206,17 +234,24 @@ function darken(hex: string, amount = 0.1) {
 function readableColor(
   hex: string,
   lightText = "#FFFFFF",
-  darkText = "#111827"
+  darkText = "#111827",
+  threshold = 4.5
 ) {
-  const { r, g, b } = hexToRgb(hex);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? darkText : lightText;
+  const background = normalizeHex(hex);
+  const lightContrast = getContrastRatio(background, lightText);
+  const darkContrast = getContrastRatio(background, darkText);
+
+  if (lightContrast >= threshold && darkContrast >= threshold) {
+    return getLuminance(background) > 0.5 ? darkText : lightText;
+  }
+
+  if (lightContrast >= threshold) return lightText;
+  if (darkContrast >= threshold) return darkText;
+  return lightContrast > darkContrast ? lightText : darkText;
 }
 
 function isLightColor(hex: string) {
-  const { r, g, b } = hexToRgb(hex);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.8;
+  return getLuminance(hex) > 0.75;
 }
 
 function hexToRgb(hex: string) {
@@ -244,6 +279,25 @@ function rgbToHex(r: number, g: number, b: number) {
       .join("")
       .toUpperCase()
   );
+}
+
+function getLuminance(hex: string) {
+  const { r, g, b } = hexToRgb(hex);
+  const [sr, sg, sb] = [r, g, b].map((value) => {
+    const channel = value / 255;
+    return channel <= 0.03928
+      ? channel / 12.92
+      : Math.pow((channel + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * sr + 0.7152 * sg + 0.0722 * sb;
+}
+
+function getContrastRatio(color1: string, color2: string) {
+  const lum1 = getLuminance(color1);
+  const lum2 = getLuminance(color2);
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
 export const defaultBrandingInput: ClinicBrandingInput = {

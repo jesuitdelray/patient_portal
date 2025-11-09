@@ -44,7 +44,9 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
               { backgroundColor: theme.brandSoft },
             ]}
           >
-            <Text style={[styles.typeText, { color: theme.brand }]}>
+            <Text
+              style={[styles.typeText, { color: theme.brandSoftText }]}
+            >
               {appointment.type}
             </Text>
           </View>
@@ -76,13 +78,13 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
                 styles.buttonSecondary,
                 {
                   borderColor: theme.ctaBg,
-                  backgroundColor: theme.brandSoft,
+                  backgroundColor: theme.ctaBg,
                 },
               ]}
               onPress={onReschedule}
             >
               <Text
-                style={[styles.buttonTextSecondary, { color: theme.ctaBg }]}
+                style={[styles.buttonTextSecondary, { color: theme.ctaText }]}
               >
                 Reschedule
               </Text>

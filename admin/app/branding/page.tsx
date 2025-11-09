@@ -52,36 +52,36 @@ const COLOR_FIELDS: Array<{
   {
     key: "brand",
     label: "Brand Color",
-    description: "Лого, название клиники, небольшие акценты.",
+    description: "Logo, clinic name, subtle highlights.",
   },
   {
     key: "nav",
     label: "Navigation / Sidebar Color",
-    description: "Фон левого меню, иконки, hover. По умолчанию светлый.",
+    description: "Sidebar background, icons, hover states. Defaults to light.",
     optional: true,
   },
   {
     key: "cta",
     label: "Primary Action Color",
-    description: "Основные CTA: «Записаться», «Сохранить».",
+    description: "Main CTAs: “Book”, “Save”.",
     optional: true,
   },
   {
     key: "highlight",
     label: "Highlight / Banner Color",
-    description: "Баннеры, пустые состояния, Upcoming Appointment.",
+    description: "Banners, empty states, upcoming appointment cards.",
     optional: true,
   },
   {
     key: "promo",
     label: "Promo Color",
-    description: "Акции, скидки, бейджи «20% OFF».",
+    description: "Promotions, discount badges such as “20% OFF”.",
     optional: true,
   },
   {
     key: "danger",
     label: "Danger Color",
-    description: "Ошибки и критичные предупреждения.",
+    description: "Errors and critical alerts.",
     optional: true,
   },
 ];
@@ -109,6 +109,8 @@ export default function BrandingPage() {
   const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const faviconInputRef = useRef<HTMLInputElement | null>(null);
+  const resetDisabled =
+    JSON.stringify(branding.colors) === JSON.stringify(DEFAULT_COLORS);
   const router = useRouter();
 
   const showAlert = (message: string) => {
@@ -241,6 +243,14 @@ export default function BrandingPage() {
     }
   };
 
+  const handleResetColors = () => {
+    setBranding((prev) => ({
+      ...prev,
+      colors: { ...DEFAULT_COLORS },
+      theme: undefined,
+    }));
+  };
+
   const handleLogoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -302,8 +312,8 @@ export default function BrandingPage() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Clinic Branding</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Настрой цвета клиники. Мы автоматически построим тему и распределим её по
-          интерфейсу портала.
+          Configure the clinic palette. We will build the full theme and apply it
+          across the patient portal automatically.
         </p>
       </div>
 
@@ -334,7 +344,7 @@ export default function BrandingPage() {
                 Logo
               </label>
               <p className="text-xs text-slate-500 mb-3">
-                PNG / JPG / SVG / WEBP · max 2&nbsp;MB · квадратное изображение
+                PNG / JPG / SVG / WEBP · max 2&nbsp;MB · square image recommended
                 (≥256 × 256px).
               </p>
               <div className="flex items-center gap-4">
@@ -370,7 +380,7 @@ export default function BrandingPage() {
                 Favicon
               </label>
               <p className="text-xs text-slate-500 mb-3">
-                PNG / SVG · max 1&nbsp;MB. Рекомендуемый размер 32 × 32px.
+                PNG / SVG · max 1&nbsp;MB. Recommended size 32 × 32px or larger.
               </p>
               <div className="flex items-center gap-4">
                 {faviconPreview && (
@@ -459,7 +469,15 @@ export default function BrandingPage() {
             })}
           </div>
 
-          <div className="flex justify-end border-t border-slate-200 pt-4">
+                <div className="flex items-center justify-between border-t border-slate-200 pt-4 gap-3">
+                  <button
+                    onClick={handleResetColors}
+                    disabled={resetDisabled}
+                    className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    type="button"
+                  >
+                    Restore Medical Default
+                  </button>
             <button
               onClick={handleSave}
               disabled={saving}

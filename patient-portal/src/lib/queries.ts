@@ -60,6 +60,7 @@ export function usePatient(patientId?: string | null) {
     },
     enabled: !!patientId, // Only run if we have a patientId
     staleTime: 2 * 60 * 1000, // 2 minutes
+    networkMode: "always",
   });
 }
 
@@ -87,6 +88,7 @@ export function useAppointments(patientId?: string | null) {
     },
     enabled: !!finalPatientId,
     staleTime: 1 * 60 * 1000, // 1 minute
+    networkMode: "always",
   });
 }
 
@@ -114,6 +116,7 @@ export function useMessages(patientId?: string | null) {
     gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes (formerly cacheTime)
     refetchOnMount: false, // Don't refetch if data exists in cache
     refetchOnWindowFocus: false, // Don't refetch on window focus
+    networkMode: "always",
   });
 }
 
@@ -156,6 +159,7 @@ export function useUnreadMessages(patientId?: string | null) {
     enabled: !!finalPatientId,
     staleTime: 30 * 1000, // 30 seconds
     refetchInterval: 30 * 1000, // Refetch every 30 seconds
+    networkMode: "always",
   });
 }
 

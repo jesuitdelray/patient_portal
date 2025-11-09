@@ -125,7 +125,7 @@ export function ActiveDiscountCard() {
               ]}
             >
               <Text
-                style={[styles.badgeText, { color: theme.brand }]}
+                style={[styles.badgeText, { color: theme.brandSoftText }]}
               >
                 {promotion.category}
               </Text>

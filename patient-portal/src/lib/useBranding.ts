@@ -1,7 +1,7 @@
-import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./queries";
-import { API_BASE } from "./api";
+import { API_BASE, connectSocket } from "./api";
 import {
   ClinicTheme,
   applyClinicTheme,
@@ -52,12 +52,65 @@ function normalizeHex(value: string | null | undefined, fallback: string) {
   return trimmed.toUpperCase();
 }
 
+const BRANDING_CACHE_PREFIX = "branding-cache:v1:";
+
+type CachedBrandingEntry = {
+  data: BrandingData;
+  cacheTimestamp: number;
+};
+
+function getCacheKey(patientId: string | null | undefined) {
+  return `${BRANDING_CACHE_PREFIX}${patientId ?? "public"}`;
+}
+
+function readCachedBranding(cacheKey: string): CachedBrandingEntry | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(cacheKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      typeof parsed.cacheTimestamp !== "number" ||
+      !parsed.data ||
+      typeof parsed.data !== "object"
+    ) {
+      return null;
+    }
+    return parsed as CachedBrandingEntry;
+  } catch (error) {
+    console.warn("[Branding] Failed to read cache", error);
+    return null;
+  }
+}
+
+function writeCachedBranding(cacheKey: string, data: BrandingData) {
+  if (typeof window === "undefined") return;
+  try {
+    const entry: CachedBrandingEntry = {
+      data,
+      cacheTimestamp: Date.now(),
+    };
+    window.localStorage.setItem(cacheKey, JSON.stringify(entry));
+  } catch (error) {
+    console.warn("[Branding] Failed to write cache", error);
+  }
+}
+
 export function useBranding() {
   const { data: auth } = useAuth();
   const patientId = auth?.role === "patient" ? auth.userId : null;
+  const queryClient = useQueryClient();
+  const brandingKey = ["branding", patientId ?? "public"] as const;
+  const cacheKey = useMemo(() => getCacheKey(patientId), [patientId]);
+  const cachedEntry = useMemo(
+    () => readCachedBranding(cacheKey),
+    [cacheKey]
+  );
 
   const query = useQuery<BrandingData>({
-    queryKey: ["branding", patientId ?? "public"],
+    queryKey: brandingKey,
     queryFn: async () => {
       const targetId = patientId ?? "public";
       const res = await fetch(`${API_BASE}/patients/${targetId}/branding`, {
@@ -103,8 +156,32 @@ export function useBranding() {
         updatedAt: payload.updatedAt ?? null,
       };
     },
-    initialData: EMPTY_BRANDING,
+    initialData: () => cachedEntry?.data ?? EMPTY_BRANDING,
+    initialDataUpdatedAt: cachedEntry?.cacheTimestamp,
+    staleTime: 5 * 60 * 1000,
+    networkMode: "always",
+    refetchOnMount: (query) => query.state.dataUpdateCount === 0,
+    refetchOnReconnect: (query) => query.state.dataUpdateCount === 0,
+    refetchOnWindowFocus: (query) => query.state.dataUpdateCount === 0,
   });
+
+  useEffect(() => {
+    const socket = connectSocket(patientId ? { patientId } : undefined);
+    const handler = () => {
+      queryClient.invalidateQueries({ queryKey: brandingKey });
+    };
+    socket.on("branding:update", handler);
+    return () => {
+      socket.off("branding:update", handler);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientId, queryClient]);
+
+  useEffect(() => {
+    if (query.isSuccess && query.isFetchedAfterMount && query.data) {
+      writeCachedBranding(cacheKey, query.data);
+    }
+  }, [cacheKey, query.data, query.isFetchedAfterMount, query.isSuccess]);
 
   useEffect(() => {
     if (query.data?.theme) {
@@ -116,8 +193,8 @@ export function useBranding() {
 
   return {
     branding: query.data ?? EMPTY_BRANDING,
-    isLoading: query.isLoading,
-    isInitialLoading: query.isFetching,
+    isLoading: query.isFetching,
+    isInitialLoading: query.isLoading,
     refetch: query.refetch,
   };
 }

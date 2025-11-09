@@ -2,26 +2,33 @@ import { colors } from "./colors";
 
 export type ClinicTheme = Record<string, string>;
 
+const BLUE = "#2563EB";
+const DEFAULT_BRAND_SOFT = softColor(BLUE, 0.22);
+const DEFAULT_HIGHLIGHT = softColor(BLUE, 0.35);
+const DEFAULT_PROMO = softColor(BLUE, 0.45);
+
 export const defaultClinicTheme: ClinicTheme = {
   "--rem-bg-page": "#F5F5F7",
   "--rem-bg-surface": "#FFFFFF",
   "--rem-border-subtle": "#E5E7EB",
   "--rem-text-main": "#111827",
   "--rem-text-muted": "#6B7280",
-  "--rem-brand": "#2563EB",
-  "--rem-brand-soft": softColor("#2563EB", 0.12),
+  "--rem-brand": BLUE,
+  "--rem-brand-text": pickText(BLUE),
+  "--rem-brand-soft": DEFAULT_BRAND_SOFT,
+  "--rem-brand-soft-text": pickText(DEFAULT_BRAND_SOFT),
   "--rem-nav-bg": "#FFFFFF",
   "--rem-nav-text": "#111827",
-  "--rem-nav-icon": "#2563EB",
-  "--rem-nav-active-bg": softColor("#2563EB", 0.1),
-  "--rem-nav-active-icon": "#2563EB",
-  "--rem-cta-bg": "#2563EB",
-  "--rem-cta-bg-hover": darken("#2563EB", 0.08),
-  "--rem-cta-text": "#0F172A",
-  "--rem-highlight-bg": softColor("#2563EB", 0.14),
-  "--rem-highlight-text": "#111827",
-  "--rem-promo-bg": softColor("#2563EB", 0.18),
-  "--rem-promo-text": "#111827",
+  "--rem-nav-icon": BLUE,
+  "--rem-nav-active-bg": softColor(BLUE, 0.12),
+  "--rem-nav-active-icon": BLUE,
+  "--rem-cta-bg": BLUE,
+  "--rem-cta-bg-hover": darken(BLUE, 0.08),
+  "--rem-cta-text": pickText(BLUE),
+  "--rem-highlight-bg": DEFAULT_HIGHLIGHT,
+  "--rem-highlight-text": pickText(DEFAULT_HIGHLIGHT),
+  "--rem-promo-bg": DEFAULT_PROMO,
+  "--rem-promo-text": pickText(DEFAULT_PROMO),
   "--rem-danger": "#EF4444",
   "--rem-success": "#16A34A",
 };
@@ -42,7 +49,7 @@ export function applyClinicTheme(theme?: ClinicTheme) {
 
   // Mutate shared color palette so legacy components keep working
   colors.primary = currentTheme["--rem-cta-bg"];
-  colors.primaryLight = softColor(currentTheme["--rem-cta-bg"], 0.2);
+  colors.primaryLight = softColor(currentTheme["--rem-cta-bg"], 0.18);
   colors.primaryDark = darken(currentTheme["--rem-cta-bg"], 0.16);
   colors.primaryBg = currentTheme["--rem-highlight-bg"];
   colors.background = currentTheme["--rem-bg-surface"];
@@ -75,6 +82,20 @@ function darken(hex: string, amount = 0.1) {
   return rgbToHex(adjust(r), adjust(g), adjust(b));
 }
 
+function pickText(background: string) {
+  const bg = normalizeHex(background);
+  const lightContrast = getContrastRatio(bg, "#FFFFFF");
+  const darkContrast = getContrastRatio(bg, "#111827");
+  const threshold = 4.5;
+
+  if (lightContrast >= threshold && darkContrast >= threshold) {
+    return getLuminance(bg) > 0.5 ? "#111827" : "#FFFFFF";
+  }
+  if (lightContrast >= threshold) return "#FFFFFF";
+  if (darkContrast >= threshold) return "#111827";
+  return lightContrast > darkContrast ? "#FFFFFF" : "#111827";
+}
+
 function hexToRgb(hex: string) {
   const normalized = hex.startsWith("#") ? hex.slice(1) : hex;
   const value =
@@ -102,4 +123,25 @@ function rgbToHex(r: number, g: number, b: number) {
   );
 }
 
+function normalizeHex(hex: string) {
+  return hex.startsWith("#") ? hex.toUpperCase() : `#${hex}`.toUpperCase();
+}
 
+function getLuminance(hex: string) {
+  const { r, g, b } = hexToRgb(hex);
+  const [sr, sg, sb] = [r, g, b].map((value) => {
+    const channel = value / 255;
+    return channel <= 0.03928
+      ? channel / 12.92
+      : Math.pow((channel + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * sr + 0.7152 * sg + 0.0722 * sb;
+}
+
+function getContrastRatio(color1: string, color2: string) {
+  const lum1 = getLuminance(color1);
+  const lum2 = getLuminance(color2);
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  return (lighter + 0.05) / (darker + 0.05);
+}

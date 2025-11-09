@@ -134,7 +134,7 @@ export default function PromotionsScreen() {
                     <Text
                       style={[
                         styles.categoryBadgeText,
-                        { color: theme.brand },
+                        { color: theme.brandSoftText },
                       ]}
                     >
                       {promo.category}
@@ -158,18 +158,18 @@ export default function PromotionsScreen() {
                 </View>
               </View>
               <View style={styles.cardContent}>
-                <Text style={[styles.cardTitle, { color: theme.brand }]}>
+                <Text style={[styles.cardTitle, { color: theme.promoText }]}>
                   {promo.title}
                 </Text>
                 <Text
-                  style={[styles.cardDescription, { color: theme.textSecondary }]}
+                  style={[styles.cardDescription, { color: theme.promoText }]}
                 >
                   {promo.description}
                 </Text>
                 <View style={styles.validUntilRow}>
-                  <Feather name="clock" size={14} color={theme.brand} />
+                  <Feather name="clock" size={14} color={theme.promoText} />
                   <Text
-                    style={[styles.validUntilText, { color: theme.textSecondary }]}
+                    style={[styles.validUntilText, { color: theme.promoText }]}
                   >
                     Valid until {promo.validUntil}
                   </Text>
@@ -203,11 +203,15 @@ export default function PromotionsScreen() {
                     </Text>
                   ) : claimedOffers.includes(promo.id) ? (
                     <>
-                      <Feather name="check-circle" size={16} color={theme.brand} />
+                      <Feather
+                        name="check-circle"
+                        size={16}
+                        color={theme.promoText}
+                      />
                       <Text
                         style={[
                           styles.claimButtonTextClaimed,
-                          { color: theme.brand },
+                          { color: theme.promoText },
                         ]}
                       >
                         Claimed

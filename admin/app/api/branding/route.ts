@@ -8,6 +8,8 @@ import {
   validateBrandingInput,
   defaultBrandingInput,
 } from "@/lib/branding";
+import { broadcast } from "@/lib/events";
+import { wsBroadcast } from "@/lib/ws";
 
 const prisma = new PrismaClient();
 
@@ -92,6 +94,21 @@ export async function PUT(request: NextRequest) {
 
     const updatedInput = clinicBrandingToInput(branding);
     const theme = buildClinicTheme(updatedInput);
+
+    const eventPayload = {
+      doctorId,
+      updatedAt: branding.updatedAt.toISOString(),
+    };
+    try {
+      broadcast("branding:update", eventPayload);
+      wsBroadcast("branding:update", eventPayload);
+      const io = (global as any).__io;
+      if (io) {
+        io.emit("branding:update", eventPayload);
+      }
+    } catch (emitError) {
+      console.error("[Branding] broadcast failed:", emitError);
+    }
 
     return NextResponse.json({
       success: true,

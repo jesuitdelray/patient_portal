@@ -226,7 +226,14 @@ export function BookAppointmentModal({
               onPress={onClose}
               disabled={isSubmitting}
             >
-              <Text style={styles.buttonTextCancel}>Cancel</Text>
+            <Text
+              style={[
+                styles.buttonTextCancel,
+                { color: theme.brandSoftText },
+              ]}
+            >
+              Cancel
+            </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[

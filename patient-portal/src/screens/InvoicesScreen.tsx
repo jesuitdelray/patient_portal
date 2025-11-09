@@ -127,7 +127,7 @@ export default function InvoicesScreen() {
                             color:
                               invoice.status === "paid"
                                 ? "#FFFFFF"
-                                : theme.textPrimary,
+                                : theme.highlightText,
                           },
                         ]}
                       >

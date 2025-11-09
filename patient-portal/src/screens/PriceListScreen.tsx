@@ -301,7 +301,7 @@ export default function PriceListScreen() {
               <Text
                 style={[
                   styles.categoryChipText,
-                  selectedCategory === null && { color: theme.brand },
+                  selectedCategory === null && { color: theme.brandSoftText },
                 ]}
               >
                 All
@@ -323,7 +323,7 @@ export default function PriceListScreen() {
                   <Text
                     style={[
                       styles.categoryChipText,
-                      selectedCategory === cat && { color: theme.brand },
+                      selectedCategory === cat && { color: theme.brandSoftText },
                     ]}
                   >
                     {cat}
@@ -388,7 +388,10 @@ export default function PriceListScreen() {
                     <Text
                       style={[
                         styles.priceItemCategory,
-                        { backgroundColor: theme.brandSoft, color: theme.brand },
+                      {
+                        backgroundColor: theme.brandSoft,
+                        color: theme.brandSoftText,
+                      },
                       ]}
                     >
                       {item.category || "General"}
@@ -433,9 +436,12 @@ export default function PriceListScreen() {
                   <Text style={styles.modalProcedureTitle}>
                     {selectedProcedure.title}
                   </Text>
-                  <Text
-                    style={[styles.modalProcedurePrice, { color: theme.brand }]}
-                  >
+                <Text
+                  style={[
+                    styles.modalProcedurePrice,
+                    { color: theme.brandSoftText },
+                  ]}
+                >
                     ${selectedProcedure.price.toFixed(2)}
                   </Text>
                 </View>

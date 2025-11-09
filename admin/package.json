@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node server.js",
-    "build": "prisma generate --data-proxy && next build",
+    "build": "prisma generate && next build",
     "start": "NODE_ENV=production node server.js",
     "socket": "node lib/socket-server.js"
   },

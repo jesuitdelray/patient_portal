@@ -261,7 +261,12 @@ export default function LoginScreen() {
           >
             <View style={styles.buttonContent}>
               <Text style={{ fontSize: 18, marginRight: 8 }}>🍎</Text>
-              <Text style={[styles.appleButtonText, { color: theme.brand }]}>
+              <Text
+                style={[
+                  styles.appleButtonText,
+                  { color: theme.brandSoftText },
+                ]}
+              >
                 Sign in with Apple
               </Text>
             </View>

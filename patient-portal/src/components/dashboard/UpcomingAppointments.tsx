@@ -151,7 +151,7 @@ export function UpcomingAppointments() {
     >
       <View style={styles.header}>
         <Text style={{ fontSize: 18 }}>📅</Text>
-        <Text style={[styles.title, { color: theme.brand }]}>
+        <Text style={[styles.title, { color: theme.highlightText }]}>
           Upcoming Appointments
         </Text>
       </View>
@@ -226,7 +226,7 @@ export function UpcomingAppointments() {
                       styles.rescheduleButton,
                       {
                         borderColor: theme.ctaBg,
-                        backgroundColor: theme.brandSoft,
+                    backgroundColor: theme.ctaBg,
                       },
                     ]}
                     onPress={() => handleOpenEdit(appointment)}
@@ -234,7 +234,7 @@ export function UpcomingAppointments() {
                     <Text
                       style={[
                         styles.rescheduleButtonText,
-                        { color: theme.ctaBg },
+                    { color: theme.ctaText },
                       ]}
                     >
                       Edit
@@ -246,7 +246,7 @@ export function UpcomingAppointments() {
                       styles.rescheduleButton,
                       {
                         borderColor: theme.ctaBg,
-                        backgroundColor: theme.brandSoft,
+                    backgroundColor: theme.ctaBg,
                       },
                     ]}
                     onPress={() => handleOpenReschedule(appointment)}
@@ -254,7 +254,7 @@ export function UpcomingAppointments() {
                     <Text
                       style={[
                         styles.rescheduleButtonText,
-                        { color: theme.ctaBg },
+                    { color: theme.ctaText },
                       ]}
                     >
                       Reschedule

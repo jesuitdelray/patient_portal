@@ -19,17 +19,22 @@ export function setNavigateForAuth(nav: any) {
   globalNavigate = nav;
 }
 
+const DEFAULT_REMOTE_API = "https://patient-portal-admin-service-production.up.railway.app/api";
+
 function computeDefaultApiBase(): string {
-  // Web: use current hostname (defensively)
+  // Web: use current hostname. If we're on localhost, point to local dev API,
+  // otherwise fall back to the production Railway API.
   try {
-    if (typeof window !== "undefined" && (window as any)?.location?.hostname) {
-      const host = (window as any).location.hostname || "localhost";
-      return `http://${host}:3001/api`;
+    if (typeof window !== "undefined" && window?.location?.hostname) {
+      const host = window.location.hostname;
+      if (host === "localhost" || host === "127.0.0.1") {
+        return `http://${host}:3001/api`;
+      }
+      return DEFAULT_REMOTE_API;
     }
   } catch {}
-  // Native: try to read Expo host from Constants
+  // Native Expo: try to infer Metro host; if not available, use production API.
   try {
-    // Lazy import to avoid web bundling issues
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Constants = require("expo-constants").default;
     const hostUri: string | undefined =
@@ -37,10 +42,12 @@ function computeDefaultApiBase(): string {
       Constants?.manifest2?.extra?.expoClient?.hostUri;
     if (hostUri) {
       const host = hostUri.split(":")[0];
-      return `http://${host}:3001/api`;
+      if (host === "localhost" || host === "127.0.0.1") {
+        return `http://${host}:3001/api`;
+      }
     }
   } catch {}
-  return "http://localhost:3001/api";
+  return DEFAULT_REMOTE_API;
 }
 
 export const API_BASE =
