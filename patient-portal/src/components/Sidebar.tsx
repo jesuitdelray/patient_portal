@@ -82,16 +82,17 @@ export function Sidebar() {
               key={item.screen}
               style={[
                 styles.menuItem,
-                isActive && styles.menuItemActive,
+                {
+                  borderColor: isActive ? theme.navActiveBg : "transparent",
+                  backgroundColor: isActive ? theme.navActiveBg : "transparent",
+                },
               ]}
               onPress={() => navigation.navigate(item.screen)}
             >
               <Text
                 style={[
                   styles.menuIcon,
-                  {
-                    color: isActive ? theme.navText : theme.navIcon,
-                  },
+                  { color: isActive ? theme.navActiveText : theme.navIcon },
                 ]}
               >
                 {item.icon}
@@ -100,7 +101,7 @@ export function Sidebar() {
                 style={[
                   styles.menuText,
                   {
-                    color: isActive ? theme.navText : theme.navText,
+                    color: isActive ? theme.navActiveText : theme.navText,
                     fontWeight: isActive ? "600" : "400",
                   },
                 ]}

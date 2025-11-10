@@ -101,6 +101,15 @@ function ensureColorOrNull(value: string) {
   return normalizeHex(trimmed);
 }
 
+const isAbsoluteAsset = (value: string) =>
+  /^https?:\/\//i.test(value) || value.startsWith("data:");
+
+const resolveAssetUrl = (value: string | null | undefined) => {
+  if (!value) return null;
+  if (isAbsoluteAsset(value)) return value;
+  return `${API_BASE.replace(/\/api$/, "")}${value}`;
+};
+
 export default function BrandingPage() {
   const [branding, setBranding] = useState<BrandingData>(DEFAULT_BRANDING);
   const [loading, setLoading] = useState(true);
@@ -119,6 +128,38 @@ export default function BrandingPage() {
     } else {
       console.log("[Branding] notice:", message);
     }
+  };
+
+  const buildPayload = (data: BrandingData) => ({
+    clinicName: data.clinicName,
+    logoUrl: data.logoUrl,
+    faviconUrl: data.faviconUrl,
+    colors: {
+      brand: data.colors.brand,
+      nav: ensureColorOrNull(data.colors.nav),
+      cta: ensureColorOrNull(data.colors.cta),
+      highlight: ensureColorOrNull(data.colors.highlight),
+      promo: ensureColorOrNull(data.colors.promo),
+      danger: ensureColorOrNull(data.colors.danger),
+    },
+  });
+
+  const submitBranding = async (nextBranding: BrandingData, options?: { silent?: boolean }) => {
+    const payload = buildPayload(nextBranding);
+    const res = await fetch("/api/branding", {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.error || "Failed to save branding");
+    }
+    if (!options?.silent) {
+      showAlert("Branding updated");
+    }
+    router.refresh();
   };
 
   useEffect(() => {
@@ -150,18 +191,10 @@ export default function BrandingPage() {
           updatedAt: data.updatedAt || null,
         });
         if (data.logoUrl) {
-          setLogoPreview(
-            data.logoUrl.startsWith("http")
-              ? data.logoUrl
-              : `${API_BASE.replace(/\/api$/, "")}${data.logoUrl}`
-          );
+          setLogoPreview(resolveAssetUrl(data.logoUrl));
         }
         if (data.faviconUrl) {
-          setFaviconPreview(
-            data.faviconUrl.startsWith("http")
-              ? data.faviconUrl
-              : `${API_BASE.replace(/\/api$/, "")}${data.faviconUrl}`
-          );
+          setFaviconPreview(resolveAssetUrl(data.faviconUrl));
         }
       } catch (error) {
         console.error("[Branding] load failed:", error);
@@ -175,32 +208,7 @@ export default function BrandingPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = {
-        clinicName: branding.clinicName,
-        logoUrl: branding.logoUrl,
-        faviconUrl: branding.faviconUrl,
-        colors: {
-          brand: branding.colors.brand,
-          nav: ensureColorOrNull(branding.colors.nav),
-          cta: ensureColorOrNull(branding.colors.cta),
-          highlight: ensureColorOrNull(branding.colors.highlight),
-          promo: ensureColorOrNull(branding.colors.promo),
-          danger: ensureColorOrNull(branding.colors.danger),
-        },
-      };
-
-      const res = await fetch("/api/branding", {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to save branding");
-      }
-      showAlert("Branding updated");
-      router.refresh();
+      await submitBranding(branding);
     } catch (error: any) {
       console.error("[Branding] save failed:", error);
       showAlert(error.message || "Failed to save branding");
@@ -228,18 +236,30 @@ export default function BrandingPage() {
     const data = await res.json();
     if (type === "logo") {
       setBranding((prev) => ({ ...prev, logoUrl: data.url }));
-      setLogoPreview(
-        data.url.startsWith("http")
-          ? data.url
-          : `${API_BASE.replace(/\/api$/, "")}${data.url}`
-      );
+      setLogoPreview(resolveAssetUrl(data.url));
+      try {
+        await submitBranding(
+          { ...branding, logoUrl: data.url },
+          { silent: true }
+        );
+        showAlert("Logo updated");
+      } catch (error: any) {
+        console.error("[Branding] auto-save logo failed:", error);
+        showAlert(error?.message || "Failed to save logo");
+      }
     } else {
       setBranding((prev) => ({ ...prev, faviconUrl: data.url }));
-      setFaviconPreview(
-        data.url.startsWith("http")
-          ? data.url
-          : `${API_BASE.replace(/\/api$/, "")}${data.url}`
-      );
+      setFaviconPreview(resolveAssetUrl(data.url));
+      try {
+        await submitBranding(
+          { ...branding, faviconUrl: data.url },
+          { silent: true }
+        );
+        showAlert("Favicon updated");
+      } catch (error: any) {
+        console.error("[Branding] auto-save favicon failed:", error);
+        showAlert(error?.message || "Failed to save favicon");
+      }
     }
   };
 
@@ -411,13 +431,13 @@ export default function BrandingPage() {
             </section>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2 items-stretch">
             {COLOR_FIELDS.map((field) => {
               const value = branding.colors[field.key] ?? "";
               return (
                 <div
                   key={field.key}
-                  className="space-y-3 rounded-xl border border-slate-200 p-4"
+                  className="flex h-full flex-col justify-between gap-4 rounded-xl border border-slate-200 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -431,42 +451,46 @@ export default function BrandingPage() {
                         {field.description}
                       </p>
                     </div>
+                    <div className="flex-shrink-0">
+                      <input
+                        type="color"
+                        value={value || "#FFFFFF"}
+                        onChange={(event) => {
+                          const hex = normalizeHex(event.target.value);
+                          setBranding((prev) => ({
+                            ...prev,
+                            colors: { ...prev.colors, [field.key]: hex },
+                          }));
+                        }}
+                        className="w-14 h-14 min-w-[3.5rem] min-h-[3.5rem] border border-slate-300 rounded-lg cursor-pointer shadow-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
                     <input
-                      type="color"
-                      value={value || "#FFFFFF"}
+                      type="text"
+                      value={value}
                       onChange={(event) => {
-                        const hex = normalizeHex(event.target.value);
+                        const hex = event.target.value;
                         setBranding((prev) => ({
                           ...prev,
-                          colors: { ...prev.colors, [field.key]: hex },
+                          colors: {
+                            ...prev.colors,
+                            [field.key]: hex.toUpperCase(),
+                          },
                         }));
                       }}
-                      className="w-14 h-10 border rounded cursor-pointer"
+                      onBlur={(event) => {
+                        const normalized = normalizeHex(event.target.value);
+                        setBranding((prev) => ({
+                          ...prev,
+                          colors: { ...prev.colors, [field.key]: normalized },
+                        }));
+                      }}
+                      placeholder={DEFAULT_COLORS[field.key]}
+                      className="w-full border rounded-lg px-3 py-2 text-sm font-mono"
                     />
                   </div>
-                  <input
-                    type="text"
-                    value={value}
-                    onChange={(event) => {
-                      const hex = event.target.value;
-                      setBranding((prev) => ({
-                        ...prev,
-                        colors: {
-                          ...prev.colors,
-                          [field.key]: hex.toUpperCase(),
-                        },
-                      }));
-                    }}
-                    onBlur={(event) => {
-                      const normalized = normalizeHex(event.target.value);
-                      setBranding((prev) => ({
-                        ...prev,
-                        colors: { ...prev.colors, [field.key]: normalized },
-                      }));
-                    }}
-                    placeholder={DEFAULT_COLORS[field.key]}
-                    className="w-full border rounded-lg px-3 py-2 text-sm font-mono"
-                  />
                 </div>
               );
             })}

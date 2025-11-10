@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireDoctor } from "@/lib/auth";
-import { mkdir, writeFile } from "fs/promises";
-import { existsSync } from "fs";
-import { join } from "path";
-
 const ALLOWED_TYPES = [
   "image/png",
   "image/jpeg",
@@ -47,28 +43,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uploadDir = join(
-      process.cwd(),
-      "public",
-      "uploads",
-      "branding",
-      doctorId
-    );
-
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
-    const extension = file.name?.split(".").pop() || "png";
-    const filename = `${type}.${extension}`;
-    const filepath = join(uploadDir, filename);
-
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filepath, buffer);
 
-    const publicUrl = `/uploads/branding/${doctorId}/${filename}`;
+    const base64 = buffer.toString("base64");
+    const dataUrl = `data:${file.type};base64,${base64}`;
 
-    return NextResponse.json({ success: true, url: publicUrl });
+    return NextResponse.json({
+      success: true,
+      url: dataUrl,
+      doctorId,
+      type,
+      size: buffer.length,
+    });
   } catch (error) {
     console.error("[Branding Upload] failed:", error);
     return NextResponse.json(

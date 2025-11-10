@@ -15,6 +15,7 @@ export type BrandingTheme = {
   navIcon: string;
   navActiveBg: string;
   navActiveIcon: string;
+  navActiveText: string;
   ctaBg: string;
   ctaBgHover: string;
   ctaText: string;
@@ -51,6 +52,10 @@ export function useBrandingTheme(): BrandingTheme {
       softColor(brand, 0.45)
     );
     const ctaBg = ensureHex(theme["--rem-cta-bg"], brand);
+    const navActiveBg = ensureHex(
+      theme["--rem-nav-active-bg"],
+      softColor(brand, 0.12)
+    );
 
     return {
       brand,
@@ -70,11 +75,14 @@ export function useBrandingTheme(): BrandingTheme {
       navBg: ensureHex(theme["--rem-nav-bg"], "#FFFFFF"),
       navText: ensureHex(theme["--rem-nav-text"], DARK_TEXT),
       navIcon: ensureHex(theme["--rem-nav-icon"], brand),
-      navActiveBg: ensureHex(
-        theme["--rem-nav-active-bg"],
-        softColor(brand, 0.12)
-      ),
+      navActiveBg,
       navActiveIcon: ensureHex(theme["--rem-nav-active-icon"], brand),
+      navActiveText: ensureText(
+        theme["--rem-nav-active-text"],
+        navActiveBg,
+        DARK_TEXT,
+        LIGHT_TEXT
+      ),
       ctaBg,
       ctaBgHover: ensureHex(
         theme["--rem-cta-bg-hover"],

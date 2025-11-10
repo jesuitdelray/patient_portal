@@ -21,6 +21,7 @@ export const defaultClinicTheme: ClinicTheme = {
   "--rem-nav-text": "#111827",
   "--rem-nav-icon": BLUE,
   "--rem-nav-active-bg": softColor(BLUE, 0.12),
+  "--rem-nav-active-text": pickText(softColor(BLUE, 0.12)),
   "--rem-nav-active-icon": BLUE,
   "--rem-cta-bg": BLUE,
   "--rem-cta-bg-hover": darken(BLUE, 0.08),

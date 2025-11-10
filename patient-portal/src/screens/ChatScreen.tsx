@@ -811,11 +811,18 @@ export default function ChatScreen() {
     }
   };
 
-  const handleBookSuccess = (bookedAppointment?: any) => {
-    // Add a message to chat with the booked appointment
-    if (bookedAppointment) {
+  const handleBookSuccess = (bookedAppointment?: any, bookingMessage?: Message) => {
+    if (bookingMessage) {
+      setMessages((prev) => {
+        const exists = prev.some((msg) => msg.id === bookingMessage.id);
+        if (exists) {
+          return prev;
+        }
+        return [...prev, bookingMessage];
+      });
+    } else if (bookedAppointment) {
       const appointmentMessage: Message = {
-        id: `appointment-booked-${Date.now()}`,
+        id: `temp-doctor-${Date.now()}`,
         content: JSON.stringify({
           action: "view_upcoming_appointments",
           title: "Appointment booked",
@@ -824,10 +831,10 @@ export default function ChatScreen() {
         sender: "doctor",
         createdAt: new Date().toISOString(),
       };
-      
+
       setMessages((prev) => [...prev, appointmentMessage]);
     }
-    
+
     Toast.show({
       type: "success",
       text1: "Appointment booked!",

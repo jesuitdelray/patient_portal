@@ -16,6 +16,9 @@ import { useAuth } from "../../lib/queries";
 import { colors } from "../../lib/colors";
 import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
+const WEB_DATE_INPUT_FONT =
+  "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif";
+
 export function UpcomingAppointments() {
   const { appointments, setAppointments } = useAppointments();
   const { data: authData } = useAuth();
@@ -343,7 +346,8 @@ export function UpcomingAppointments() {
                       border: `1px solid ${theme.borderSubtle}`,
                       borderRadius: "8px",
                       backgroundColor: colors.primaryWhite,
-                      fontFamily: "inherit",
+                      fontFamily: WEB_DATE_INPUT_FONT,
+                      fontWeight: 500,
                       boxSizing: "border-box",
                       color: theme.textPrimary,
                       outline: "none",
@@ -492,7 +496,8 @@ export function UpcomingAppointments() {
                         boxSizing: "border-box",
                         cursor: "pointer",
                         marginTop: 8,
-                        fontFamily: "inherit",
+                        fontFamily: WEB_DATE_INPUT_FONT,
+                        fontWeight: 500,
                       }}
                     />
                   </View>

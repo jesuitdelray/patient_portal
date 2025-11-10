@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthPayload } from "@/lib/auth";
+import { broadcast } from "@/lib/events";
+import { wsBroadcast } from "@/lib/ws";
 
 export async function POST(req: NextRequest) {
   console.log("[API] POST /appointments/create - Request received");
@@ -139,31 +141,68 @@ export async function POST(req: NextRequest) {
     // For now, we'll just create the appointment
 
     // Emit socket event for real-time updates
+    let chatMessage: any | null = null;
+    try {
+      const { patient: _patient, ...appointmentData } = appointment;
+
+      const messagePayload = {
+        action: "view_upcoming_appointments",
+        title: "Appointment booked",
+        data: [
+          {
+            ...appointmentData,
+          },
+        ],
+      };
+
+      chatMessage = await prisma.message.create({
+        data: {
+          patientId,
+          sender: "doctor",
+          content: JSON.stringify(messagePayload),
+        },
+      });
+
+      broadcast("message.new", { message: chatMessage }, { patientId });
+      wsBroadcast("message.new", { message: chatMessage }, { patientId });
+    } catch (messageError) {
+      console.error(
+        "[API] Failed to persist appointment confirmation message:",
+        messageError
+      );
+    }
+
     console.log("[API] Emitting socket events...");
     const io = (global as any).__io;
     if (io) {
       console.log("[API] Socket.IO instance found");
       const by = bodyPatientId ? "doctor" : "patient";
       console.log("[API] Appointment created by:", by);
-      
-      // Emit appointment:new for new appointments
+
       io.to(`patient:${patientId}`).emit("appointment:new", {
         appointment,
         by,
       });
-      console.log("[API] Emitted to patient room:", `patient:${patientId}`);
-      
+      console.log("[API] Emitted appointment:new to patient room:", `patient:${patientId}`);
+
+      if (chatMessage) {
+        io.to(`patient:${patientId}`).emit("message:new", { message: chatMessage });
+        io.to("admin").emit("message:new", { message: chatMessage });
+        console.log("[API] Emitted message:new events for appointment confirmation");
+      }
+
       io.to("admin").emit("appointment:new", {
         appointment,
         by: "doctor",
       });
-      console.log("[API] Emitted to admin room");
+      console.log("[API] Emitted appointment:new to admin room");
     } else {
       console.warn("[API] Socket.IO instance not found, skipping socket events");
     }
 
     const response = {
       appointment,
+      message: chatMessage,
     };
     console.log("[API] Sending success response");
     console.log("[API] Response data:", JSON.stringify(response, null, 2));

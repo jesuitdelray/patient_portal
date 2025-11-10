@@ -44,7 +44,7 @@ export function Sidebar() {
 
   if (loading) {
     return (
-      <aside className="hidden md:block w-64 border-r bg-white/80 backdrop-blur p-5 flex items-center justify-center">
+      <aside className="hidden md:block w-64 border-r bg-white/80 backdrop-blur p-5 flex items-center justify-center md:sticky md:top-0 md:h-screen md:max-h-screen">
         <Loader />
       </aside>
     );
@@ -55,7 +55,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden md:block w-64 border-r bg-white/80 backdrop-blur p-5 flex flex-col h-screen">
+    <aside className="hidden md:block w-64 border-r bg-white/80 backdrop-blur p-5 flex flex-col md:sticky md:top-0 md:h-screen md:max-h-screen md:overflow-y-auto">
       <div className="flex-1">
         <div className="mb-6 flex items-center gap-3">
           <img

@@ -13,6 +13,9 @@ import Toast from "react-native-toast-message";
 import { colors } from "../../lib/colors";
 import { useBrandingTheme } from "../../lib/useBrandingTheme";
 
+const WEB_DATE_INPUT_FONT =
+  "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif";
+
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -137,7 +140,8 @@ export function RescheduleAppointmentModal({
                     borderRadius: 8,
                     border: `1px solid ${colors.border}`,
                     fontSize: 15,
-                    fontFamily: "inherit",
+                    fontFamily: WEB_DATE_INPUT_FONT,
+                    fontWeight: 500,
                     backgroundColor: colors.primaryWhite,
                     color: colors.textPrimary,
                     outline: "none",

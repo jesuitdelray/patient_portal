@@ -25,10 +25,13 @@ type SuggestedSlot = {
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (appointment?: any, message?: any) => void;
   procedureTitle?: string;
   initialSlot?: SuggestedSlot | null;
 };
+
+const WEB_DATE_INPUT_FONT =
+  "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif";
 
 export function BookAppointmentModal({
   visible,
@@ -124,7 +127,7 @@ export function BookAppointmentModal({
           type: "success",
           text1: "Appointment booked successfully!",
         });
-        onSuccess?.(responseData.appointment);
+        onSuccess?.(responseData.appointment, responseData.message);
         onClose();
         setTitle("");
         setDatetime("");
@@ -203,7 +206,8 @@ export function BookAppointmentModal({
                     borderRadius: 8,
                     border: `1px solid ${theme.borderSubtle}`,
                     fontSize: 15,
-                    fontFamily: "inherit",
+                    fontFamily: WEB_DATE_INPUT_FONT,
+                    fontWeight: 500,
                     color: colors.textPrimary,
                     backgroundColor: colors.primaryWhite,
                   }}

@@ -115,7 +115,7 @@ export default function PromotionsScreen() {
                 styles.card,
                 {
                   borderColor: theme.borderSubtle,
-                  backgroundColor: colors.primaryWhite,
+                  backgroundColor: theme.surface,
                   shadowColor: theme.brand,
                 },
               ]}
@@ -140,11 +140,16 @@ export default function PromotionsScreen() {
                       {promo.category}
                     </Text>
                   </View>
-                  <View style={styles.discountBadge}>
+                  <View
+                    style={[
+                      styles.discountBadge,
+                      { backgroundColor: theme.ctaBg },
+                    ]}
+                  >
                     <Text
                       style={[
                         styles.discountBadgeText,
-                        { color: theme.promoText },
+                        { color: theme.ctaText },
                       ]}
                     >
                       {promo.discount}
@@ -153,18 +158,18 @@ export default function PromotionsScreen() {
                 </View>
               </View>
               <View style={styles.cardContent}>
-                <Text style={[styles.cardTitle, { color: theme.promoText }]}>
+                <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
                   {promo.title}
                 </Text>
                 <Text
-                  style={[styles.cardDescription, { color: theme.promoText }]}
+                  style={[styles.cardDescription, { color: theme.textSecondary }]}
                 >
                   {promo.description}
                 </Text>
                 <View style={styles.validUntilRow}>
-                  <Feather name="clock" size={14} color={theme.promoText} />
+                  <Feather name="clock" size={14} color={theme.textSecondary} />
                   <Text
-                    style={[styles.validUntilText, { color: theme.promoText }]}
+                    style={[styles.validUntilText, { color: theme.textSecondary }]}
                   >
                     Valid until {promo.validUntil}
                   </Text>
@@ -176,6 +181,10 @@ export default function PromotionsScreen() {
                       backgroundColor: theme.ctaBg,
                     },
                     claimedOffers.includes(promo.id) && styles.claimButtonClaimed,
+                    claimedOffers.includes(promo.id) && {
+                      backgroundColor: theme.surface,
+                      borderColor: theme.borderSubtle,
+                    },
                     loadingOffers.includes(promo.id) && styles.claimButtonLoading,
                   ]}
                   onPress={() => handleClaimOffer(promo.id, promo.title)}
@@ -198,12 +207,12 @@ export default function PromotionsScreen() {
                       <Feather
                         name="check-circle"
                         size={16}
-                        color={theme.promoText}
+                        color={theme.textSecondary}
                       />
                       <Text
                         style={[
                           styles.claimButtonTextClaimed,
-                          { color: theme.promoText },
+                          { color: theme.textSecondary },
                         ]}
                       >
                         Claimed

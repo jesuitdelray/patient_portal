@@ -13,19 +13,21 @@ export function Logo({ size = 40, style }: LogoProps) {
   const defaultLogo: ImageSourcePropType = require("../../assets/teeth_logo.webp");
 
   if (branding.logoUrl) {
+    const url = branding.logoUrl;
+    const isAbsolute = /^https?:\/\//i.test(url);
+    const isDataUri = url.startsWith("data:");
     const base =
       Platform.OS === "web" && typeof window !== "undefined"
         ? window.location.origin
         : API_BASE.replace(/\/api$/, "");
 
-    const raw = branding.logoUrl.startsWith("http")
-      ? branding.logoUrl
-      : `${base}${branding.logoUrl}`;
-    const version = branding.updatedAt
-      ? `${raw}${raw.includes("?") ? "&" : "?"}v=${encodeURIComponent(
-          branding.updatedAt
-        )}`
-      : raw;
+    const raw = isAbsolute || isDataUri ? url : `${base}${url}`;
+    const version =
+      !isDataUri && branding.updatedAt
+        ? `${raw}${raw.includes("?") ? "&" : "?"}v=${encodeURIComponent(
+            branding.updatedAt
+          )}`
+        : raw;
 
     return (
       <Image

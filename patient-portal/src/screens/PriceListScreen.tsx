@@ -29,6 +29,9 @@ type PriceItem = {
   duration?: number;
 };
 
+const WEB_DATE_INPUT_FONT =
+  "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif";
+
 export default function PriceListScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -441,7 +444,7 @@ export default function PriceListScreen() {
                   <Text
                     style={[
                       styles.modalProcedureTitle,
-                      { color: theme.brandSoftText },
+                      { color: theme.brandText },
                     ]}
                   >
                     {selectedProcedure.title}
@@ -449,7 +452,7 @@ export default function PriceListScreen() {
                   <Text
                     style={[
                       styles.modalProcedurePrice,
-                      { color: theme.brandSoftText },
+                      { color: theme.brandText },
                     ]}
                   >
                     ${selectedProcedure.price.toFixed(2)}
@@ -480,7 +483,8 @@ export default function PriceListScreen() {
                           border: `1px solid ${theme.borderSubtle}`,
                           borderRadius: "6px",
                           backgroundColor: colors.primaryWhite,
-                          fontFamily: "inherit",
+                      fontFamily: WEB_DATE_INPUT_FONT,
+                      fontWeight: 500,
                           boxSizing: "border-box",
                           maxWidth: "100%",
                           color: theme.textPrimary,

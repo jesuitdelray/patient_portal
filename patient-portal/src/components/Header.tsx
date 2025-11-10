@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Logo } from "./Logo";
 import { colors } from "../lib/colors";
@@ -12,6 +12,10 @@ interface HeaderProps {
 }
 
 export function Header({ title, showLogo = true }: HeaderProps) {
+  if (Platform.OS === "web") {
+    return null;
+  }
+
   const { branding } = useBranding();
   const theme = useBrandingTheme();
   const displayTitle = branding.clinicName || title;
