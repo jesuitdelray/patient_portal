@@ -14,10 +14,11 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Header } from "../components/Header";
 import { Loader } from "../components/Loader";
 import { colors } from "../lib/colors";
-import { API_BASE } from "../lib/api";
+import { API_BASE, fetchWithAuth } from "../lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import { useBrandingTheme } from "../lib/useBrandingTheme";
+import { useAuth } from "../lib/queries";
 
 type PriceItem = {
   id: string;
@@ -38,6 +39,9 @@ export default function PriceListScreen() {
   const [newDateTime, setNewDateTime] = useState("");
   const queryClient = useQueryClient();
   const theme = useBrandingTheme();
+  const { data: authData } = useAuth();
+  const patientId =
+    authData?.role === "patient" && authData?.userId ? authData.userId : undefined;
 
   const today = new Date();
   // Minimum date is tomorrow
@@ -91,18 +95,17 @@ export default function PriceListScreen() {
       console.log("[PriceList] Full URL:", `${API_BASE}/appointments`);
       
       try {
-        // Don't send patientId - API will get it from auth
         const requestBody = {
           title: data.title,
           datetime: data.datetime,
           type: data.type,
+          ...(patientId ? { patientId } : {}),
         };
         console.log("[PriceList] Request body:", JSON.stringify(requestBody));
-        
-        const res = await fetch(`${API_BASE}/appointments/create`, {
+
+        const res = await fetchWithAuth(`${API_BASE}/appointments/create`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify(requestBody),
         });
         

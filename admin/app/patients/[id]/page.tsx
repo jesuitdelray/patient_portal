@@ -716,6 +716,58 @@ export default function PatientDetail({
     when: string;
   } | null>(null);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [credentialEmail, setCredentialEmail] = useState("");
+  const [credentialPassword, setCredentialPassword] = useState("");
+  const [isSavingCredentials, setIsSavingCredentials] = useState(false);
+  const [credentialSuccess, setCredentialSuccess] = useState<string | null>(null);
+  const [credentialError, setCredentialError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (patient?.email && credentialEmail !== patient.email) {
+      setCredentialEmail(patient.email);
+    }
+  }, [patient?.email]);
+
+  const handleCredentialSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!credentialEmail.trim()) {
+      setCredentialError("Email is required");
+      return;
+    }
+
+    setIsSavingCredentials(true);
+    setCredentialError(null);
+    setCredentialSuccess(null);
+
+    try {
+      const payload: Record<string, string> = {
+        email: credentialEmail.trim(),
+      };
+      if (credentialPassword.trim()) {
+        payload.password = credentialPassword.trim();
+      }
+
+      const res = await fetch(`${API_BASE}/patients/${patientId}/credentials`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to update credentials");
+      }
+
+      setCredentialSuccess("Credentials updated");
+      setCredentialPassword("");
+      invalidate.invalidatePatient(patientId);
+    } catch (error: any) {
+      console.error("Credential update error:", error);
+      setCredentialError(error?.message || "Failed to update credentials");
+    } finally {
+      setIsSavingCredentials(false);
+    }
+  };
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -925,6 +977,77 @@ export default function PatientDetail({
           </div>
           <PatientDiscountBadge patientId={patientId} />
         </div>
+      </section>
+
+      <section className="bg-white/80 backdrop-blur rounded-xl border shadow-sm p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold">Portal Access</h2>
+            <p className="text-sm text-slate-600">
+              Configure fallback email and password login for this patient.
+            </p>
+          </div>
+          {credentialSuccess && (
+            <span className="text-sm text-green-600">{credentialSuccess}</span>
+          )}
+        </div>
+        {credentialError && (
+          <p className="text-sm text-red-500 mt-2">{credentialError}</p>
+        )}
+        <form onSubmit={handleCredentialSubmit} className="mt-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={credentialEmail}
+                onChange={(e) => setCredentialEmail(e.target.value)}
+                required
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                value={credentialPassword}
+                onChange={(e) => setCredentialPassword(e.target.value)}
+                placeholder="Leave blank to keep current password"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                minLength={6}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Minimum 6 characters. Share securely with the patient.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              className="px-3 py-1.5 text-sm border rounded hover:bg-slate-100"
+              onClick={() => {
+                setCredentialError(null);
+                setCredentialSuccess(null);
+                setCredentialEmail(patient.email || "");
+                setCredentialPassword("");
+              }}
+              disabled={isSavingCredentials}
+            >
+              Reset
+            </button>
+            <button
+              type="submit"
+              disabled={isSavingCredentials}
+              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isSavingCredentials ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
       </section>
 
       <TreatmentPlansSection

@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   slotPill: {
-    backgroundColor: colors.medicalBlueBg,
+    backgroundColor: colors.primaryWhite,
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,

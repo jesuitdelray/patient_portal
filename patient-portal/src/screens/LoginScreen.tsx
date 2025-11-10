@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
   Dimensions,
   Platform,
   Alert,
@@ -26,6 +27,9 @@ const screenWidth = Dimensions.get("window").width;
 export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { data: authData } = useAuth();
   const { branding } = useBranding();
@@ -91,6 +95,7 @@ export default function LoginScreen() {
     if (authData?.role === "patient") {
       return;
     }
+    setAuthError(null);
     setIsLoading(true);
     try {
       await initiateGoogleAuth("patient");
@@ -106,6 +111,7 @@ export default function LoginScreen() {
     if (authData?.role === "patient") {
       return;
     }
+    setAuthError(null);
 
     // On web, always use web-based Apple Sign In
     if (Platform.OS === "web") {
@@ -201,6 +207,63 @@ export default function LoginScreen() {
     }
   };
 
+  const handleEmailLogin = async () => {
+    if (authData?.role === "patient") {
+      return;
+    }
+    if (!email.trim() || !password.trim()) {
+      setAuthError("Email and password are required");
+      return;
+    }
+
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const authBase = getAuthBase();
+      const res = await fetch(`${authBase}/api/auth/patient-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim(),
+        }),
+        credentials: "include",
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Invalid email or password");
+      }
+
+      if (data.token) {
+        try {
+          storageSync.setItem("auth_token", data.token);
+          if (
+            Platform.OS === "web" &&
+            typeof window !== "undefined" &&
+            window.sessionStorage
+          ) {
+            window.sessionStorage.setItem("auth_token_temp", data.token);
+          } else {
+            storageSync.setItem("auth_token_temp", data.token);
+          }
+        } catch (error) {
+          console.error("Failed to store auth token:", error);
+        }
+      }
+
+      setPassword("");
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      queryClient.refetchQueries({ queryKey: ["auth", "me"] });
+    } catch (error: any) {
+      console.error("Email login error:", error);
+      setAuthError(error?.message || "Failed to sign in");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -272,6 +335,62 @@ export default function LoginScreen() {
             </View>
           </TouchableOpacity>
         )}
+
+        <View style={styles.orDivider}>
+          <View style={styles.orLine} />
+          <Text style={styles.orText}>or sign in with email</Text>
+          <View style={styles.orLine} />
+        </View>
+
+        <View style={styles.emailForm}>
+          {authError && <Text style={styles.errorText}>{authError}</Text>}
+          <TextInput
+            style={[
+              styles.input,
+              {
+                borderColor: theme.borderSubtle,
+                color: theme.textPrimary,
+              },
+            ]}
+            placeholder="Email"
+            placeholderTextColor={theme.textSecondary}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+            editable={!isLoading}
+          />
+          <TextInput
+            style={[
+              styles.input,
+              {
+                borderColor: theme.borderSubtle,
+                color: theme.textPrimary,
+              },
+            ]}
+            placeholder="Password"
+            placeholderTextColor={theme.textSecondary}
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            editable={!isLoading}
+          />
+          <TouchableOpacity
+            style={[
+              styles.emailButton,
+              { backgroundColor: theme.brand, borderColor: theme.brand },
+              (!email.trim() || !password.trim() || isLoading) &&
+                styles.buttonDisabled,
+            ]}
+            onPress={handleEmailLogin}
+            disabled={!email.trim() || !password.trim() || isLoading}
+          >
+            <Text style={[styles.emailButtonText, { color: theme.brandText }]}>
+              {isLoading ? "Signing in..." : "Sign in with Email"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
@@ -399,6 +518,54 @@ const styles = StyleSheet.create({
   linkText: {
     color: colors.primary,
     textDecorationLine: "underline",
+  },
+  orDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 320,
+    marginTop: 32,
+    marginBottom: 12,
+    gap: 8,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.greyscale200,
+  },
+  orText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  emailForm: {
+    width: "100%",
+    maxWidth: 320,
+    gap: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === "web" ? 12 : 10,
+    fontSize: 15,
+    backgroundColor: colors.primaryWhite,
+  },
+  emailButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  emailButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  errorText: {
+    color: "#dc2626",
+    fontSize: 13,
   },
   buttonDisabled: {
     opacity: 0.6,

@@ -55,9 +55,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Import prisma and jwt utilities
+    // Import prisma, jwt utilities, and default plan helper
     const { prisma } = await import("@/lib/db");
     const { signToken } = await import("@/lib/jwt");
+    const { ensureDefaultTreatmentPlan } = await import(
+      "@/lib/default-treatment-plan"
+    );
 
     // Find or create patient
     let patient = await prisma.patient.findUnique({
@@ -76,15 +79,14 @@ export async function POST(req: NextRequest) {
           picture: null,
         },
       });
-    } else {
-      // Update patient if needed
-      if (sub && patient.googleId !== sub) {
-        patient = await prisma.patient.update({
-          where: { id: patient.id },
-          data: { googleId: sub },
-        });
-      }
+    } else if (sub && patient.googleId !== sub) {
+      patient = await prisma.patient.update({
+        where: { id: patient.id },
+        data: { googleId: sub },
+      });
     }
+
+    await ensureDefaultTreatmentPlan(patient.id);
 
     // Generate JWT token
     const token = await signToken({

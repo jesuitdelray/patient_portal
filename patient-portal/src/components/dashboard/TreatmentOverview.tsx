@@ -103,12 +103,7 @@ export function TreatmentOverview() {
                     </Text>
                   </View>
                 </View>
-                <View
-                  style={[
-                    styles.progressBarContainer,
-                    { backgroundColor: theme.brandSoft },
-                  ]}
-                >
+                <View style={styles.progressBarContainer}>
                   <View
                     style={[
                       styles.progressBar,
@@ -197,17 +192,19 @@ const styles = StyleSheet.create({
   },
   progressBarContainer: {
     height: 8,
-    backgroundColor: colors.greyscale200,
-    borderRadius: 4,
+    backgroundColor: colors.primaryWhite,
+    borderRadius: 999,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
   },
   progressBar: {
     height: "100%",
-    backgroundColor: colors.greyscale700,
-    borderRadius: 4,
+    backgroundColor: colors.medicalGreen,
+    borderRadius: 999,
   },
   progressBarComplete: {
-    backgroundColor: colors.greyscale800,
+    backgroundColor: colors.medicalGreen,
   },
   progressLabel: {
     fontSize: 12,

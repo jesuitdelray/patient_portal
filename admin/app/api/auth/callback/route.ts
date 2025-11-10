@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "@/lib/db";
 import { signToken } from "@/lib/jwt";
+import { ensureDefaultTreatmentPlan } from "@/lib/default-treatment-plan";
 
 export async function GET(request: NextRequest) {
   const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -104,15 +105,14 @@ export async function GET(request: NextRequest) {
           picture: picture || null,
         },
       });
-    } else {
-      // Update patient if googleId or picture changed
-      if (googleId && patient.googleId !== googleId) {
-        patient = await prisma.patient.update({
-          where: { id: patient.id },
-          data: { googleId, picture: picture || patient.picture },
-        });
-      }
+    } else if (googleId && patient.googleId !== googleId) {
+      patient = await prisma.patient.update({
+        where: { id: patient.id },
+        data: { googleId, picture: picture || patient.picture },
+      });
     }
+
+    await ensureDefaultTreatmentPlan(patient.id);
 
     // Generate JWT token for patient
     const token = await signToken({

@@ -115,7 +115,7 @@ export default function PromotionsScreen() {
                 styles.card,
                 {
                   borderColor: theme.borderSubtle,
-                  backgroundColor: theme.promoBg,
+                  backgroundColor: colors.primaryWhite,
                   shadowColor: theme.brand,
                 },
               ]}
@@ -140,12 +140,7 @@ export default function PromotionsScreen() {
                       {promo.category}
                     </Text>
                   </View>
-                  <View
-                    style={[
-                      styles.discountBadge,
-                      { backgroundColor: theme.promoBg },
-                    ]}
-                  >
+                  <View style={styles.discountBadge}>
                     <Text
                       style={[
                         styles.discountBadgeText,
@@ -180,10 +175,7 @@ export default function PromotionsScreen() {
                     {
                       backgroundColor: theme.ctaBg,
                     },
-                    claimedOffers.includes(promo.id) && [
-                      styles.claimButtonClaimed,
-                      { backgroundColor: theme.promoBg },
-                    ],
+                    claimedOffers.includes(promo.id) && styles.claimButtonClaimed,
                     loadingOffers.includes(promo.id) && styles.claimButtonLoading,
                   ]}
                   onPress={() => handleClaimOffer(promo.id, promo.title)}
@@ -345,7 +337,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   claimButtonClaimed: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.primaryWhite,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   claimButtonLoading: {
     opacity: 0.7,

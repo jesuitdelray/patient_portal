@@ -16,7 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Header } from "../components/Header";
 import { Loader } from "../components/Loader";
 import { colors } from "../lib/colors";
-import { API_BASE, connectSocket } from "../lib/api";
+import { API_BASE, connectSocket, fetchWithAuth } from "../lib/api";
 import { useAuth } from "../lib/queries";
 import { sendSocketEvent } from "../lib/socket-utils";
 import { StructuredMessage } from "../components/chat/StructuredMessage";
@@ -57,6 +57,9 @@ export default function ChatScreen() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [bookProcedureTitle, setBookProcedureTitle] = useState("");
   const [bookingSlot, setBookingSlot] = useState<any>(null);
+  const [showFrontDeskModal, setShowFrontDeskModal] = useState(false);
+  const [frontDeskMessage, setFrontDeskMessage] = useState("");
+  const [isSendingFrontDesk, setIsSendingFrontDesk] = useState(false);
   
   const messagesEndRef = useRef<ScrollView>(null);
   const initialScrollHandled = useRef(false);
@@ -458,6 +461,149 @@ export default function ChatScreen() {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  const generateTempId = (prefix: string) =>
+    `${prefix}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+
+  const createAssistantMessage = (content: string): Message => ({
+    id: generateTempId("assistant"),
+    content,
+    sender: "doctor",
+    createdAt: new Date().toISOString(),
+  });
+
+  const createPatientMessage = (content: string): Message => ({
+    id: generateTempId("patient-local"),
+    content,
+    sender: "patient",
+    createdAt: new Date().toISOString(),
+  });
+
+  const addAssistantPrompt = (text: string) => {
+    const promptMessage = createAssistantMessage(text);
+    setMessages((prev) => [...prev, promptMessage]);
+  };
+
+  const deliverFrontDeskMessage = async (
+    rawContent: string,
+    options: { closeModal?: boolean } = {}
+  ) => {
+    const trimmed = rawContent?.trim();
+    if (!trimmed) {
+      Toast.show({
+        type: "error",
+        text1: "Please enter a message",
+      });
+      return false;
+    }
+
+    if (!patientId) {
+      Toast.show({
+        type: "error",
+        text1: "Not authenticated",
+      });
+      return false;
+    }
+
+    setIsSendingFrontDesk(true);
+    try {
+      const res = await fetchWithAuth(
+        `${API_BASE}/patients/${patientId}/messages`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sender: "patient",
+            content: trimmed,
+          }),
+        }
+      );
+
+      const text = await res.text();
+      let savedMessage: Message | null = null;
+
+      if (text) {
+        try {
+          const parsed = JSON.parse(text);
+          savedMessage = parsed?.message || null;
+        } catch (error) {
+          console.warn("[Chat] Failed to parse message response:", error);
+        }
+      }
+
+      if (!res.ok) {
+        const errorMessage =
+          savedMessage && (savedMessage as any)?.error
+            ? (savedMessage as any).error
+            : (() => {
+                try {
+                  const parsed = text ? JSON.parse(text) : null;
+                  return parsed?.error;
+                } catch {
+                  return null;
+                }
+              })();
+        throw new Error(
+          errorMessage || "Failed to send message to front desk"
+        );
+      }
+
+      if (!savedMessage) {
+        savedMessage = createPatientMessage(trimmed);
+      }
+
+      const receiptMessage = createAssistantMessage("Message sent to front desk.");
+
+      setMessages((prev) => {
+        let next = prev;
+        if (
+          savedMessage &&
+          !prev.some((msg) => msg.id === savedMessage!.id)
+        ) {
+          next = [...next, savedMessage];
+        }
+        return [...next, receiptMessage];
+      });
+
+      Toast.show({
+        type: "success",
+        text1: "Message sent to front desk",
+      });
+
+      if (options.closeModal) {
+        setShowFrontDeskModal(false);
+        setFrontDeskMessage("");
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error("[Chat] Front desk message error:", error);
+      Toast.show({
+        type: "error",
+        text1: error?.message || "Failed to send message",
+      });
+      return false;
+    } finally {
+      setIsSendingFrontDesk(false);
+    }
+  };
+
+  const openFrontDeskPrompt = (
+    prefill?: string,
+    promptText?: string
+  ) => {
+    const prompt =
+      promptText?.trim() ||
+      "Which message do you want to send to the front desk?";
+    addAssistantPrompt(prompt);
+    const initial = prefill?.trim() || "";
+    setFrontDeskMessage(initial);
+    setShowFrontDeskModal(true);
+  };
+
+  const handleFrontDeskSubmit = async () => {
+    await deliverFrontDeskMessage(frontDeskMessage, { closeModal: true });
+  };
+
   const handleAction = async (action: string, data: any) => {
     console.log("[Chat] Action triggered:", action, data);
     
@@ -477,6 +623,21 @@ export default function ChatScreen() {
         setSelectedAppointment(data);
         setShowRescheduleModal(true);
         break;
+
+      case "send_message_to_front_desk": {
+        const initialMessage =
+          typeof data?.message === "string" ? data.message.trim() : "";
+        if (initialMessage) {
+          await deliverFrontDeskMessage(initialMessage);
+        } else {
+          const promptText =
+            typeof data?.prompt === "string" && data.prompt.trim().length > 0
+              ? data.prompt
+              : undefined;
+          openFrontDeskPrompt(data?.initialMessage || "", promptText);
+        }
+        break;
+      }
 
       case "cancel_appointment":
         if (!data?.id) {
@@ -840,6 +1001,67 @@ export default function ChatScreen() {
         </View>
       </View>
 
+      {/* Front Desk Modal */}
+      <Modal
+        visible={showFrontDeskModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isSendingFrontDesk) {
+            setShowFrontDeskModal(false);
+            setFrontDeskMessage("");
+          }
+        }}
+      >
+        <View style={styles.frontDeskOverlay}>
+          <View style={styles.frontDeskContainer}>
+            <Text style={styles.frontDeskTitle}>Message to Front Desk</Text>
+            <Text style={styles.frontDeskSubtitle}>
+              We will pass this along to the clinic team.
+            </Text>
+            <TextInput
+              style={styles.frontDeskInput}
+              value={frontDeskMessage}
+              onChangeText={setFrontDeskMessage}
+              placeholder="Describe what you’d like to tell the front desk"
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              autoFocus
+              editable={!isSendingFrontDesk}
+            />
+            <View style={styles.frontDeskButtons}>
+              <TouchableOpacity
+                style={[styles.frontDeskButton, styles.frontDeskCancel]}
+                onPress={() => {
+                  if (!isSendingFrontDesk) {
+                    setShowFrontDeskModal(false);
+                    setFrontDeskMessage("");
+                  }
+                }}
+                disabled={isSendingFrontDesk}
+              >
+                <Text style={styles.frontDeskCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.frontDeskButton,
+                  styles.frontDeskSubmit,
+                  !frontDeskMessage.trim() || isSendingFrontDesk
+                    ? styles.frontDeskButtonDisabled
+                    : null,
+                ]}
+                onPress={handleFrontDeskSubmit}
+                disabled={!frontDeskMessage.trim() || isSendingFrontDesk}
+              >
+                <Text style={styles.frontDeskSubmitText}>
+                  {isSendingFrontDesk ? "Sending..." : "Send"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modals */}
       <BookAppointmentModal
         visible={showBookModal}
@@ -1136,6 +1358,76 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: colors.primaryWhite,
+  },
+  frontDeskOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  frontDeskContainer: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: colors.primaryWhite,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 12,
+  },
+  frontDeskTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  frontDeskSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  frontDeskInput: {
+    minHeight: 96,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    color: colors.textPrimary,
+    backgroundColor: colors.primaryWhite,
+    textAlignVertical: "top",
+  },
+  frontDeskButtons: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 4,
+  },
+  frontDeskButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  frontDeskCancel: {
+    backgroundColor: colors.primaryWhite,
+    borderColor: colors.border,
+  },
+  frontDeskCancelText: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  frontDeskSubmit: {
+    backgroundColor: colors.medicalBlue,
+    borderColor: colors.medicalBlue,
+  },
+  frontDeskSubmitText: {
+    color: colors.primaryWhite,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  frontDeskButtonDisabled: {
+    opacity: 0.5,
   },
 });
 

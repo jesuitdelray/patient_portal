@@ -139,15 +139,17 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: colors.greyscale200,
-    borderRadius: 4,
+    backgroundColor: colors.primaryWhite,
+    borderRadius: 999,
     overflow: "hidden",
     marginBottom: 6,
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
   },
   progressFill: {
     height: "100%",
     backgroundColor: colors.medicalGreen,
-    borderRadius: 4,
+    borderRadius: 999,
   },
   progressText: {
     fontSize: 12,

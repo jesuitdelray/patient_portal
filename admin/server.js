@@ -66,7 +66,7 @@ async function getActionData(action, patientId, actionPayload = {}, context = {}
     view_remaining_procedures: "Remaining procedures",
     view_treatment_progress: "Treatment progress",
     send_message_to_doctor: "Message sent to your dentist",
-    send_message_to_front_desk: "Message sent to front desk",
+    send_message_to_front_desk: "",
     view_unpaid_invoices: "Unpaid invoices",
     view_past_invoices: "Past invoices",
     view_all_invoices: "Invoices",
@@ -178,6 +178,21 @@ async function getActionData(action, patientId, actionPayload = {}, context = {}
         data = {
           query: searchTerm || null,
           matches: results,
+        };
+        break;
+      }
+
+      case "send_message_to_front_desk": {
+        const rawMessage =
+          typeof actionPayload?.message === "string"
+            ? actionPayload.message.trim()
+            : "";
+        data = {
+          prompt:
+            actionPayload?.prompt ||
+            "Which message do you want to send to the front desk?",
+          initialMessage: rawMessage || null,
+          requireInput: !rawMessage,
         };
         break;
       }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { signToken } from "@/lib/jwt";
+import { ensureDefaultTreatmentPlan } from "@/lib/default-treatment-plan";
 
 // Apple OAuth callback - handles form_post response from Apple
 export async function POST(req: NextRequest) {
@@ -100,15 +101,14 @@ export async function POST(req: NextRequest) {
           picture: null,
         },
       });
-    } else {
-      // Update patient if needed
-      if (sub && patient.googleId !== sub) {
-        patient = await prisma.patient.update({
-          where: { id: patient.id },
-          data: { googleId: sub },
-        });
-      }
+    } else if (sub && patient.googleId !== sub) {
+      patient = await prisma.patient.update({
+        where: { id: patient.id },
+        data: { googleId: sub },
+      });
     }
+
+    await ensureDefaultTreatmentPlan(patient.id);
 
     // Generate JWT token
     const token = await signToken({

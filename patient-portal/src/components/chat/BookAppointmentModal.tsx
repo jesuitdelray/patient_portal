@@ -171,7 +171,7 @@ export function BookAppointmentModal({
                   styles.input,
                   {
                     borderColor: theme.borderSubtle,
-                    backgroundColor: theme.surface,
+                    backgroundColor: colors.primaryWhite,
                     color: theme.textPrimary,
                   },
                 ]}
@@ -215,7 +215,7 @@ export function BookAppointmentModal({
                     styles.dateInput,
                     {
                       borderColor: theme.borderSubtle,
-                      backgroundColor: theme.surface,
+                      backgroundColor: colors.primaryWhite,
                     },
                   ]}
                   onPress={() => setShowDatePicker(true)}
