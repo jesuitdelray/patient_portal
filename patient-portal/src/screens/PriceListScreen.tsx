@@ -434,14 +434,14 @@ export default function PriceListScreen() {
                     styles.modalProcedureInfo,
                     {
                       borderColor: theme.borderSubtle,
-                      backgroundColor: theme.brand,
+                      backgroundColor: theme.brandSoft,
                     },
                   ]}
                 >
                   <Text
                     style={[
                       styles.modalProcedureTitle,
-                      { color: theme.brandText },
+                      { color: theme.brandSoftText },
                     ]}
                   >
                     {selectedProcedure.title}
@@ -449,7 +449,7 @@ export default function PriceListScreen() {
                   <Text
                     style={[
                       styles.modalProcedurePrice,
-                      { color: theme.brandText },
+                      { color: theme.brandSoftText },
                     ]}
                   >
                     ${selectedProcedure.price.toFixed(2)}
@@ -528,7 +528,7 @@ export default function PriceListScreen() {
                       styles.modalButton,
                       styles.modalButtonCancel,
                       {
-                        backgroundColor: theme.brandSoft,
+                        backgroundColor: theme.surface,
                         borderColor: theme.borderSubtle,
                       },
                     ]}
@@ -547,8 +547,17 @@ export default function PriceListScreen() {
                     style={[
                       styles.modalButton,
                       styles.modalButtonConfirm,
-                      { backgroundColor: theme.ctaBg },
-                      (createAppointmentMutation.isPending || !newDateTime) && styles.modalButtonDisabled,
+                      {
+                        backgroundColor: theme.brand,
+                        borderColor: theme.brand,
+                      },
+                      (createAppointmentMutation.isPending || !newDateTime) && [
+                        styles.modalButtonDisabled,
+                        {
+                          backgroundColor: theme.brandSoft,
+                          borderColor: theme.borderSubtle,
+                        },
+                      ],
                     ]}
                     onPress={handleCreateAppointment}
                     disabled={createAppointmentMutation.isPending || !newDateTime}
@@ -556,7 +565,7 @@ export default function PriceListScreen() {
                     <Text
                       style={[
                         styles.modalButtonConfirmText,
-                        { color: theme.ctaText },
+                        { color: theme.brandText },
                       ]}
                     >
                       {createAppointmentMutation.isPending
@@ -736,15 +745,13 @@ const styles = StyleSheet.create({
     borderColor: colors.greyscale200,
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
     color: colors.textPrimary,
-    marginBottom: 20,
-    textAlign: "center",
+    marginBottom: 24,
   },
   modalProcedureInfo: {
-    backgroundColor: colors.greyscale100,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
@@ -753,13 +760,11 @@ const styles = StyleSheet.create({
   modalProcedureTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: colors.textPrimary,
     marginBottom: 8,
   },
   modalProcedurePrice: {
     fontSize: 20,
     fontWeight: "700",
-    color: colors.primary,
   },
   modalForm: {
     marginBottom: 20,
@@ -799,19 +804,20 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: "center",
+    borderWidth: 1,
   },
   modalButtonCancel: {
-    backgroundColor: colors.greyscale100,
-    borderWidth: 1,
+    backgroundColor: colors.primaryWhite,
     borderColor: colors.greyscale200,
   },
   modalButtonConfirm: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   modalButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
   modalButtonCancelText: {
     fontSize: 16,
