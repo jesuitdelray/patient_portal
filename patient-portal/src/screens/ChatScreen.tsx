@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  KeyboardAvoidingView,
   Platform,
   Linking,
   Alert,
@@ -1035,191 +1036,203 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header title="Chat" />
-      <View style={styles.chatContainer}>
-        {/* Messages List */}
-        {isLoading ? (
-          <View style={styles.centerContainer}>
-            <Loader />
-          </View>
-        ) : (
-          <ScrollView
-            ref={messagesEndRef}
-            style={styles.messagesList}
-            contentContainerStyle={styles.messagesContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {messages.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No messages yet</Text>
-                <Text style={styles.emptySubtext}>
-                  Start a conversation by sending a message
-                </Text>
-              </View>
-            ) : (
-              messages.map((msg, index) => {
-                const isPatient = msg.sender === "patient";
-                const uniqueKey = msg.id || `msg-${index}-${msg.createdAt}`;
-                const isManual =
-                  !isPatient && Boolean(msg.manual ?? msg.isManual);
-                const bubbleBackground = isPatient
-                  ? null
-                  : isManual
-                  ? {
-                      backgroundColor: "rgba(15, 111, 255, 0.14)",
-                      borderColor: colors.medicalBlue,
-                      borderWidth: 1,
-                    }
-                  : {
-                      backgroundColor: theme.surface,
-                      borderColor: theme.borderSubtle,
-                      borderWidth: 1,
-                    };
-                return (
-                  <View
-                    key={uniqueKey}
-                    style={[
-                      styles.messageContainer,
-                      isPatient ? styles.messagePatient : styles.messageDoctor,
-                    ]}
-                  >
+      <KeyboardAvoidingView
+        style={styles.chatContainer}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 24 : 0}
+      >
+        <View style={styles.chatContent}>
+          {/* Messages List */}
+          {isLoading ? (
+            <View style={styles.centerContainer}>
+              <Loader />
+            </View>
+          ) : (
+            <ScrollView
+              ref={messagesEndRef}
+              style={styles.messagesList}
+              contentContainerStyle={styles.messagesContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {messages.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No messages yet</Text>
+                  <Text style={styles.emptySubtext}>
+                    Start a conversation by sending a message
+                  </Text>
+                </View>
+              ) : (
+                messages.map((msg, index) => {
+                  const isPatient = msg.sender === "patient";
+                  const uniqueKey = msg.id || `msg-${index}-${msg.createdAt}`;
+                  const isManual =
+                    !isPatient && Boolean(msg.manual ?? msg.isManual);
+                  const bubbleBackground = isPatient
+                    ? null
+                    : isManual
+                    ? {
+                        backgroundColor: "rgba(15, 111, 255, 0.14)",
+                        borderColor: colors.medicalBlue,
+                        borderWidth: 1,
+                      }
+                    : {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.borderSubtle,
+                        borderWidth: 1,
+                      };
+                  return (
                     <View
+                      key={uniqueKey}
                       style={[
-                        styles.messageBubble,
-                        isPatient ? styles.bubblePatient : styles.bubbleDoctor,
-                        isManual ? styles.bubbleDoctorManual : null,
-                        bubbleBackground,
+                        styles.messageContainer,
+                        isPatient
+                          ? styles.messagePatient
+                          : styles.messageDoctor,
                       ]}
                     >
-                      {isPatient ? (
-                        <>
-                          <Text
-                            style={[
-                              styles.messageText,
-                              styles.messageTextPatient,
-                            ]}
-                          >
-                            {msg.content}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.messageTime,
-                              styles.messageTimePatient,
-                            ]}
-                          >
-                            {formatTime(msg.createdAt)}
-                          </Text>
-                        </>
-                      ) : (
-                        <>
-                          {isManual ? (
+                      <View
+                        style={[
+                          styles.messageBubble,
+                          isPatient
+                            ? styles.bubblePatient
+                            : styles.bubbleDoctor,
+                          isManual ? styles.bubbleDoctorManual : null,
+                          bubbleBackground,
+                          { alignSelf: isPatient ? "flex-end" : "flex-start" },
+                        ]}
+                      >
+                        {isPatient ? (
+                          <>
                             <Text
                               style={[
                                 styles.messageText,
-                                styles.messageTextDoctorManual,
+                                styles.messageTextPatient,
                               ]}
                             >
                               {msg.content}
                             </Text>
-                          ) : (
-                            <StructuredMessage
-                              content={msg.content}
-                              onAction={handleAction}
-                            />
-                          )}
-                          <Text
-                            style={[
-                              styles.messageTime,
-                              isManual
-                                ? [styles.messageTimeDoctorManual]
-                                : styles.messageTimeDoctor,
-                            ]}
-                          >
-                            {formatTime(msg.createdAt)}
-                          </Text>
-                        </>
-                      )}
+                            <Text
+                              style={[
+                                styles.messageTime,
+                                styles.messageTimePatient,
+                              ]}
+                            >
+                              {formatTime(msg.createdAt)}
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            {isManual ? (
+                              <Text
+                                style={[
+                                  styles.messageText,
+                                  styles.messageTextDoctorManual,
+                                ]}
+                              >
+                                {msg.content}
+                              </Text>
+                            ) : (
+                              <StructuredMessage
+                                content={msg.content}
+                                onAction={handleAction}
+                              />
+                            )}
+                            <Text
+                              style={[
+                                styles.messageTime,
+                                isManual
+                                  ? [styles.messageTimeDoctorManual]
+                                  : styles.messageTimeDoctor,
+                              ]}
+                            >
+                              {formatTime(msg.createdAt)}
+                            </Text>
+                          </>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                );
-              })
-            )}
-          </ScrollView>
-        )}
+                  );
+                })
+              )}
+            </ScrollView>
+          )}
 
-        {isFrontDeskActive ? (
-          <View
-            style={[
-              styles.frontDeskStatusBar,
-              {
-                borderColor: theme.borderSubtle,
-                backgroundColor: theme.surface,
-              },
-            ]}
-          >
-            <View style={styles.frontDeskStatusInfo}>
-              <View
+          {isFrontDeskActive ? (
+            <View
+              style={[
+                styles.frontDeskStatusBar,
+                {
+                  borderColor: theme.borderSubtle,
+                  backgroundColor: theme.surface,
+                },
+              ]}
+            >
+              <View style={styles.frontDeskStatusInfo}>
+                <View
+                  style={[
+                    styles.frontDeskStatusDot,
+                    { backgroundColor: theme.success },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.frontDeskStatusText,
+                    { color: theme.textPrimary },
+                  ]}
+                >
+                  Connected to the clinic front desk
+                </Text>
+              </View>
+              <TouchableOpacity
                 style={[
-                  styles.frontDeskStatusDot,
-                  { backgroundColor: theme.success },
+                  styles.frontDeskStatusButton,
+                  {
+                    borderColor: theme.danger,
+                    backgroundColor: theme.danger,
+                  },
+                  isSendingFrontDesk && styles.frontDeskButtonDisabled,
                 ]}
-              />
-              <Text
-                style={[
-                  styles.frontDeskStatusText,
-                  { color: theme.textPrimary },
-                ]}
+                onPress={endFrontDeskChat}
+                disabled={isSendingFrontDesk}
               >
-                Connected to the clinic front desk
-              </Text>
+                <Text
+                  style={[
+                    styles.frontDeskStatusButtonText,
+                    { color: colors.primaryWhite },
+                  ]}
+                >
+                  End chat with clinic
+                </Text>
+              </TouchableOpacity>
             </View>
+          ) : null}
+
+          {/* Input Area */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder={inputPlaceholder}
+              placeholderTextColor={colors.greyscale400}
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              maxLength={1000}
+              editable={!isSendInProgress}
+            />
             <TouchableOpacity
               style={[
-                styles.frontDeskStatusButton,
-                {
-                  borderColor: theme.danger,
-                  backgroundColor: theme.danger,
-                },
-                isSendingFrontDesk && styles.frontDeskButtonDisabled,
+                styles.sendButton,
+                sendDisabled && styles.sendButtonDisabled,
               ]}
-              onPress={endFrontDeskChat}
-              disabled={isSendingFrontDesk}
+              onPress={handleSendMessage}
+              disabled={sendDisabled}
             >
-              <Text
-                style={[
-                  styles.frontDeskStatusButtonText,
-                  { color: colors.primaryWhite },
-                ]}
-              >
-                End chat with clinic
-              </Text>
+              <Text style={styles.sendButtonText}>{sendButtonLabel}</Text>
             </TouchableOpacity>
           </View>
-        ) : null}
-
-        {/* Input Area */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder={inputPlaceholder}
-            placeholderTextColor={colors.greyscale400}
-            value={message}
-            onChangeText={setMessage}
-            multiline
-            maxLength={1000}
-            editable={!isSendInProgress}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              sendDisabled && styles.sendButtonDisabled,
-            ]}
-            onPress={handleSendMessage}
-            disabled={sendDisabled}
-          >
-            <Text style={styles.sendButtonText}>{sendButtonLabel}</Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
 
       {/* Modals */}
       <BookAppointmentModal
@@ -1338,6 +1351,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  chatContent: {
+    flex: 1,
+  },
   statusBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -1399,6 +1415,7 @@ const styles = StyleSheet.create({
   messageContainer: {
     marginBottom: 12,
     flexDirection: "row",
+    ...(Platform.OS === "web" ? {} : { flex: 1 }),
   },
   messagePatient: {
     justifyContent: "flex-end",
@@ -1407,10 +1424,13 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   messageBubble: {
-    maxWidth: "75%",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 16,
+    flexShrink: 1,
+    ...(Platform.OS === "web"
+      ? { maxWidth: 520, flexGrow: 0 }
+      : { maxWidth: "90%", flexGrow: 1 }),
   },
   bubblePatient: {
     backgroundColor: colors.medicalBlue,

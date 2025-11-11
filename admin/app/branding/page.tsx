@@ -319,6 +319,27 @@ export default function BrandingPage() {
     }
   };
 
+  const handleRemoveLogo = async () => {
+    const confirmed =
+      typeof window === "undefined" ||
+      window.confirm("Remove the clinic logo and use the default icon?");
+    if (!confirmed) return;
+
+    setSaving(true);
+    try {
+      const nextBranding = { ...branding, logoUrl: null };
+      await submitBranding(nextBranding, { silent: true });
+      setBranding(nextBranding);
+      setLogoPreview(null);
+      showAlert("Logo removed");
+    } catch (error: any) {
+      console.error("[Branding] remove logo failed:", error);
+      showAlert(error?.message || "Failed to remove logo");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleFaviconChange = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -423,6 +444,16 @@ export default function BrandingPage() {
                   >
                     {logoPreview ? "Change Logo" : "Upload Logo"}
                   </button>
+                  {logoPreview && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      className="mt-2 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100"
+                      disabled={saving}
+                    >
+                      Remove Logo
+                    </button>
+                  )}
                 </div>
               </div>
             </section>

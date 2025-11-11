@@ -9,6 +9,8 @@ import {
   Platform,
   Alert,
   Linking,
+  KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -266,162 +268,180 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.logoContainer}>
-          <Logo size={80} />
-        </View>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.brand }]}>
-            {branding.clinicName || "Welcome"}
-          </Text>
-          <Text style={styles.subtitle}>
-            Sign in to access your patient portal
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.googleButton,
-            { backgroundColor: theme.ctaBg, borderColor: theme.ctaBg },
-            isLoading && styles.buttonDisabled,
-          ]}
-          onPress={handleGoogleLogin}
-          disabled={isLoading}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoider}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 32 : 0}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.buttonContent}>
-            <Text style={{ fontSize: 20, marginRight: 8 }}>🔐</Text>
-            <Text style={[styles.buttonText, { color: theme.ctaText }]}>
-              Sign in with Google
-            </Text>
-          </View>
-        </TouchableOpacity>
+          <View style={styles.content}>
+            <View style={styles.logoContainer}>
+              <Logo size={screenWidth < 768 ? 86 : 100} />
+            </View>
 
-        {/* Apple Sign In - show on iOS if native available, or show custom button for web/fallback */}
-        {Platform.OS === "ios" && appleAuthAvailable ? (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={
-              AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
-            }
-            buttonStyle={
-              AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-            }
-            cornerRadius={8}
-            style={styles.appleButton}
-            onPress={handleAppleLogin}
-          />
-        ) : (
-          <TouchableOpacity
-            style={[
-              styles.appleButtonWeb,
-              {
-                backgroundColor: theme.brandSoft,
-                borderColor: theme.borderSubtle,
-              },
-              isLoading && styles.buttonDisabled,
-            ]}
-            onPress={handleAppleLogin}
-            disabled={isLoading}
-          >
-            <View style={styles.buttonContent}>
-              <Text style={{ fontSize: 18, marginRight: 8 }}>🍎</Text>
-              <Text
-                style={[
-                  styles.appleButtonText,
-                  { color: theme.brandSoftText },
-                ]}
-              >
-                Sign in with Apple
+            <View style={styles.header}>
+              <Text style={[styles.title, { color: theme.brand }]}>
+                {branding.clinicName || "Welcome"}
+              </Text>
+              <Text style={styles.subtitle}>
+                Sign in to access your patient portal
               </Text>
             </View>
-          </TouchableOpacity>
-        )}
 
-        <View style={styles.orDivider}>
-          <View style={styles.orLine} />
-          <Text style={styles.orText}>or sign in with email</Text>
-          <View style={styles.orLine} />
-        </View>
-
-        <View style={styles.emailForm}>
-          {authError && <Text style={styles.errorText}>{authError}</Text>}
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: theme.borderSubtle,
-                color: theme.textPrimary,
-              },
-            ]}
-            placeholder="Email"
-            placeholderTextColor={theme.textSecondary}
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-            editable={!isLoading}
-          />
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: theme.borderSubtle,
-                color: theme.textPrimary,
-              },
-            ]}
-            placeholder="Password"
-            placeholderTextColor={theme.textSecondary}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            editable={!isLoading}
-          />
-          <TouchableOpacity
-            style={[
-              styles.emailButton,
-              { backgroundColor: theme.brand, borderColor: theme.brand },
-              (!email.trim() || !password.trim() || isLoading) &&
-                styles.buttonDisabled,
-            ]}
-            onPress={handleEmailLogin}
-            disabled={!email.trim() || !password.trim() || isLoading}
-          >
-            <Text style={[styles.emailButtonText, { color: theme.brandText }]}>
-              {isLoading ? "Signing in..." : "Sign in with Email"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            By signing in, you agree to our{" "}
-            <Text
-              style={[styles.linkText, { color: theme.brand }]}
-              onPress={() => {
-                const termsUrl =
-                  require("../../app.json").expo.extra?.termsOfServiceUrl ||
-                  "https://your-domain.com/terms";
-                Linking.openURL(termsUrl);
-              }}
+            <TouchableOpacity
+              style={[
+                styles.googleButton,
+                { backgroundColor: theme.ctaBg, borderColor: theme.ctaBg },
+                isLoading && styles.buttonDisabled,
+              ]}
+              onPress={handleGoogleLogin}
+              disabled={isLoading}
             >
-              Terms of Service
-            </Text>{" "}
-            and{" "}
-            <Text
-              style={[styles.linkText, { color: theme.brand }]}
-              onPress={() => {
-                const privacyUrl =
-                  require("../../app.json").expo.extra?.privacyPolicyUrl ||
-                  "https://your-domain.com/privacy";
-                Linking.openURL(privacyUrl);
-              }}
-            >
-              Privacy Policy
-            </Text>
-          </Text>
-        </View>
-      </View>
-      <DebugLogs />
+              <View style={styles.buttonContent}>
+                <Text style={{ fontSize: 20, marginRight: 8 }}>🔐</Text>
+                <Text style={[styles.buttonText, { color: theme.ctaText }]}>
+                  Sign in with Google
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.section}>
+              {Platform.OS === "ios" && appleAuthAvailable ? (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={
+                    AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+                  }
+                  buttonStyle={
+                    AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                  }
+                  cornerRadius={8}
+                  style={styles.appleButton}
+                  onPress={handleAppleLogin}
+                />
+              ) : (
+                <TouchableOpacity
+                  style={[
+                    styles.appleButtonWeb,
+                    {
+                      backgroundColor: theme.brandSoft,
+                      borderColor: theme.borderSubtle,
+                    },
+                    isLoading && styles.buttonDisabled,
+                  ]}
+                  onPress={handleAppleLogin}
+                  disabled={isLoading}
+                >
+                  <View style={styles.buttonContent}>
+                    <Text style={{ fontSize: 18, marginRight: 8 }}>🍎</Text>
+                    <Text
+                      style={[
+                        styles.appleButtonText,
+                        { color: theme.brandSoftText },
+                      ]}
+                    >
+                      Sign in with Apple
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.orDivider}>
+              <View style={styles.orLine} />
+              <Text style={styles.orText}>or sign in with email</Text>
+              <View style={styles.orLine} />
+            </View>
+
+            <View style={styles.emailForm}>
+              {authError && <Text style={styles.errorText}>{authError}</Text>}
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    borderColor: theme.borderSubtle,
+                    color: theme.textPrimary,
+                  },
+                ]}
+                placeholder="Email"
+                placeholderTextColor={theme.textSecondary}
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+                editable={!isLoading}
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    borderColor: theme.borderSubtle,
+                    color: theme.textPrimary,
+                  },
+                ]}
+                placeholder="Password"
+                placeholderTextColor={theme.textSecondary}
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                editable={!isLoading}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.emailButton,
+                  { backgroundColor: theme.brand, borderColor: theme.brand },
+                  (!email.trim() || !password.trim() || isLoading) &&
+                    styles.buttonDisabled,
+                ]}
+                onPress={handleEmailLogin}
+                disabled={!email.trim() || !password.trim() || isLoading}
+              >
+                <Text
+                  style={[styles.emailButtonText, { color: theme.brandText }]}
+                >
+                  {isLoading ? "Signing in..." : "Sign in with Email"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                By signing in, you agree to our{" "}
+                <Text
+                  style={[styles.linkText, { color: theme.brand }]}
+                  onPress={() => {
+                    const termsUrl =
+                      require("../../app.json").expo.extra?.termsOfServiceUrl ||
+                      "https://your-domain.com/terms";
+                    Linking.openURL(termsUrl);
+                  }}
+                >
+                  Terms of Service
+                </Text>{" "}
+                and{" "}
+                <Text
+                  style={[styles.linkText, { color: theme.brand }]}
+                  onPress={() => {
+                    const privacyUrl =
+                      require("../../app.json").expo.extra?.privacyPolicyUrl ||
+                      "https://your-domain.com/privacy";
+                    Linking.openURL(privacyUrl);
+                  }}
+                >
+                  Privacy Policy
+                </Text>
+              </Text>
+            </View>
+          </View>
+          <View style={styles.debugContainer}>
+            <DebugLogs />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -431,14 +451,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  content: {
+  keyboardAvoider: {
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+  },
+  content: {
+    width: "100%",
+    alignItems: "center",
+    gap: 24,
+  },
+  section: {
+    width: "100%",
+    maxWidth: 320,
+    alignItems: "center",
+    marginTop: 16,
   },
   header: {
-    marginBottom: 48,
+    marginBottom: 24,
     alignItems: "center",
   },
   title: {
@@ -509,6 +547,10 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 32,
     paddingHorizontal: 24,
+  },
+  debugContainer: {
+    width: "100%",
+    marginTop: 24,
   },
   footerText: {
     fontSize: 12,

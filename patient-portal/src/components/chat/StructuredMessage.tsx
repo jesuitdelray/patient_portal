@@ -417,9 +417,12 @@ function renderActionButton(
   );
 }
 
+const WEB_MAX_WIDTH = 520;
+
 const styles = StyleSheet.create({
   container: {
     width: "100%",
+    ...(Platform.OS === "web" ? { maxWidth: WEB_MAX_WIDTH } : {}),
   },
   title: {
     fontSize: 16,

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useBranding } from "./useBranding";
 import { getCurrentTheme, defaultClinicTheme } from "./theme";
+import { colors } from "./colors";
 
 const LIGHT_TEXT = "#FFFFFF";
 const DARK_TEXT = "#111827";
@@ -59,54 +60,29 @@ export function useBrandingTheme(): BrandingTheme {
 
     return {
       brand,
-      brandText: ensureText(
-        theme["--rem-brand-text"],
-        brand,
-        DARK_TEXT,
-        LIGHT_TEXT
-      ),
+      brandText: colors.primaryWhite,
       brandSoft,
-      brandSoftText: ensureText(
-        theme["--rem-brand-soft-text"],
-        brandSoft,
-        DARK_TEXT,
-        LIGHT_TEXT
-      ),
+      brandSoftText: colors.textPrimary,
       navBg: ensureHex(theme["--rem-nav-bg"], "#FFFFFF"),
-      navText: ensureHex(theme["--rem-nav-text"], DARK_TEXT),
+      navText: colors.textPrimary,
       navIcon: ensureHex(theme["--rem-nav-icon"], brand),
       navActiveBg,
       navActiveIcon: ensureHex(theme["--rem-nav-active-icon"], brand),
-      navActiveText: ensureText(
-        theme["--rem-nav-active-text"],
-        navActiveBg,
-        DARK_TEXT,
-        LIGHT_TEXT
-      ),
+      navActiveText: colors.textPrimary,
       ctaBg,
       ctaBgHover: ensureHex(
         theme["--rem-cta-bg-hover"],
         darken(ctaBg, 0.08)
       ),
-      ctaText: ensureText(theme["--rem-cta-text"], ctaBg, LIGHT_TEXT, DARK_TEXT),
+      ctaText: colors.primaryWhite,
       highlightBg,
-      highlightText: ensureText(
-        theme["--rem-highlight-text"],
-        highlightBg,
-        DARK_TEXT,
-        LIGHT_TEXT
-      ),
+      highlightText: colors.textPrimary,
       promoBg,
-      promoText: ensureText(
-        theme["--rem-promo-text"],
-        promoBg,
-        DARK_TEXT,
-        LIGHT_TEXT
-      ),
+      promoText: colors.textPrimary,
       danger: ensureHex(theme["--rem-danger"], "#EF4444"),
       success: ensureHex(theme["--rem-success"], "#16A34A"),
-      textPrimary: ensureHex(theme["--rem-text-main"], DARK_TEXT),
-      textSecondary: ensureHex(theme["--rem-text-muted"], "#6B7280"),
+      textPrimary: colors.textPrimary,
+      textSecondary: colors.textSecondary,
       borderSubtle: ensureHex(theme["--rem-border-subtle"], "#E5E7EB"),
       surface: ensureHex(theme["--rem-bg-surface"], "#FFFFFF"),
       pageBg: ensureHex(theme["--rem-bg-page"], "#F5F5F7"),

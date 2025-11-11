@@ -176,23 +176,13 @@ export function RescheduleAppointmentModal({
               style={[
                 styles.button,
                 styles.buttonCancel,
-                {
-                  borderColor: theme.brand,
-                  backgroundColor: theme.brandSoft,
-                },
+                { borderColor: colors.border },
                 isSubmitting && styles.buttonDisabled,
               ]}
               onPress={onClose}
               disabled={isSubmitting}
             >
-            <Text
-              style={[
-                styles.buttonTextCancel,
-                { color: theme.brandSoftText },
-              ]}
-            >
-              Cancel
-            </Text>
+              <Text style={styles.buttonTextCancel}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[

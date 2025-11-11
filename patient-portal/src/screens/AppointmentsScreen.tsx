@@ -134,13 +134,20 @@ export default function AppointmentsScreen() {
                 style={[
                   styles.filterChip,
                   isActive && {
-                    backgroundColor: theme.brand,
-                    borderColor: theme.brand,
+                    backgroundColor: colors.medicalBlue,
+                    borderColor: colors.medicalBlue,
                   },
                 ]}
                 onPress={() => setFilter(item.key)}
               >
-                <Text style={styles.filterChipText}>{item.label}</Text>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    isActive && { color: colors.primaryWhite },
+                  ]}
+                >
+                  {item.label}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -155,13 +162,13 @@ export default function AppointmentsScreen() {
         >
           {filteredAppointments.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
                 {filter === "upcoming"
                   ? "No upcoming appointments"
                   : "No past appointments"}
               </Text>
               <Text
-                style={[styles.emptySubtitle, { color: theme.textSecondary }]}
+                style={[styles.emptySubtitle, { color: colors.textSecondary }]}
               >
                 {filter === "upcoming"
                   ? "When your dentist schedules something new, it will appear here."
