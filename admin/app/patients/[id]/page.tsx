@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { API_BASE, connectSocket } from "@/lib/api";
 import { sendSocketEvent } from "@/lib/socket-utils";
 import {
@@ -23,6 +29,8 @@ type Message = {
   sender: "doctor" | "patient";
   content: string;
   createdAt: string;
+  manual?: boolean;
+  isManual?: boolean;
 };
 type Patient = { id: string; name: string; email: string };
 
@@ -719,10 +727,158 @@ export default function PatientDetail({
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
+  const parseStructuredMessage = (content: string) => {
+    if (!content) return null;
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === "object") {
+        return parsed;
+      }
+    } catch {
+      // not JSON, ignore
+    }
+    return null;
+  };
+
+  const humanizeKey = (key: string) =>
+    key
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+      .trim();
+
+  const isIsoDate = (value: string) =>
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) && !Number.isNaN(Date.parse(value));
+
+  const formatPrimitive = (value: string | number | boolean) => {
+    if (typeof value === "string") {
+      if (isIsoDate(value)) {
+        try {
+          return new Date(value).toLocaleString();
+        } catch {
+          // fall through to raw string
+        }
+      }
+      return value;
+    }
+    return String(value);
+  };
+
+  function renderValue(value: any, depth = 0): ReactNode {
+    if (value === undefined || value === null || value === "") {
+      return <span className="text-slate-400">—</span>;
+    }
+
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      return (
+        <span className="whitespace-pre-wrap">
+          {formatPrimitive(value)}
+        </span>
+      );
+    }
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return <span className="text-slate-400">—</span>;
+      }
+
+      return (
+        <div className="space-y-2">
+          {value.map((item, index) => (
+            <div
+              key={index}
+              className="pl-3 border-l border-slate-200 space-y-1 text-sm text-slate-700"
+            >
+              {typeof item === "object"
+                ? renderObject(item, depth + 1)
+                : renderValue(item, depth + 1)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (typeof value === "object") {
+      return renderObject(value, depth + 1);
+    }
+
+    return <span>{String(value)}</span>;
+  }
+
+  function renderObject(obj: Record<string, any>, depth = 0): ReactNode {
+    const entries = Object.entries(obj || {}).filter(
+      ([, val]) => val !== undefined && val !== null && val !== ""
+    );
+
+    if (entries.length === 0) {
+      return <span className="text-slate-400">—</span>;
+    }
+
+    return (
+      <div className="space-y-1">
+        {entries.map(([key, val]) => (
+          <div key={key} className="text-sm text-slate-700">
+            <span className="font-medium text-slate-600">
+              {humanizeKey(key)}:
+            </span>{" "}
+            {renderValue(val, depth + 1)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const renderStructuredMessage = (payload: any) => {
+    if (!payload || typeof payload !== "object") {
+      return (
+        <div className="text-sm text-slate-700 whitespace-pre-wrap">
+          {String(payload ?? "")}
+        </div>
+      );
+    }
+
+    const title =
+      typeof payload.title === "string" && payload.title.trim().length > 0
+        ? payload.title.trim()
+        : null;
+    const action =
+      typeof payload.action === "string" && payload.action.trim().length > 0
+        ? payload.action.trim()
+        : null;
+
+    const source =
+      typeof payload.data !== "undefined" ? payload.data : payload;
+
+    return (
+      <div className="space-y-2">
+        {title ? (
+          <div className="font-semibold text-sm leading-tight text-slate-900">
+            {title}
+          </div>
+        ) : null}
+        {action ? (
+          <div className="text-[10px] uppercase tracking-wide text-slate-400">
+            {humanizeKey(action)}
+          </div>
+        ) : null}
+        <div className="space-y-2">{renderValue(source)}</div>
+      </div>
+    );
+  };
+
   // Initialize messages from patient data
   useEffect(() => {
     if (patientData?.messages) {
-      setMessages(patientData.messages);
+      const normalized = patientData.messages.map((m: Message) => ({
+        ...m,
+        manual: Boolean((m as any)?.manual || (m as any)?.isManual),
+        isManual: Boolean((m as any)?.manual || (m as any)?.isManual),
+      }));
+      setMessages(normalized);
     }
   }, [patientData?.messages]);
 
@@ -866,7 +1022,7 @@ export default function PatientDetail({
     try {
       await sendSocketEvent(
         "message:send",
-        { patientId, sender: "doctor", content: msgContent },
+        { patientId, sender: "doctor", content: msgContent, manual: true },
         { patientId },
         (ack: any) => {
           if (!ack?.ok) {
@@ -1103,31 +1259,50 @@ export default function PatientDetail({
         ) : (
           <div
             ref={messagesContainerRef}
-            className="border rounded-lg p-3 space-y-2 max-h-80 overflow-auto bg-white"
+            className="border rounded-lg p-3 space-y-2 max-h-80 overflow-y-auto overflow-x-hidden bg-white"
           >
-            {messages.map((m: Message) => (
-              <div
-                key={m.id}
-                className={
-                  "text-sm flex " +
-                  (m.sender === "doctor" ? "justify-end" : "justify-start")
-                }
-              >
+            {messages.map((m: Message) => {
+              const isDoctor = m.sender === "doctor";
+              const isManual = Boolean(m.manual);
+              const structured =
+                isDoctor && !isManual ? parseStructuredMessage(m.content) : null;
+              const isStructured = Boolean(structured);
+              const bubbleClass =
+                (isDoctor
+                  ? isManual
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-slate-900 border border-slate-200"
+                  : "bg-slate-100 text-slate-900") +
+                " px-3 py-2 rounded-xl shadow-sm max-w-[70%]";
+              const timeClass = isDoctor
+                ? isManual
+                  ? "text-white/80"
+                  : "text-slate-400"
+                : "text-slate-500";
+
+              return (
                 <div
+                  key={m.id}
                   className={
-                    (m.sender === "doctor"
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-900") +
-                    " px-3 py-2 rounded-xl shadow-sm max-w-[70%]"
+                    "text-sm flex " +
+                    (isDoctor ? "justify-end" : "justify-start")
                   }
                 >
-                  {m.content}
-                  <div className="mt-1 text-[10px] opacity-70 text-right">
-                    {new Date(m.createdAt).toLocaleTimeString()}
+                  <div className={bubbleClass}>
+                    {isStructured ? (
+                      renderStructuredMessage(structured)
+                    ) : (
+                      <div className="whitespace-pre-wrap break-words text-sm">
+                        {m.content}
+                      </div>
+                    )}
+                    <div className={`mt-1 text-[10px] opacity-70 text-right ${timeClass}`}>
+                      {new Date(m.createdAt).toLocaleTimeString()}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
         )}

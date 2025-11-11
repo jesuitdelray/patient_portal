@@ -66,7 +66,7 @@ async function getActionData(action, patientId, actionPayload = {}, context = {}
     view_remaining_procedures: "Remaining procedures",
     view_treatment_progress: "Treatment progress",
     send_message_to_doctor: "Message sent to your dentist",
-    send_message_to_front_desk: "",
+    send_message_to_front_desk: null,
     view_unpaid_invoices: "Unpaid invoices",
     view_past_invoices: "Past invoices",
     view_all_invoices: "Invoices",
@@ -90,7 +90,7 @@ async function getActionData(action, patientId, actionPayload = {}, context = {}
     check_appointment_procedures: "Appointment procedures",
     view_weekend_slots: "Weekend available slots",
     general_response:
-      "I’m here to help! Tell me what you’d like to do.\n\nExamples:\n• “Provide me the invoices list”\n• “Show my upcoming appointments”\n• “Update my contact information”",
+      "I’m here to help! Tell me what you’d like to do.\n\nExamples:\n• “Provide me the invoices list”\n• “Show my upcoming appointments”",
   };
 
   const emptyStateMessages = {
@@ -116,7 +116,9 @@ async function getActionData(action, patientId, actionPayload = {}, context = {}
     view_completed_treatments: "No completed treatments",
   };
 
-  const title = actionTitles[action] || "Response";
+  const rawTitle = actionTitles[action];
+  const title =
+    rawTitle === undefined ? "Response" : rawTitle === null ? null : rawTitle;
   let data = null;
 
   try {
@@ -132,51 +134,79 @@ async function getActionData(action, patientId, actionPayload = {}, context = {}
         const queryFromMessage = extractProcedureQuery(context.message);
         const searchTerm = (queryFromPayload || queryFromMessage || "").trim();
 
-        const where = searchTerm
-          ? {
-              isActive: true,
-              OR: [
-                {
-                  title: {
-                    contains: searchTerm,
-                    mode: "insensitive",
+        const rawTerms = searchTerm
+          ? searchTerm
+              .split(/(?:,|&|\/|\band\b|\+)+/i)
+              .map((term) =>
+                term
+                  .replace(/(?:how much|cost|price|for|the|procedure|\?)/gi, "")
+                  .trim()
+              )
+              .filter(Boolean)
+          : [];
+
+        const termsToSearch =
+          rawTerms.length > 0 ? rawTerms : searchTerm ? [searchTerm] : [];
+
+        const uniqueMatches = new Map();
+
+        if (termsToSearch.length > 0) {
+          for (const term of termsToSearch) {
+            const termMatches = await prisma.priceList.findMany({
+              where: {
+                isActive: true,
+                OR: [
+                  {
+                    title: {
+                      contains: term,
+                      mode: "insensitive",
+                    },
                   },
-                },
-                {
-                  description: {
-                    contains: searchTerm,
-                    mode: "insensitive",
+                  {
+                    description: {
+                      contains: term,
+                      mode: "insensitive",
+                    },
                   },
-                },
-              ],
+                ],
+              },
+              orderBy: [{ order: "asc" }, { title: "asc" }],
+              take: 5,
+            });
+
+            for (const item of termMatches) {
+              if (!uniqueMatches.has(item.id)) {
+                uniqueMatches.set(item.id, item);
+              }
             }
-          : {
-              isActive: true,
-            };
+          }
+        } else {
+          const fallback = await prisma.priceList.findMany({
+            where: { isActive: true },
+            orderBy: [{ order: "asc" }, { title: "asc" }],
+            take: 10,
+          });
+          fallback.forEach((item) => uniqueMatches.set(item.id, item));
+        }
 
-        const matches = await prisma.priceList.findMany({
-          where,
-          orderBy: [{ order: "asc" }, { title: "asc" }],
-          take: searchTerm ? 5 : 10,
-        });
+        let results = Array.from(uniqueMatches.values());
 
-        // If nothing matched but we have a search term, do a secondary fuzzy match by scanning all titles
-        let results = matches;
-        if (searchTerm && matches.length === 0) {
+        if (searchTerm && results.length === 0) {
           const allItems = await prisma.priceList.findMany({
             where: { isActive: true },
             orderBy: [{ order: "asc" }, { title: "asc" }],
           });
           const lowerTerm = searchTerm.toLowerCase();
           results = allItems.filter((item) =>
-            lowerTerm.split(/\s+/).every((token) =>
-              item.title.toLowerCase().includes(token)
-            )
+            lowerTerm
+              .split(/\s+/)
+              .every((token) => item.title.toLowerCase().includes(token))
           );
         }
 
         data = {
           query: searchTerm || null,
+          terms: termsToSearch,
           matches: results,
         };
         break;
@@ -520,6 +550,7 @@ function extractProcedureQuery(message) {
   if (!message || typeof message !== "string") return "";
   const patterns = [
     /(price|cost)\s+(?:for|of)\s+(.+?)(\?|$)/i,
+    /how much\s+cost\s+(.+?)(\?|$)/i,
     /how much(?: is| does)?(?: the)?\s+(.+?)(?:\s+cost|\?|$)/i,
     /what(?:'s| is)?(?: the)?\s+price\s+of\s+(.+?)(\?|$)/i,
   ];

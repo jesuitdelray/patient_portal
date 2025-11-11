@@ -36,6 +36,24 @@ export function StructuredMessage({ content, onAction }: Props) {
   }
 
   if (!parsed || !parsed.action) {
+    if (
+      typeof parsed?.prompt === "string" ||
+      typeof parsed?.initialMessage === "string"
+    ) {
+      const promptText =
+        typeof parsed.prompt === "string" && parsed.prompt.trim().length > 0
+          ? parsed.prompt.trim()
+          : "What would you like to tell the clinic?";
+      return (
+        <View style={styles.infoContainer}>
+          <Text style={styles.infoText}>{promptText}</Text>
+          <Text style={styles.infoSubtext}>
+            Reply in the chat box below and we’ll send it to the front desk.
+          </Text>
+        </View>
+      );
+    }
+
     return <Text style={styles.plainText}>{content}</Text>;
   }
 
@@ -49,7 +67,9 @@ export function StructuredMessage({ content, onAction }: Props) {
     "view_promotions",
   ];
   const shouldShowTitle =
-    title && title.trim() !== "" && !actionsWithButtons.includes(action);
+    title &&
+    title.trim() !== "" &&
+    !actionsWithButtons.includes(action);
 
   return (
     <View style={styles.container}>
@@ -296,6 +316,17 @@ function renderDataByAction(
       );
     }
 
+    case "send_message_to_front_desk": {
+      return (
+        <View style={styles.frontDeskPrompt}>
+          <Text style={styles.frontDeskPromptMain}>
+            Please write a message for our front desk — they’ll get back to you
+            as soon as possible!
+          </Text>
+        </View>
+      );
+    }
+
     default:
       // For other actions, display data as formatted JSON
       return (
@@ -417,6 +448,18 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === "web" ? "monospace" : "monospace",
     color: colors.textSecondary,
   },
+  frontDeskPrompt: {
+    gap: 4,
+  },
+  frontDeskPromptMain: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    fontWeight: "500",
+  },
+  frontDeskPromptHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
   infoContainer: {
     backgroundColor: colors.greyscale100,
     borderRadius: 8,
@@ -440,6 +483,16 @@ const styles = StyleSheet.create({
   infoSubtext: {
     fontSize: 12,
     color: colors.textSecondary,
+    marginTop: 4,
+  },
+  infoPromptPreview: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: colors.primaryWhite,
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
+    gap: 4,
   },
   priceListItem: {
     gap: 4,

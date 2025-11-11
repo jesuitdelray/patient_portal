@@ -22,10 +22,15 @@ io.on("connection", (socket) => {
     socket.emit("ready", { ok: true });
   });
 
-  socket.on("message:send", async ({ patientId, sender, content }) => {
+  socket.on("message:send", async ({ patientId, sender, content, manual }) => {
     if (!patientId || !sender || !content) return;
     const message = await prisma.message.create({
-      data: { patientId, sender, content },
+      data: {
+        patientId,
+        sender,
+        content,
+        manual: Boolean(manual),
+      },
     });
     io.to(`patient:${patientId}`).emit("message:new", { message });
   });

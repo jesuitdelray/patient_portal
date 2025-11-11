@@ -1,0 +1,3 @@
+ALTER TABLE "Message"
+ADD COLUMN "manual" BOOLEAN NOT NULL DEFAULT false;
+

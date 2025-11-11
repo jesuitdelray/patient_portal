@@ -95,6 +95,7 @@ model Message {
   patientId String
   sender    String
   content   String
+  manual    Boolean  @default(false)
   createdAt DateTime @default(now())
   patient   Patient  @relation(fields: [patientId], references: [id])
 }

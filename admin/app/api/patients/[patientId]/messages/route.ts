@@ -32,9 +32,14 @@ export async function POST(
 ) {
   try {
     const { patientId } = await params;
-    const { sender, content } = await req.json();
+    const { sender, content, manual } = await req.json();
     const message = await prisma.message.create({
-      data: { patientId, sender, content },
+      data: {
+        patientId,
+        sender,
+        content,
+        manual: Boolean(manual),
+      },
     });
     broadcast("message.new", { message }, { patientId });
     wsBroadcast("message.new", { message }, { patientId });

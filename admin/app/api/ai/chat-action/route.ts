@@ -213,7 +213,7 @@ Available actions with examples:
 - view_remaining_procedures: "what procedures are left?", "remaining procedures", "what's left to do"
 - view_treatment_progress: "how is my treatment going?", "treatment progress", "how far along am I"
 - send_message_to_doctor: "message my dentist", "contact my doctor", "send message to doctor"
-- send_message_to_front_desk: "message front desk", "contact reception", "send message to front desk"
+- send_message_to_front_desk: "message front desk", "contact reception", "send message to front desk", "connect me to the clinic", "talk to the clinic team", "соедини меня с клиникой"
 - view_unpaid_invoices: "unpaid invoices", "what do I owe", "outstanding balance", "unpaid bills", "bills I need to pay"
 - view_past_invoices: "past invoices", "invoice history", "previous invoices", "paid invoices"
 - view_all_invoices: "do I have invoices?", "show me my invoices", "all my invoices", "invoices", "my invoices", "what invoices do I have"
@@ -332,7 +332,7 @@ STRICTLY return ONLY valid JSON, no other text before or after.`;
           "Let me check what procedures are included in that appointment.",
         view_weekend_slots: "Let me check for weekend availability.",
       general_response:
-        "I’m ready to help! Let me know what you’d like to do.\n\nExamples:\n• “Provide me the invoices list”\n• “Show my upcoming appointments”\n• “Update my contact information”",
+        "I’m ready to help! Let me know what you’d like to do.\n\nExamples:\n• “Provide me the invoices list”\n• “Show my upcoming appointments”",
       };
       responseText =
         actionResponses[actionData.action] ||

@@ -23,12 +23,17 @@ import { StructuredMessage } from "../components/chat/StructuredMessage";
 import { BookAppointmentModal } from "../components/chat/BookAppointmentModal";
 import { RescheduleAppointmentModal } from "../components/chat/RescheduleAppointmentModal";
 import Toast from "react-native-toast-message";
+import { storage } from "../lib/storage";
+import { useBrandingTheme } from "../lib/useBrandingTheme";
 
 type Message = {
   id: string;
   content: string;
   sender: "patient" | "doctor";
   createdAt: string;
+  manual?: boolean;
+  isManual?: boolean;
+  patientId?: string;
 };
 
 type AIAction = {
@@ -37,18 +42,21 @@ type AIAction = {
   messageId: string;
 };
 
+const FRONT_DESK_STATE_KEY = "frontDeskActive";
+
 export default function ChatScreen() {
   const { data: authData } = useAuth();
   const patientId = authData?.role === "patient" ? authData.userId : null;
   const navigation = useNavigation<any>();
-  
+  const theme = useBrandingTheme();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   // Socket connection is handled by connectSocket, no need to track state
   const [lastAction, setLastAction] = useState<AIAction | null>(null);
-  
+
   // Modal states
   const [showBookModal, setShowBookModal] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
@@ -57,13 +65,38 @@ export default function ChatScreen() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [bookProcedureTitle, setBookProcedureTitle] = useState("");
   const [bookingSlot, setBookingSlot] = useState<any>(null);
-  const [showFrontDeskModal, setShowFrontDeskModal] = useState(false);
-  const [frontDeskMessage, setFrontDeskMessage] = useState("");
   const [isSendingFrontDesk, setIsSendingFrontDesk] = useState(false);
-  
+  const [isFrontDeskActive, setIsFrontDeskActive] = useState(false);
+
   const messagesEndRef = useRef<ScrollView>(null);
   const initialScrollHandled = useRef(false);
   const socketRef = useRef<any>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const storedActive = await storage.getItem(FRONT_DESK_STATE_KEY);
+        if (!mounted) return;
+        if (storedActive === "true") {
+          setIsFrontDeskActive(true);
+        }
+      } catch (error) {
+        console.warn("[Chat] Failed to restore front desk state:", error);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    storage
+      .setItem(FRONT_DESK_STATE_KEY, isFrontDeskActive ? "true" : "false")
+      .catch((error) =>
+        console.warn("[Chat] Failed to persist front desk state:", error)
+      );
+  }, [isFrontDeskActive]);
 
   // Load existing messages
   useEffect(() => {
@@ -176,7 +209,8 @@ export default function ChatScreen() {
             })
           );
 
-          setMessages(validatedMessages);
+          const normalized = validatedMessages.map(normalizeMessage);
+          setMessages(normalized);
         }
       } catch (error) {
         console.error("Error loading messages:", error);
@@ -223,33 +257,47 @@ export default function ChatScreen() {
     }
 
     // Listen for new messages
-    const messageHandler = ({ message: newMessage }: any) => {
-      console.log("[Chat] Received message:new event:", newMessage?.id, newMessage?.content);
-      if (newMessage?.patientId === patientId) {
+    const messageHandler = ({ message: incoming }: any) => {
+      const normalizedMessage = normalizeMessage(incoming || {});
+      console.log(
+        "[Chat] Received message:new event:",
+        normalizedMessage?.id,
+        normalizedMessage?.content
+      );
+      if (normalizedMessage?.patientId === patientId) {
         setMessages((prev) => {
           // Avoid duplicates - check by ID
-          const exists = prev.some((m) => m.id === newMessage.id);
+          const exists = prev.some((m) => m.id === normalizedMessage.id);
           if (exists) {
-            console.log("[Chat] Duplicate message ignored:", newMessage.id);
+            console.log(
+              "[Chat] Duplicate message ignored:",
+              normalizedMessage.id
+            );
             return prev;
           }
-          
+
           // If this is a patient message, check if we have an optimistic message with same content
           // and replace it with the real one
-          if (newMessage.sender === "patient") {
+          if (normalizedMessage.sender === "patient") {
             const optimisticIndex = prev.findIndex(
-              (m) => m.id.startsWith("temp-") && m.content === newMessage.content && m.sender === "patient"
+              (m) =>
+                m.id.startsWith("temp-") &&
+                m.content === normalizedMessage.content &&
+                m.sender === "patient"
             );
             if (optimisticIndex !== -1) {
-              console.log("[Chat] Replacing optimistic message with real one:", newMessage.id);
+              console.log(
+                "[Chat] Replacing optimistic message with real one:",
+                normalizedMessage.id
+              );
               const updated = [...prev];
-              updated[optimisticIndex] = newMessage;
+              updated[optimisticIndex] = normalizedMessage;
               return updated;
             }
           }
-          
-          console.log("[Chat] Adding new message:", newMessage.id);
-          return [...prev, newMessage];
+
+          console.log("[Chat] Adding new message:", normalizedMessage.id);
+          return [...prev, normalizedMessage];
         });
       }
     };
@@ -269,14 +317,28 @@ export default function ChatScreen() {
     const actionHandler = (actionData: AIAction) => {
       console.log("[Chat] Received AI action:", actionData);
       setLastAction(actionData);
-      // Action is already displayed as a message from doctor
-      // This is kept for future action handling implementation
+
+      if (actionData?.action === "send_message_to_front_desk") {
+        setIsFrontDeskActive(true);
+        const initialMessage =
+          typeof actionData.data?.message === "string"
+            ? actionData.data.message.trim()
+            : typeof actionData.data?.initialMessage === "string"
+            ? actionData.data.initialMessage.trim()
+            : "";
+        if (initialMessage) {
+          deliverFrontDeskMessage(initialMessage, { showReceipt: false });
+        }
+      }
+      // Other actions are handled via UI components
     };
 
     socket.on("ai:action", actionHandler);
 
     // Listen for appointment updates to refresh messages containing appointments
-    const appointmentUpdatedHandler = ({ appointment: updatedAppointment }: any) => {
+    const appointmentUpdatedHandler = ({
+      appointment: updatedAppointment,
+    }: any) => {
       console.log("[Chat] Appointment updated:", updatedAppointment);
       if (updatedAppointment?.patientId === patientId) {
         // Update messages that contain this appointment
@@ -287,18 +349,24 @@ export default function ChatScreen() {
                 const parsed = JSON.parse(msg.content);
                 if (parsed.action && parsed.data) {
                   // Check if this message contains the updated appointment
-                  const appointmentData = Array.isArray(parsed.data) 
-                    ? parsed.data.find((apt: any) => apt.id === updatedAppointment.id)
-                    : parsed.data?.id === updatedAppointment.id ? parsed.data : null;
-                  
+                  const appointmentData = Array.isArray(parsed.data)
+                    ? parsed.data.find(
+                        (apt: any) => apt.id === updatedAppointment.id
+                      )
+                    : parsed.data?.id === updatedAppointment.id
+                    ? parsed.data
+                    : null;
+
                   if (appointmentData) {
                     // Update the appointment data in the message
                     const updatedData = Array.isArray(parsed.data)
-                      ? parsed.data.map((apt: any) => 
-                          apt.id === updatedAppointment.id ? updatedAppointment : apt
+                      ? parsed.data.map((apt: any) =>
+                          apt.id === updatedAppointment.id
+                            ? updatedAppointment
+                            : apt
                         )
                       : updatedAppointment;
-                    
+
                     return {
                       ...msg,
                       content: JSON.stringify({
@@ -320,7 +388,10 @@ export default function ChatScreen() {
 
     socket.on("appointment:update", appointmentUpdatedHandler);
 
-    const appointmentCancelledHandler = ({ appointmentId: cancelledId, patientId: cancelledPatientId }: any) => {
+    const appointmentCancelledHandler = ({
+      appointmentId: cancelledId,
+      patientId: cancelledPatientId,
+    }: any) => {
       console.log("[Chat] Appointment cancelled:", cancelledId);
       if (cancelledPatientId === patientId || !cancelledPatientId) {
         // Update messages that contain this appointment - remove it
@@ -331,30 +402,37 @@ export default function ChatScreen() {
                 const parsed = JSON.parse(msg.content);
                 if (parsed.action && parsed.data) {
                   // Check if this message contains the cancelled appointment
-                  const appointmentData = Array.isArray(parsed.data) 
+                  const appointmentData = Array.isArray(parsed.data)
                     ? parsed.data.find((apt: any) => apt.id === cancelledId)
-                    : parsed.data?.id === cancelledId ? parsed.data : null;
-                  
+                    : parsed.data?.id === cancelledId
+                    ? parsed.data
+                    : null;
+
                   if (appointmentData) {
                     // Remove the cancelled appointment from the data
                     const updatedData = Array.isArray(parsed.data)
                       ? parsed.data.filter((apt: any) => apt.id !== cancelledId)
                       : null;
-                    
+
                     // If no appointments left, update title to empty state
-                    const isEmpty = !updatedData || (Array.isArray(updatedData) && updatedData.length === 0);
+                    const isEmpty =
+                      !updatedData ||
+                      (Array.isArray(updatedData) && updatedData.length === 0);
                     const emptyStateMessages: Record<string, string> = {
-                      view_upcoming_appointments: "Sorry, but you don't have any upcoming appointments yet.",
-                      view_next_appointment: "Sorry, but you don't have any upcoming appointments yet.",
+                      view_upcoming_appointments:
+                        "Sorry, but you don't have any upcoming appointments yet.",
+                      view_next_appointment:
+                        "Sorry, but you don't have any upcoming appointments yet.",
                     };
-                    
+
                     return {
                       ...msg,
                       content: JSON.stringify({
                         ...parsed,
-                        title: isEmpty && emptyStateMessages[parsed.action] 
-                          ? emptyStateMessages[parsed.action]
-                          : parsed.title,
+                        title:
+                          isEmpty && emptyStateMessages[parsed.action]
+                            ? emptyStateMessages[parsed.action]
+                            : parsed.title,
                         data: updatedData,
                       }),
                     };
@@ -394,11 +472,29 @@ export default function ChatScreen() {
   }, [messages.length]);
 
   const handleSendMessage = async () => {
-    if (!message.trim() || !patientId || isSending) return;
+    const trimmed = message.trim();
+    if (!trimmed || !patientId) return;
 
-    const messageContent = message.trim();
+    if (
+      isFrontDeskActive ||
+      lastAction?.action === "send_message_to_front_desk"
+    ) {
+      if (!isFrontDeskActive) {
+        setIsFrontDeskActive(true);
+      }
+      if (isSendingFrontDesk) return;
+      setMessage("");
+      await deliverFrontDeskMessage(trimmed, { showReceipt: true });
+      setLastAction(null);
+      return;
+    }
+
+    if (isSending) return;
+
     setMessage("");
     setIsSending(true);
+
+    const messageContent = trimmed;
 
     // Create optimistic message - show immediately
     const optimisticMessage: Message = {
@@ -425,17 +521,24 @@ export default function ChatScreen() {
             // Replace optimistic message with real one from server
             setMessages((prev) => {
               // Remove optimistic message
-              const withoutOptimistic = prev.filter((m) => m.id !== optimisticMessage.id);
+              const withoutOptimistic = prev.filter(
+                (m) => m.id !== optimisticMessage.id
+              );
               // Add real message if not already present
-              const exists = withoutOptimistic.some((m) => m.id === ack.message.id);
+              const normalizedAck = normalizeMessage(ack.message);
+              const exists = withoutOptimistic.some(
+                (m) => m.id === normalizedAck.id
+              );
               if (!exists) {
-                return [...withoutOptimistic, ack.message];
+                return [...withoutOptimistic, normalizedAck];
               }
               return withoutOptimistic;
             });
           } else {
             // Remove optimistic message on error
-            setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
+            setMessages((prev) =>
+              prev.filter((m) => m.id !== optimisticMessage.id)
+            );
             Toast.show({
               type: "error",
               text1: "Failed to send message",
@@ -469,6 +572,8 @@ export default function ChatScreen() {
     content,
     sender: "doctor",
     createdAt: new Date().toISOString(),
+    manual: false,
+    isManual: false,
   });
 
   const createPatientMessage = (content: string): Message => ({
@@ -476,6 +581,14 @@ export default function ChatScreen() {
     content,
     sender: "patient",
     createdAt: new Date().toISOString(),
+    manual: false,
+    isManual: false,
+  });
+
+  const normalizeMessage = (message: any): Message => ({
+    ...message,
+    manual: Boolean(message?.manual || message?.isManual),
+    isManual: Boolean(message?.manual || message?.isManual),
   });
 
   const addAssistantPrompt = (text: string) => {
@@ -485,7 +598,7 @@ export default function ChatScreen() {
 
   const deliverFrontDeskMessage = async (
     rawContent: string,
-    options: { closeModal?: boolean } = {}
+    options: { showReceipt?: boolean } = {}
   ) => {
     const trimmed = rawContent?.trim();
     if (!trimmed) {
@@ -506,6 +619,8 @@ export default function ChatScreen() {
 
     setIsSendingFrontDesk(true);
     try {
+      const shouldToast = options.showReceipt !== false;
+
       const res = await fetchWithAuth(
         `${API_BASE}/patients/${patientId}/messages`,
         {
@@ -542,36 +657,27 @@ export default function ChatScreen() {
                   return null;
                 }
               })();
-        throw new Error(
-          errorMessage || "Failed to send message to front desk"
-        );
+        throw new Error(errorMessage || "Failed to send message to front desk");
       }
 
       if (!savedMessage) {
         savedMessage = createPatientMessage(trimmed);
+      } else {
+        savedMessage = normalizeMessage(savedMessage);
       }
 
-      const receiptMessage = createAssistantMessage("Message sent to front desk.");
-
       setMessages((prev) => {
-        let next = prev;
-        if (
-          savedMessage &&
-          !prev.some((msg) => msg.id === savedMessage!.id)
-        ) {
-          next = [...next, savedMessage];
+        if (savedMessage && !prev.some((msg) => msg.id === savedMessage!.id)) {
+          return [...prev, savedMessage];
         }
-        return [...next, receiptMessage];
+        return prev;
       });
 
-      Toast.show({
-        type: "success",
-        text1: "Message sent to front desk",
-      });
-
-      if (options.closeModal) {
-        setShowFrontDeskModal(false);
-        setFrontDeskMessage("");
+      if (shouldToast) {
+        Toast.show({
+          type: "success",
+          text1: "Message sent to front desk",
+        });
       }
 
       return true;
@@ -587,26 +693,35 @@ export default function ChatScreen() {
     }
   };
 
-  const openFrontDeskPrompt = (
-    prefill?: string,
-    promptText?: string
-  ) => {
-    const prompt =
-      promptText?.trim() ||
-      "Which message do you want to send to the front desk?";
-    addAssistantPrompt(prompt);
-    const initial = prefill?.trim() || "";
-    setFrontDeskMessage(initial);
-    setShowFrontDeskModal(true);
+  const endFrontDeskChat = async () => {
+    if (!isFrontDeskActive || isSendingFrontDesk) return;
+    await deliverFrontDeskMessage("Thank you, we can end the chat for now.", {
+      showReceipt: false,
+    });
+    setIsFrontDeskActive(false);
+    setMessages((prev) => [
+      ...prev,
+      createAssistantMessage(
+        "You ended the chat with the clinic. The assistant is back."
+      ),
+    ]);
+    Toast.show({
+      type: "info",
+      text1: "Chat with the clinic ended",
+    });
   };
 
-  const handleFrontDeskSubmit = async () => {
-    await deliverFrontDeskMessage(frontDeskMessage, { closeModal: true });
-  };
+  const trimmedMessageValue = message.trim();
+  const isSendInProgress = isFrontDeskActive ? isSendingFrontDesk : isSending;
+  const sendDisabled = !trimmedMessageValue || isSendInProgress;
+  const sendButtonLabel = isSendInProgress ? "..." : "Send";
+  const inputPlaceholder = isFrontDeskActive
+    ? "Type a message to the clinic..."
+    : "Type a message...";
 
   const handleAction = async (action: string, data: any) => {
     console.log("[Chat] Action triggered:", action, data);
-    
+
     switch (action) {
       case "book_appointment": {
         if (data?.start) {
@@ -625,16 +740,18 @@ export default function ChatScreen() {
         break;
 
       case "send_message_to_front_desk": {
+        if (!isFrontDeskActive) {
+          setIsFrontDeskActive(true);
+        }
         const initialMessage =
-          typeof data?.message === "string" ? data.message.trim() : "";
+          typeof data?.message === "string" && data.message.trim().length > 0
+            ? data.message.trim()
+            : typeof data?.initialMessage === "string" &&
+              data.initialMessage.trim().length > 0
+            ? data.initialMessage.trim()
+            : "";
         if (initialMessage) {
-          await deliverFrontDeskMessage(initialMessage);
-        } else {
-          const promptText =
-            typeof data?.prompt === "string" && data.prompt.trim().length > 0
-              ? data.prompt
-              : undefined;
-          openFrontDeskPrompt(data?.initialMessage || "", promptText);
+          await deliverFrontDeskMessage(initialMessage, { showReceipt: false });
         }
         break;
       }
@@ -647,77 +764,87 @@ export default function ChatScreen() {
           });
           return;
         }
-        
+
         const confirmCancel = () => {
-        const cancelAppointment = async () => {
-          try {
-            const res = await fetch(`${API_BASE}/appointments/${data.id}`, {
-              method: "DELETE",
-              credentials: "include",
-            });
-            
-            if (res.ok) {
-              // Update messages immediately to remove cancelled appointment
-              setMessages((prev) => {
-                return prev.map((msg) => {
-                  if (msg.sender === "doctor") {
-                    try {
-                      const parsed = JSON.parse(msg.content);
-                      if (parsed.action && parsed.data) {
-                        const appointmentData = Array.isArray(parsed.data) 
-                          ? parsed.data.find((apt: any) => apt.id === data.id)
-                          : parsed.data?.id === data.id ? parsed.data : null;
-                        
-                        if (appointmentData) {
-                          const updatedData = Array.isArray(parsed.data)
-                            ? parsed.data.filter((apt: any) => apt.id !== data.id)
+          const cancelAppointment = async () => {
+            try {
+              const res = await fetch(`${API_BASE}/appointments/${data.id}`, {
+                method: "DELETE",
+                credentials: "include",
+              });
+
+              if (res.ok) {
+                // Update messages immediately to remove cancelled appointment
+                setMessages((prev) => {
+                  return prev.map((msg) => {
+                    if (msg.sender === "doctor") {
+                      try {
+                        const parsed = JSON.parse(msg.content);
+                        if (parsed.action && parsed.data) {
+                          const appointmentData = Array.isArray(parsed.data)
+                            ? parsed.data.find((apt: any) => apt.id === data.id)
+                            : parsed.data?.id === data.id
+                            ? parsed.data
                             : null;
-                          
-                          const isEmpty = !updatedData || (Array.isArray(updatedData) && updatedData.length === 0);
-                          const emptyStateMessages: Record<string, string> = {
-                            view_upcoming_appointments: "Sorry, but you don't have any upcoming appointments yet.",
-                            view_next_appointment: "Sorry, but you don't have any upcoming appointments yet.",
-                          };
-                          
-                          return {
-                            ...msg,
-                            content: JSON.stringify({
-                              ...parsed,
-                              title: isEmpty && emptyStateMessages[parsed.action] 
-                                ? emptyStateMessages[parsed.action]
-                                : parsed.title,
-                              data: updatedData,
-                            }),
-                          };
+
+                          if (appointmentData) {
+                            const updatedData = Array.isArray(parsed.data)
+                              ? parsed.data.filter(
+                                  (apt: any) => apt.id !== data.id
+                                )
+                              : null;
+
+                            const isEmpty =
+                              !updatedData ||
+                              (Array.isArray(updatedData) &&
+                                updatedData.length === 0);
+                            const emptyStateMessages: Record<string, string> = {
+                              view_upcoming_appointments:
+                                "Sorry, but you don't have any upcoming appointments yet.",
+                              view_next_appointment:
+                                "Sorry, but you don't have any upcoming appointments yet.",
+                            };
+
+                            return {
+                              ...msg,
+                              content: JSON.stringify({
+                                ...parsed,
+                                title:
+                                  isEmpty && emptyStateMessages[parsed.action]
+                                    ? emptyStateMessages[parsed.action]
+                                    : parsed.title,
+                                data: updatedData,
+                              }),
+                            };
+                          }
                         }
+                      } catch (e) {
+                        // Not JSON, skip
                       }
-                    } catch (e) {
-                      // Not JSON, skip
                     }
-                  }
-                  return msg;
+                    return msg;
+                  });
                 });
-              });
-              
+
+                Toast.show({
+                  type: "success",
+                  text1: "Appointment cancelled successfully",
+                });
+              } else {
+                throw new Error("Failed to cancel appointment");
+              }
+            } catch (error: any) {
+              console.error("[Chat] Cancel appointment error:", error);
               Toast.show({
-                type: "success",
-                text1: "Appointment cancelled successfully",
+                type: "error",
+                text1: error.message || "Failed to cancel appointment",
               });
-            } else {
-              throw new Error("Failed to cancel appointment");
             }
-          } catch (error: any) {
-            console.error("[Chat] Cancel appointment error:", error);
-            Toast.show({
-              type: "error",
-              text1: error.message || "Failed to cancel appointment",
-            });
-          }
-        };
-          
+          };
+
           cancelAppointment();
         };
-        
+
         if (Platform.OS === "web") {
           if (confirm("Are you sure you want to cancel this appointment?")) {
             confirmCancel();
@@ -749,13 +876,13 @@ export default function ChatScreen() {
           });
           return;
         }
-        
+
         const downloadInvoice = async () => {
           try {
             const res = await fetch(`${API_BASE}/invoices/${data.id}/pdf`, {
               credentials: "include",
             });
-            
+
             if (res.ok) {
               if (Platform.OS === "web") {
                 // Web: download via blob URL
@@ -778,7 +905,7 @@ export default function ChatScreen() {
                   throw new Error("Cannot open PDF");
                 }
               }
-              
+
               Toast.show({
                 type: "success",
                 text1: "Invoice opened",
@@ -794,7 +921,7 @@ export default function ChatScreen() {
             });
           }
         };
-        
+
         downloadInvoice();
         break;
 
@@ -811,7 +938,10 @@ export default function ChatScreen() {
     }
   };
 
-  const handleBookSuccess = (bookedAppointment?: any, bookingMessage?: Message) => {
+  const handleBookSuccess = (
+    bookedAppointment?: any,
+    bookingMessage?: Message
+  ) => {
     if (bookingMessage) {
       setMessages((prev) => {
         const exists = prev.some((msg) => msg.id === bookingMessage.id);
@@ -850,17 +980,23 @@ export default function ChatScreen() {
             try {
               const parsed = JSON.parse(msg.content);
               if (parsed.action && parsed.data) {
-                const appointmentData = Array.isArray(parsed.data) 
-                  ? parsed.data.find((apt: any) => apt.id === updatedAppointment.id)
-                  : parsed.data?.id === updatedAppointment.id ? parsed.data : null;
-                
+                const appointmentData = Array.isArray(parsed.data)
+                  ? parsed.data.find(
+                      (apt: any) => apt.id === updatedAppointment.id
+                    )
+                  : parsed.data?.id === updatedAppointment.id
+                  ? parsed.data
+                  : null;
+
                 if (appointmentData) {
                   const updatedData = Array.isArray(parsed.data)
-                    ? parsed.data.map((apt: any) => 
-                        apt.id === updatedAppointment.id ? updatedAppointment : apt
+                    ? parsed.data.map((apt: any) =>
+                        apt.id === updatedAppointment.id
+                          ? updatedAppointment
+                          : apt
                       )
                     : updatedAppointment;
-                  
+
                   return {
                     ...msg,
                     content: JSON.stringify({
@@ -878,7 +1014,7 @@ export default function ChatScreen() {
         });
       });
     }
-    
+
     Toast.show({
       type: "success",
       text1: "Appointment rescheduled!",
@@ -922,8 +1058,22 @@ export default function ChatScreen() {
             ) : (
               messages.map((msg, index) => {
                 const isPatient = msg.sender === "patient";
-                // Use combination of id and index to ensure unique keys
                 const uniqueKey = msg.id || `msg-${index}-${msg.createdAt}`;
+                const isManual =
+                  !isPatient && Boolean(msg.manual ?? msg.isManual);
+                const bubbleBackground = isPatient
+                  ? null
+                  : isManual
+                  ? {
+                      backgroundColor: "rgba(15, 111, 255, 0.14)",
+                      borderColor: colors.medicalBlue,
+                      borderWidth: 1,
+                    }
+                  : {
+                      backgroundColor: theme.surface,
+                      borderColor: theme.borderSubtle,
+                      borderWidth: 1,
+                    };
                 return (
                   <View
                     key={uniqueKey}
@@ -936,6 +1086,8 @@ export default function ChatScreen() {
                       style={[
                         styles.messageBubble,
                         isPatient ? styles.bubblePatient : styles.bubbleDoctor,
+                        isManual ? styles.bubbleDoctorManual : null,
+                        bubbleBackground,
                       ]}
                     >
                       {isPatient ? (
@@ -959,14 +1111,27 @@ export default function ChatScreen() {
                         </>
                       ) : (
                         <>
-                          <StructuredMessage
-                            content={msg.content}
-                            onAction={handleAction}
-                          />
+                          {isManual ? (
+                            <Text
+                              style={[
+                                styles.messageText,
+                                styles.messageTextDoctorManual,
+                              ]}
+                            >
+                              {msg.content}
+                            </Text>
+                          ) : (
+                            <StructuredMessage
+                              content={msg.content}
+                              onAction={handleAction}
+                            />
+                          )}
                           <Text
                             style={[
                               styles.messageTime,
-                              styles.messageTimeDoctor,
+                              isManual
+                                ? [styles.messageTimeDoctorManual]
+                                : styles.messageTimeDoctor,
                             ]}
                           >
                             {formatTime(msg.createdAt)}
@@ -981,93 +1146,80 @@ export default function ChatScreen() {
           </ScrollView>
         )}
 
+        {isFrontDeskActive ? (
+          <View
+            style={[
+              styles.frontDeskStatusBar,
+              {
+                borderColor: theme.borderSubtle,
+                backgroundColor: theme.surface,
+              },
+            ]}
+          >
+            <View style={styles.frontDeskStatusInfo}>
+              <View
+                style={[
+                  styles.frontDeskStatusDot,
+                  { backgroundColor: theme.success },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.frontDeskStatusText,
+                  { color: theme.textPrimary },
+                ]}
+              >
+                Connected to the clinic front desk
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.frontDeskStatusButton,
+                {
+                  borderColor: theme.danger,
+                  backgroundColor: theme.danger,
+                },
+                isSendingFrontDesk && styles.frontDeskButtonDisabled,
+              ]}
+              onPress={endFrontDeskChat}
+              disabled={isSendingFrontDesk}
+            >
+              <Text
+                style={[
+                  styles.frontDeskStatusButtonText,
+                  { color: colors.primaryWhite },
+                ]}
+              >
+                End chat with clinic
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {/* Input Area */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Type a message..."
+            placeholder={inputPlaceholder}
             placeholderTextColor={colors.greyscale400}
             value={message}
             onChangeText={setMessage}
             multiline
             maxLength={1000}
-            editable={!isSending}
+            editable={!isSendInProgress}
           />
           <TouchableOpacity
             style={[
               styles.sendButton,
-              (!message.trim() || isSending) && styles.sendButtonDisabled,
+              sendDisabled && styles.sendButtonDisabled,
             ]}
             onPress={handleSendMessage}
-            disabled={!message.trim() || isSending}
+            disabled={sendDisabled}
           >
-            <Text style={styles.sendButtonText}>
-              {isSending ? "..." : "Send"}
-            </Text>
+            <Text style={styles.sendButtonText}>{sendButtonLabel}</Text>
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Front Desk Modal */}
-      <Modal
-        visible={showFrontDeskModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          if (!isSendingFrontDesk) {
-            setShowFrontDeskModal(false);
-            setFrontDeskMessage("");
-          }
-        }}
-      >
-        <View style={styles.frontDeskOverlay}>
-          <View style={styles.frontDeskContainer}>
-            <Text style={styles.frontDeskTitle}>Message to Front Desk</Text>
-            <Text style={styles.frontDeskSubtitle}>
-              We will pass this along to the clinic team.
-            </Text>
-            <TextInput
-              style={styles.frontDeskInput}
-              value={frontDeskMessage}
-              onChangeText={setFrontDeskMessage}
-              placeholder="Describe what you’d like to tell the front desk"
-              placeholderTextColor={colors.textSecondary}
-              multiline
-              autoFocus
-              editable={!isSendingFrontDesk}
-            />
-            <View style={styles.frontDeskButtons}>
-              <TouchableOpacity
-                style={[styles.frontDeskButton, styles.frontDeskCancel]}
-                onPress={() => {
-                  if (!isSendingFrontDesk) {
-                    setShowFrontDeskModal(false);
-                    setFrontDeskMessage("");
-                  }
-                }}
-                disabled={isSendingFrontDesk}
-              >
-                <Text style={styles.frontDeskCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.frontDeskButton,
-                  styles.frontDeskSubmit,
-                  !frontDeskMessage.trim() || isSendingFrontDesk
-                    ? styles.frontDeskButtonDisabled
-                    : null,
-                ]}
-                onPress={handleFrontDeskSubmit}
-                disabled={!frontDeskMessage.trim() || isSendingFrontDesk}
-              >
-                <Text style={styles.frontDeskSubmitText}>
-                  {isSendingFrontDesk ? "Sending..." : "Send"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Modals */}
       <BookAppointmentModal
@@ -1106,19 +1258,27 @@ export default function ChatScreen() {
             </Text>
             <View style={styles.confirmModalButtons}>
               <TouchableOpacity
-                style={[styles.confirmModalButton, styles.confirmModalButtonCancel]}
+                style={[
+                  styles.confirmModalButton,
+                  styles.confirmModalButtonCancel,
+                ]}
                 onPress={() => setShowPriceListModal(false)}
               >
                 <Text style={styles.confirmModalButtonTextCancel}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.confirmModalButton, styles.confirmModalButtonProceed]}
+                style={[
+                  styles.confirmModalButton,
+                  styles.confirmModalButtonProceed,
+                ]}
                 onPress={() => {
                   setShowPriceListModal(false);
                   navigation.navigate("PriceList");
                 }}
               >
-                <Text style={styles.confirmModalButtonTextProceed}>Proceed</Text>
+                <Text style={styles.confirmModalButtonTextProceed}>
+                  Proceed
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1139,19 +1299,27 @@ export default function ChatScreen() {
             </Text>
             <View style={styles.confirmModalButtons}>
               <TouchableOpacity
-                style={[styles.confirmModalButton, styles.confirmModalButtonCancel]}
+                style={[
+                  styles.confirmModalButton,
+                  styles.confirmModalButtonCancel,
+                ]}
                 onPress={() => setShowPromotionsModal(false)}
               >
                 <Text style={styles.confirmModalButtonTextCancel}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.confirmModalButton, styles.confirmModalButtonProceed]}
+                style={[
+                  styles.confirmModalButton,
+                  styles.confirmModalButtonProceed,
+                ]}
                 onPress={() => {
                   setShowPromotionsModal(false);
                   navigation.navigate("Promotions");
                 }}
               >
-                <Text style={styles.confirmModalButtonTextProceed}>Proceed</Text>
+                <Text style={styles.confirmModalButtonTextProceed}>
+                  Proceed
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1249,7 +1417,12 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   bubbleDoctor: {
-    backgroundColor: colors.greyscale200,
+    backgroundColor: colors.primaryWhite,
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bubbleDoctorManual: {
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -1263,6 +1436,10 @@ const styles = StyleSheet.create({
   messageTextDoctor: {
     color: colors.textPrimary,
   },
+  messageTextDoctorManual: {
+    color: colors.medicalBlue,
+    fontWeight: "600",
+  },
   messageTime: {
     fontSize: 11,
     alignSelf: "flex-end",
@@ -1272,6 +1449,9 @@ const styles = StyleSheet.create({
   },
   messageTimeDoctor: {
     color: colors.textTertiary,
+  },
+  messageTimeDoctorManual: {
+    color: colors.medicalBlue,
   },
   inputContainer: {
     flexDirection: "row",
@@ -1296,7 +1476,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
     ...(Platform.OS === "web" && {
-      outlineStyle: "none",
+      outlineStyle: "solid" as const,
+      outlineWidth: 0,
     }),
   },
   sendButton: {
@@ -1315,6 +1496,39 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: colors.primaryWhite,
     fontSize: 15,
+    fontWeight: "600",
+  },
+  frontDeskStatusBar: {
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  frontDeskStatusInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  frontDeskStatusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  frontDeskStatusText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  frontDeskStatusButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  frontDeskStatusButtonText: {
+    fontSize: 13,
     fontWeight: "600",
   },
   modalOverlay: {
@@ -1366,75 +1580,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.primaryWhite,
   },
-  frontDeskOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  frontDeskContainer: {
-    width: "100%",
-    maxWidth: 420,
-    backgroundColor: colors.primaryWhite,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 12,
-  },
-  frontDeskTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: colors.textPrimary,
-  },
-  frontDeskSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  frontDeskInput: {
-    minHeight: 96,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    color: colors.textPrimary,
-    backgroundColor: colors.primaryWhite,
-    textAlignVertical: "top",
-  },
-  frontDeskButtons: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 4,
-  },
-  frontDeskButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  frontDeskCancel: {
-    backgroundColor: colors.primaryWhite,
-    borderColor: colors.border,
-  },
-  frontDeskCancelText: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  frontDeskSubmit: {
-    backgroundColor: colors.medicalBlue,
-    borderColor: colors.medicalBlue,
-  },
-  frontDeskSubmitText: {
-    color: colors.primaryWhite,
-    fontSize: 14,
-    fontWeight: "600",
-  },
   frontDeskButtonDisabled: {
     opacity: 0.5,
   },
 });
-
