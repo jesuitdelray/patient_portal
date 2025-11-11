@@ -130,3 +130,38 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const doctorId = await requireDoctor(request);
+
+    await prisma.clinicBranding.deleteMany({
+      where: { doctorId },
+    });
+
+    const eventPayload = {
+      doctorId,
+      updatedAt: new Date().toISOString(),
+      disabled: true,
+    };
+
+    try {
+      broadcast("branding:update", eventPayload);
+      wsBroadcast("branding:update", eventPayload);
+      const io = (global as any).__io;
+      if (io) {
+        io.emit("branding:update", eventPayload);
+      }
+    } catch (emitError) {
+      console.error("[Branding] broadcast (disable) failed:", emitError);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[Branding] DELETE failed:", error);
+    return NextResponse.json(
+      { error: "Failed to disable branding" },
+      { status: 500 }
+    );
+  }
+}
+

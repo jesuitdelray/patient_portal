@@ -5,6 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Platform,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Header } from "../components/Header";
@@ -12,13 +14,20 @@ import { useAppointments } from "../components/dashboard/AppointmentsContext";
 import { useBrandingTheme } from "../lib/useBrandingTheme";
 import { colors } from "../lib/colors";
 import { AppointmentCard } from "../components/chat/AppointmentCard";
+import { RescheduleAppointmentModal } from "../components/chat/RescheduleAppointmentModal";
+import { API_BASE } from "../lib/api";
+import Toast from "react-native-toast-message";
 
 type FilterKey = "upcoming" | "past";
 
 export default function AppointmentsScreen() {
-  const { appointments } = useAppointments();
+  const { appointments, setAppointments } = useAppointments();
   const theme = useBrandingTheme();
   const [filter, setFilter] = useState<FilterKey>("upcoming");
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(
+    null
+  );
 
   const sections = useMemo(() => {
     const now = new Date();
@@ -37,6 +46,75 @@ export default function AppointmentsScreen() {
   }, [appointments]);
 
   const filteredAppointments = sections[filter];
+
+  const handleReschedule = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    setShowRescheduleModal(true);
+  };
+
+  const handleRescheduleSuccess = (updatedAppointment?: any) => {
+    if (!updatedAppointment) return;
+    setAppointments((prev) =>
+      prev.map((appt) =>
+        appt.id === updatedAppointment.id ? updatedAppointment : appt
+      )
+    );
+  };
+
+  const cancelAppointment = async (appointment: any) => {
+    if (!appointment?.id) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid appointment",
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/appointments/${appointment.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error || "Failed to cancel appointment");
+      }
+
+      setAppointments((prev) =>
+        prev.filter((appt) => appt.id !== appointment.id)
+      );
+      Toast.show({
+        type: "success",
+        text1: "Appointment cancelled successfully",
+      });
+    } catch (error: any) {
+      console.error("[Appointments] Cancel error:", error);
+      Toast.show({
+        type: "error",
+        text1: error?.message || "Failed to cancel appointment",
+      });
+    }
+  };
+
+  const handleCancel = (appointment: any) => {
+    const confirmCancellation = () => cancelAppointment(appointment);
+
+    if (Platform.OS === "web") {
+      if (window.confirm("Cancel this appointment?")) {
+        confirmCancellation();
+      }
+    } else {
+      Alert.alert(
+        "Cancel Appointment",
+        "Are you sure you want to cancel this appointment?",
+        [
+          { text: "No", style: "cancel" },
+          { text: "Yes", style: "destructive", onPress: confirmCancellation },
+        ]
+      );
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.pageBg }]}>
@@ -62,11 +140,7 @@ export default function AppointmentsScreen() {
                 ]}
                 onPress={() => setFilter(item.key)}
               >
-                <Text
-                  style={styles.filterChipText}
-                >
-                  {item.label}
-                </Text>
+                <Text style={styles.filterChipText}>{item.label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -97,12 +171,33 @@ export default function AppointmentsScreen() {
           ) : (
             filteredAppointments.map((appointment: any) => (
               <View style={styles.cardWrapper} key={appointment.id}>
-                <AppointmentCard appointment={appointment} />
+                <AppointmentCard
+                  appointment={appointment}
+                  onReschedule={
+                    filter === "upcoming"
+                      ? () => handleReschedule(appointment)
+                      : undefined
+                  }
+                  onCancel={
+                    filter === "upcoming"
+                      ? () => handleCancel(appointment)
+                      : undefined
+                  }
+                />
               </View>
             ))
           )}
         </ScrollView>
       </View>
+      <RescheduleAppointmentModal
+        visible={showRescheduleModal}
+        onClose={() => {
+          setShowRescheduleModal(false);
+          setSelectedAppointment(null);
+        }}
+        appointment={selectedAppointment}
+        onSuccess={handleRescheduleSuccess}
+      />
     </SafeAreaView>
   );
 }
@@ -158,7 +253,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   cardWrapper: {
-    marginBottom: 16,
+    // marginBottom: 16,
   },
 });
-

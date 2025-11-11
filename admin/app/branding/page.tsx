@@ -26,11 +26,11 @@ type BrandingData = {
 };
 
 const DEFAULT_COLORS: BrandingColors = {
-  brand: "#2563EB",
+  brand: "#4A90E2",
   nav: "#FFFFFF",
-  cta: "#2563EB",
-  highlight: "#2563EB",
-  promo: "#2563EB",
+  cta: "#4A90E2",
+  highlight: "#E8F4FD",
+  promo: "#E8F4FD",
   danger: "#EF4444",
 };
 
@@ -271,6 +271,38 @@ export default function BrandingPage() {
     }));
   };
 
+  const handleDisableBranding = async () => {
+    const confirmed =
+      typeof window === "undefined" ||
+      window.confirm(
+        "Disable branding for this clinic? Patients will see the default palette."
+      );
+
+    if (!confirmed) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/branding", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.error || "Failed to disable branding");
+      }
+      setBranding({ ...DEFAULT_BRANDING });
+      setLogoPreview(null);
+      setFaviconPreview(null);
+      showAlert("Branding disabled. Default palette applied.");
+      router.refresh();
+    } catch (error: any) {
+      console.error("[Branding] disable failed:", error);
+      showAlert(error?.message || "Failed to disable branding");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -496,23 +528,33 @@ export default function BrandingPage() {
             })}
           </div>
 
-                <div className="flex items-center justify-between border-t border-slate-200 pt-4 gap-3">
-                  <button
-                    onClick={handleResetColors}
-                    disabled={resetDisabled}
-                    className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    type="button"
-                  >
-                    Restore Medical Default
-                  </button>
+        <div className="flex flex-wrap items-center justify-between border-t border-slate-200 pt-4 gap-3">
+          <div className="flex flex-wrap gap-2">
             <button
-              onClick={handleSave}
+              onClick={handleDisableBranding}
               disabled={saving}
-              className="px-5 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-950 text-sm disabled:opacity-60"
+              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
             >
-              {saving ? "Saving..." : "Save Changes"}
+              Disable Branding
+            </button>
+            <button
+              onClick={handleResetColors}
+              disabled={resetDisabled || saving}
+              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+            >
+              Restore Medical Default
             </button>
           </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-5 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-950 text-sm disabled:opacity-60"
+          >
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">

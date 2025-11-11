@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireDoctor(req);
+    const doctorId = await requireDoctor(req);
     const body = await req.json();
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     const email =
@@ -108,6 +108,20 @@ export async function POST(req: NextRequest) {
     });
 
     await ensureDefaultTreatmentPlan(patient.id);
+
+    await prisma.doctorPatient.upsert({
+      where: {
+        doctorId_patientId: {
+          doctorId,
+          patientId: patient.id,
+        },
+      },
+      update: {},
+      create: {
+        doctorId,
+        patientId: patient.id,
+      },
+    });
 
     return NextResponse.json({ patient }, { status: 201 });
   } catch (error: any) {

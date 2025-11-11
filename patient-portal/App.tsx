@@ -168,6 +168,14 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
     }
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (isAuthenticated && typeof document !== "undefined") {
+      if (!document.title || document.title === "undefined") {
+        document.title = "Patient Portal";
+      }
+    }
+  }, [isAuthenticated]);
+
   // Handle initial route from URL - must be outside conditional
   useEffect(() => {
     // Only on web platform where window.location exists
@@ -193,17 +201,15 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
         if (routeName && navigationRef.current?.isReady()) {
           console.log("[MainNavigator] Navigating to:", routeName);
           navigationRef.current.navigate(routeName as never);
+        }
 
-          // Set initial title based on route
-          if (
-            typeof document !== "undefined" &&
-            routeName &&
-            routeName !== "undefined"
-          ) {
-            console.log("[MainNavigator] Setting initial title to:", routeName);
-            document.title = routeName;
-            console.log("[MainNavigator] Title after set:", document.title);
-          }
+        if (typeof document !== "undefined") {
+          const nextTitle =
+            routeName && routeName !== "undefined"
+              ? routeName
+              : "Patient Portal";
+          document.title = nextTitle;
+          console.log("[MainNavigator] Title after set:", document.title);
         }
       } catch (e) {
         console.error("[MainNavigator] Error handling initial route:", e);
@@ -246,45 +252,38 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
                   console.log("[App] Navigation state changed:", state);
                   if (state) {
                     const route = state.routes[state.index];
-                    console.log("[App] Current route:", route?.name);
-                    if (route?.name) {
-                      const routeMap: Record<string, string> = {
-                        Dashboard: "/dashboard",
-                        Profile: "/profile",
-                        Promotions: "/promotions",
-                        Treatment: "/treatment",
-                        PriceList: "/price-list",
-                        Invoices: "/invoices",
-                        Chat: "/chat",
-                      };
-                      const path = routeMap[route.name] || "/dashboard";
-                      
-                      // Only update history if available
-                      if (window.history && window.history.replaceState) {
-                        window.history.replaceState(null, "", path);
-                      }
+                    const routeName =
+                      typeof route?.name === "string" && route.name.length > 0
+                        ? route.name
+                        : null;
+                    console.log("[App] Current route:", routeName);
 
-                      // Update document.title
-                      if (typeof document !== "undefined") {
-                        const currentTitle = document.title;
-                        // Prevent setting "undefined" as string - use fallback
-                        const newTitle =
-                          route.name && route.name !== "undefined"
-                            ? route.name
-                            : "Patient Portal";
+                    const routeMap: Record<string, string> = {
+                      Dashboard: "/dashboard",
+                      Profile: "/profile",
+                      Promotions: "/promotions",
+                      Treatment: "/treatment",
+                      PriceList: "/price-list",
+                      Invoices: "/invoices",
+                      Chat: "/chat",
+                    };
+                    const path = routeName ? routeMap[routeName] : undefined;
 
-                        // Only update if title is actually undefined or different
-                        if (
-                          currentTitle === "undefined" ||
-                          currentTitle !== newTitle
-                        ) {
-                          console.log("[App] Title update:", {
-                            currentTitle,
-                            newTitle,
-                          });
-                          document.title = newTitle;
-                        }
-                      }
+                    if (window.history && window.history.replaceState) {
+                      window.history.replaceState(
+                        null,
+                        "",
+                        path || "/dashboard"
+                      );
+                    }
+
+                    if (typeof document !== "undefined") {
+                      const fallbackTitle = "Patient Portal";
+                      const newTitle =
+                        routeName && routeName !== "undefined"
+                          ? routeName
+                          : fallbackTitle;
+                      document.title = newTitle;
                     }
                   }
                 } catch (e) {

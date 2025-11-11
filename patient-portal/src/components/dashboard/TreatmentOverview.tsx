@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { API_BASE, resolvePatientId } from "../../lib/api";
 import { colors } from "../../lib/colors";
 import { useBrandingTheme } from "../../lib/useBrandingTheme";
+import { useNavigation } from "@react-navigation/native";
 
 type Procedure = {
   id: string;
@@ -20,6 +21,7 @@ type Plan = {
 export function TreatmentOverview() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const theme = useBrandingTheme();
+  const navigation = useNavigation<any>();
 
   useEffect(() => {
     (async () => {
@@ -71,19 +73,31 @@ export function TreatmentOverview() {
         ) : (
           plans.map((plan) => {
             const { percentage, completed, total } = calculateProgress(plan);
-            const isCompleted = plan.status === "completed" || percentage === 100;
+            const isCompleted =
+              plan.status === "completed" || percentage === 100;
 
             return (
-              <View key={plan.id} style={styles.treatmentCard}>
+              <TouchableOpacity
+                key={plan.id}
+                style={styles.treatmentCard}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate("Treatment")}
+              >
                 <View style={styles.treatmentHeader}>
                   <View style={styles.treatmentInfo}>
                     <Text
-                      style={[styles.treatmentName, { color: theme.textPrimary }]}
+                      style={[
+                        styles.treatmentName,
+                        { color: theme.textPrimary },
+                      ]}
                     >
                       {plan.title}
                     </Text>
                     <Text
-                      style={[styles.treatmentStep, { color: theme.textSecondary }]}
+                      style={[
+                        styles.treatmentStep,
+                        { color: theme.textSecondary },
+                      ]}
                     >
                       {plan.status === "completed"
                         ? "Completed"
@@ -96,9 +110,7 @@ export function TreatmentOverview() {
                     <Text style={{ fontSize: 16 }}>
                       {isCompleted ? "✅" : "⏰"}
                     </Text>
-                    <Text
-                      style={[styles.progressText, { color: theme.brand }]}
-                    >
+                    <Text style={[styles.progressText, { color: theme.brand }]}>
                       {percentage}%
                     </Text>
                   </View>
@@ -119,12 +131,15 @@ export function TreatmentOverview() {
                 </View>
                 {total > 0 && (
                   <Text
-                    style={[styles.progressLabel, { color: theme.textSecondary }]}
+                    style={[
+                      styles.progressLabel,
+                      { color: theme.textSecondary },
+                    ]}
                   >
                     {completed} of {total} procedures completed
                   </Text>
                 )}
-              </View>
+              </TouchableOpacity>
             );
           })
         )}

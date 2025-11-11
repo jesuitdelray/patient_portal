@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
   slotDate: {
     fontSize: 12,
     fontWeight: "600",
-    color: colors.medicalBlue,
+    color: colors.textPrimary,
   },
   slotTime: {
     fontSize: 12,

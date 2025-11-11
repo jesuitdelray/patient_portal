@@ -38,20 +38,16 @@ export function TreatmentPlanCard({ plan }: Props) {
           </Text>
         </View>
       </View>
-
       {totalCount > 0 && (
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View
-              style={[styles.progressFill, { width: `${progress}%` }]}
-            />
+            <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
           <Text style={styles.progressText}>
             {completedCount} of {totalCount} procedures completed
           </Text>
         </View>
       )}
-
       {procedures.length > 0 && (
         <View style={styles.proceduresContainer}>
           <Text style={styles.proceduresTitle}>Procedures:</Text>
@@ -119,7 +115,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   statusActive: {
-    backgroundColor: colors.medicalGreenLight,
+    backgroundColor: colors.medicalGreen,
   },
   statusInactive: {
     backgroundColor: colors.greyscale200,
@@ -203,4 +199,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-

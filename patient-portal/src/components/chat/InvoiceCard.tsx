@@ -135,13 +135,14 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
   },
   label: {
     fontSize: 14,
     color: colors.textSecondary,
-    minWidth: 100,
+    marginRight: 8,
   },
   value: {
     fontSize: 14,
@@ -151,7 +152,8 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 18,
     fontWeight: "700",
-    color: colors.medicalBlue,
+    color: colors.textPrimary,
+    textAlign: "right",
   },
   downloadButton: {
     backgroundColor: colors.medicalBlue,
@@ -160,6 +162,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     marginTop: 8,
+    alignSelf: "stretch",
   },
   downloadButtonText: {
     fontSize: 14,

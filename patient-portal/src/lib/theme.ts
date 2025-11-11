@@ -2,10 +2,10 @@ import { colors } from "./colors";
 
 export type ClinicTheme = Record<string, string>;
 
-const BLUE = "#2563EB";
-const DEFAULT_BRAND_SOFT = softColor(BLUE, 0.22);
-const DEFAULT_HIGHLIGHT = softColor(BLUE, 0.35);
-const DEFAULT_PROMO = softColor(BLUE, 0.45);
+const BRAND = "#4A90E2";
+const DEFAULT_BRAND_SOFT = "#6BA3E8";
+const DEFAULT_HIGHLIGHT = "#E8F4FD";
+const DEFAULT_PROMO = "#E8F4FD";
 
 export const defaultClinicTheme: ClinicTheme = {
   "--rem-bg-page": "#F5F5F7",
@@ -13,19 +13,19 @@ export const defaultClinicTheme: ClinicTheme = {
   "--rem-border-subtle": "#E5E7EB",
   "--rem-text-main": "#111827",
   "--rem-text-muted": "#6B7280",
-  "--rem-brand": BLUE,
-  "--rem-brand-text": pickText(BLUE),
+  "--rem-brand": BRAND,
+  "--rem-brand-text": pickText(BRAND),
   "--rem-brand-soft": DEFAULT_BRAND_SOFT,
   "--rem-brand-soft-text": pickText(DEFAULT_BRAND_SOFT),
   "--rem-nav-bg": "#FFFFFF",
   "--rem-nav-text": "#111827",
-  "--rem-nav-icon": BLUE,
-  "--rem-nav-active-bg": softColor(BLUE, 0.12),
-  "--rem-nav-active-text": pickText(softColor(BLUE, 0.12)),
-  "--rem-nav-active-icon": BLUE,
-  "--rem-cta-bg": BLUE,
-  "--rem-cta-bg-hover": darken(BLUE, 0.08),
-  "--rem-cta-text": pickText(BLUE),
+  "--rem-nav-icon": BRAND,
+  "--rem-nav-active-bg": softColor(BRAND, 0.12),
+  "--rem-nav-active-text": pickText(softColor(BRAND, 0.12)),
+  "--rem-nav-active-icon": BRAND,
+  "--rem-cta-bg": BRAND,
+  "--rem-cta-bg-hover": darken(BRAND, 0.08),
+  "--rem-cta-text": pickText(BRAND),
   "--rem-highlight-bg": DEFAULT_HIGHLIGHT,
   "--rem-highlight-text": pickText(DEFAULT_HIGHLIGHT),
   "--rem-promo-bg": DEFAULT_PROMO,
@@ -56,8 +56,6 @@ export function applyClinicTheme(theme?: ClinicTheme) {
   colors.background = currentTheme["--rem-bg-surface"];
   colors.surface = currentTheme["--rem-bg-surface"];
   colors.border = currentTheme["--rem-border-subtle"];
-  colors.textPrimary = currentTheme["--rem-text-main"];
-  colors.textSecondary = currentTheme["--rem-text-muted"];
   colors.medicalBlue = currentTheme["--rem-brand"];
   colors.medicalBlueBg = currentTheme["--rem-brand-soft"];
   colors.medicalGreen = currentTheme["--rem-success"];
