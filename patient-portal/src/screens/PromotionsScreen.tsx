@@ -134,7 +134,7 @@ export default function PromotionsScreen() {
                     <Text
                       style={[
                         styles.categoryBadgeText,
-                        { color: theme.brandSoftText },
+                        { color: colors.primaryWhite },
                       ]}
                     >
                       {promo.category}

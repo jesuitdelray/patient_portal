@@ -36,7 +36,7 @@ export default function PriceListScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
-  const [selectedProcedure, setSelectedProcedure] = useState<PriceItem | null>(null);
+  const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newDateTime, setNewDateTime] = useState("");
@@ -44,7 +44,9 @@ export default function PriceListScreen() {
   const theme = useBrandingTheme();
   const { data: authData } = useAuth();
   const patientId =
-    authData?.role === "patient" && authData?.userId ? authData.userId : undefined;
+    authData?.role === "patient" && authData?.userId
+      ? authData.userId
+      : undefined;
 
   const today = new Date();
   // Minimum date is tomorrow
@@ -87,7 +89,12 @@ export default function PriceListScreen() {
 
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
-    mutationFn: async (data: { title: string; datetime: string; type: string }) => {
+    mutationFn: async (data: {
+      title: string;
+      datetime: string;
+      type: string;
+      procedureIds?: string[];
+    }) => {
       console.log("[PriceList] Starting appointment creation...");
       console.log("[PriceList] Data to send:", {
         title: data.title,
@@ -96,13 +103,16 @@ export default function PriceListScreen() {
       });
       console.log("[PriceList] API_BASE:", API_BASE);
       console.log("[PriceList] Full URL:", `${API_BASE}/appointments`);
-      
+
       try {
         const requestBody = {
           title: data.title,
           datetime: data.datetime,
           type: data.type,
           ...(patientId ? { patientId } : {}),
+          ...(data.procedureIds && data.procedureIds.length > 0
+            ? { procedureIds: data.procedureIds }
+            : {}),
         };
         console.log("[PriceList] Request body:", JSON.stringify(requestBody));
 
@@ -111,15 +121,18 @@ export default function PriceListScreen() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
         });
-        
+
         console.log("[PriceList] Response status:", res.status);
         console.log("[PriceList] Response statusText:", res.statusText);
-        console.log("[PriceList] Response headers:", Object.fromEntries(res.headers.entries()));
-        
+        console.log(
+          "[PriceList] Response headers:",
+          Object.fromEntries(res.headers.entries())
+        );
+
         const text = await res.text();
         console.log("[PriceList] Response text (raw):", text);
         console.log("[PriceList] Response text length:", text.length);
-        
+
         if (!res.ok) {
           console.error("[PriceList] Request failed with status:", res.status);
           try {
@@ -132,12 +145,12 @@ export default function PriceListScreen() {
             throw new Error(text || "Failed to create appointment");
           }
         }
-        
+
         if (!text) {
           console.error("[PriceList] Empty response from server");
           throw new Error("Empty response from server");
         }
-        
+
         try {
           const parsed = JSON.parse(text);
           console.log("[PriceList] Successfully parsed response:", parsed);
@@ -158,7 +171,7 @@ export default function PriceListScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       setShowAppointmentModal(false);
-      setSelectedProcedure(null);
+      setSelectedProcedures([]);
       setNewDateTime("");
       setSelectedDate(new Date());
       Toast.show({
@@ -176,9 +189,25 @@ export default function PriceListScreen() {
     },
   });
 
-  const handleProcedureClick = (procedure: PriceItem) => {
-    setSelectedProcedure(procedure);
+  const toggleProcedureSelection = (procedureId: string) => {
+    setSelectedProcedures((prev) =>
+      prev.includes(procedureId)
+        ? prev.filter((id) => id !== procedureId)
+        : [...prev, procedureId]
+    );
+  };
+
+  const handleBookAppointment = () => {
+    if (selectedProcedures.length === 0) {
+      Toast.show({
+        type: "error",
+        text1: "Please select at least one procedure",
+      });
+      return;
+    }
     const initialDate = new Date();
+    initialDate.setDate(initialDate.getDate() + 1);
+    initialDate.setHours(10, 0, 0, 0);
     setSelectedDate(initialDate);
     setNewDateTime(initialDate.toISOString().slice(0, 16));
     setShowAppointmentModal(true);
@@ -201,17 +230,17 @@ export default function PriceListScreen() {
 
   const handleCreateAppointment = () => {
     console.log("[PriceList] handleCreateAppointment called");
-    console.log("[PriceList] selectedProcedure:", selectedProcedure);
+    console.log("[PriceList] selectedProcedures:", selectedProcedures);
     console.log("[PriceList] newDateTime:", newDateTime);
-    
-    if (!selectedProcedure || !newDateTime) {
+
+    if (selectedProcedures.length === 0 || !newDateTime) {
       console.error("[PriceList] Missing required data:", {
-        hasProcedure: !!selectedProcedure,
+        hasProcedures: selectedProcedures.length > 0,
         hasDateTime: !!newDateTime,
       });
       Toast.show({
         type: "error",
-        text1: "Please select date and time",
+        text1: "Please select procedures and date/time",
       });
       return;
     }
@@ -219,19 +248,22 @@ export default function PriceListScreen() {
     // Ensure datetime is in ISO format
     let datetimeToSend = newDateTime;
     console.log("[PriceList] Initial datetimeToSend:", datetimeToSend);
-    
+
     if (!datetimeToSend.includes("T")) {
       // If it's just a date, add time
       datetimeToSend = `${datetimeToSend}T00:00:00`;
       console.log("[PriceList] Added time, datetimeToSend:", datetimeToSend);
     }
-    
+
     // Convert to ISO string if needed
     try {
       const dateObj = new Date(datetimeToSend);
       console.log("[PriceList] Created Date object:", dateObj);
-      console.log("[PriceList] Date object isValid:", !isNaN(dateObj.getTime()));
-      
+      console.log(
+        "[PriceList] Date object isValid:",
+        !isNaN(dateObj.getTime())
+      );
+
       if (isNaN(dateObj.getTime())) {
         console.error("[PriceList] Invalid date object");
         Toast.show({
@@ -251,12 +283,25 @@ export default function PriceListScreen() {
       return;
     }
 
+    const selectedItems = filteredList.filter((item: PriceItem) =>
+      selectedProcedures.includes(item.id)
+    );
+    const titles = selectedItems.map((item: PriceItem) => item.title);
+    const totalPrice = selectedItems.reduce(
+      (sum: number, item: PriceItem) => sum + item.price,
+      0
+    );
+
     const mutationData = {
-      title: selectedProcedure.title,
+      title:
+        selectedItems.length === 1
+          ? selectedItems[0].title
+          : `${selectedItems.length} Procedures`,
       datetime: datetimeToSend,
-      type: selectedProcedure.category || "General",
+      type: selectedItems[0]?.category || "General",
+      procedureIds: selectedProcedures,
     };
-    
+
     console.log("[PriceList] Calling mutation with data:", mutationData);
     createAppointmentMutation.mutate(mutationData);
   };
@@ -268,7 +313,7 @@ export default function PriceListScreen() {
   const grouped = data?.grouped || {};
 
   const filteredList = selectedCategory
-    ? (grouped[selectedCategory] || [])
+    ? grouped[selectedCategory] || []
     : priceList;
 
   return (
@@ -313,42 +358,47 @@ export default function PriceListScreen() {
                 All
               </Text>
             </TouchableOpacity>
-            {categories.length > 0 ? (
-              categories.map((cat: string) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryChip,
-                    selectedCategory === cat && {
-                      backgroundColor: theme.brandSoft,
-                      borderColor: theme.borderSubtle,
-                    },
-                  ]}
-                  onPress={() => setSelectedCategory(cat)}
-                >
-                  <Text
+            {categories.length > 0
+              ? categories.map((cat: string) => (
+                  <TouchableOpacity
+                    key={cat}
                     style={[
-                      styles.categoryChipText,
-                      selectedCategory === cat && { color: colors.primaryWhite },
+                      styles.categoryChip,
+                      selectedCategory === cat && {
+                        backgroundColor: theme.brandSoft,
+                        borderColor: theme.borderSubtle,
+                      },
                     ]}
+                    onPress={() => setSelectedCategory(cat)}
                   >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              // Show placeholder only on initial load
-              !categoriesData && (
-                <View style={[styles.categoryChip, styles.categoryChipDisabled]}>
-                  <Text style={styles.categoryChipText}>Loading...</Text>
-                </View>
-              )
-            )}
+                    <Text
+                      style={[
+                        styles.categoryChipText,
+                        selectedCategory === cat && {
+                          color: colors.primaryWhite,
+                        },
+                      ]}
+                    >
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              : // Show placeholder only on initial load
+                !categoriesData && (
+                  <View
+                    style={[styles.categoryChip, styles.categoryChipDisabled]}
+                  >
+                    <Text style={styles.categoryChipText}>Loading...</Text>
+                  </View>
+                )}
           </ScrollView>
         </View>
 
         {/* Price List */}
-        <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        >
           {isLoading ? (
             <View style={styles.centerContainer}>
               <Loader />
@@ -358,59 +408,115 @@ export default function PriceListScreen() {
               <Text style={styles.emptyText}>No procedures found</Text>
             </View>
           ) : (
-            filteredList.map((item: PriceItem) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.priceItem,
-                  {
-                    borderColor: theme.borderSubtle,
-                    shadowColor: theme.brand,
-                  },
-                ]}
-                onPress={() => handleProcedureClick(item)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.priceItemContent}>
-                  <View style={styles.priceItemHeader}>
-                    <Text style={[styles.priceItemTitle, { color: colors.textPrimary }]}>
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.priceItemPrice, { color: colors.textPrimary }]}>
-                      ${item.price.toFixed(2)}
-                    </Text>
-                  </View>
-                  {item.description && (
-                    <Text style={styles.priceItemDescription}>{item.description}</Text>
-                  )}
-                  <View style={styles.priceItemFooter}>
-                    {item.duration && (
-                      <Text
-                        style={[styles.priceItemDuration, { color: colors.textSecondary }]}
-                      >
-                        ⏱ {item.duration} min
-                      </Text>
-                    )}
-                    <Text
+            filteredList.map((item: PriceItem) => {
+              const isSelected = selectedProcedures.includes(item.id);
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.priceItem,
+                    {
+                      borderColor: isSelected
+                        ? colors.medicalBlue
+                        : theme.borderSubtle,
+                      shadowColor: theme.brand,
+                      backgroundColor: isSelected
+                        ? "rgba(15, 111, 255, 0.05)"
+                        : theme.surface,
+                    },
+                  ]}
+                  onPress={() => toggleProcedureSelection(item.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.checkboxContainer}>
+                    <View
                       style={[
-                        styles.priceItemCategory,
-                      {
-                        backgroundColor: theme.brandSoft,
-                        color: colors.primaryWhite,
-                      },
+                        styles.checkbox,
+                        {
+                          borderColor: isSelected
+                            ? colors.medicalBlue
+                            : colors.greyscale300,
+                          backgroundColor: isSelected
+                            ? colors.medicalBlue
+                            : colors.primaryWhite,
+                        },
                       ]}
                     >
-                      {item.category || "General"}
-                    </Text>
+                      {isSelected && (
+                        <Text style={styles.checkboxCheck}>✓</Text>
+                      )}
+                    </View>
                   </View>
-                </View>
-                <View style={styles.priceItemArrow}>
-                  <Text style={[styles.arrowText, { color: colors.textSecondary }]}>→</Text>
-                </View>
-              </TouchableOpacity>
-            ))
+                  <View style={styles.priceItemContent}>
+                    <View style={styles.priceItemHeader}>
+                      <Text
+                        style={[
+                          styles.priceItemTitle,
+                          { color: colors.textPrimary },
+                        ]}
+                      >
+                        {item.title}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.priceItemPrice,
+                          { color: colors.textPrimary },
+                        ]}
+                      >
+                        ${item.price.toFixed(2)}
+                      </Text>
+                    </View>
+                    {item.description && (
+                      <Text style={styles.priceItemDescription}>
+                        {item.description}
+                      </Text>
+                    )}
+                    <View style={styles.priceItemFooter}>
+                      {item.duration && (
+                        <Text
+                          style={[
+                            styles.priceItemDuration,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
+                          ⏱ {item.duration} min
+                        </Text>
+                      )}
+                      <Text
+                        style={[
+                          styles.priceItemCategory,
+                          {
+                            backgroundColor: theme.brandSoft,
+                            color: colors.primaryWhite,
+                          },
+                        ]}
+                      >
+                        {item.category || "General"}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
           )}
         </ScrollView>
+
+        {/* Book Appointment Button */}
+        {selectedProcedures.length > 0 && (
+          <View style={styles.bookButtonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.bookButton,
+                { backgroundColor: colors.medicalBlue },
+              ]}
+              onPress={handleBookAppointment}
+            >
+              <Text style={styles.bookButtonText}>
+                Book Appointment ({selectedProcedures.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Appointment Modal */}
@@ -424,43 +530,64 @@ export default function PriceListScreen() {
           <View
             style={[
               styles.modalContent,
-              { borderColor: theme.borderSubtle, backgroundColor: theme.surface },
+              {
+                borderColor: theme.borderSubtle,
+                backgroundColor: theme.surface,
+              },
             ]}
           >
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
               Book Appointment
             </Text>
-            {selectedProcedure && (
+            {selectedProcedures.length > 0 && (
               <>
-                <View
-                  style={[
-                    styles.modalProcedureInfo,
-                    {
-                      borderColor: theme.borderSubtle,
-                      backgroundColor: theme.brandSoft,
-                    },
-                  ]}
-                >
+                <View style={styles.modalProceduresList}>
                   <Text
                     style={[
-                      styles.modalProcedureTitle,
+                      styles.modalProceduresLabel,
                       { color: colors.textPrimary },
                     ]}
                   >
-                    {selectedProcedure.title}
+                    Selected Procedures ({selectedProcedures.length}):
                   </Text>
-                  <Text
-                    style={[
-                      styles.modalProcedurePrice,
-                      { color: colors.textPrimary },
-                    ]}
-                  >
-                    ${selectedProcedure.price.toFixed(2)}
-                  </Text>
+                  {filteredList
+                    .filter((item: PriceItem) =>
+                      selectedProcedures.includes(item.id)
+                    )
+                    .map((item: PriceItem) => (
+                      <View
+                        key={item.id}
+                        style={[
+                          styles.modalProcedureInfo,
+                          {
+                            borderColor: theme.borderSubtle,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.modalProcedureTitle,
+                            { color: colors.textPrimary },
+                          ]}
+                        >
+                          {item.title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.modalProcedurePrice,
+                            { color: colors.textPrimary },
+                          ]}
+                        >
+                          ${item.price.toFixed(2)}
+                        </Text>
+                      </View>
+                    ))}
                 </View>
 
                 <View style={styles.modalForm}>
-                  <Text style={[styles.modalLabel, { color: theme.textPrimary }]}>
+                  <Text
+                    style={[styles.modalLabel, { color: theme.textPrimary }]}
+                  >
                     Date & Time
                   </Text>
                   {Platform.OS === "web" ? (
@@ -483,8 +610,8 @@ export default function PriceListScreen() {
                           border: `1px solid ${theme.borderSubtle}`,
                           borderRadius: "6px",
                           backgroundColor: colors.primaryWhite,
-                      fontFamily: WEB_DATE_INPUT_FONT,
-                      fontWeight: 500,
+                          fontFamily: WEB_DATE_INPUT_FONT,
+                          fontWeight: 500,
                           boxSizing: "border-box",
                           maxWidth: "100%",
                           color: theme.textPrimary,
@@ -506,7 +633,12 @@ export default function PriceListScreen() {
                         ]}
                         onPress={() => setShowDatePicker(!showDatePicker)}
                       >
-                        <Text style={[styles.dateTimeText, { color: theme.textPrimary }]}>
+                        <Text
+                          style={[
+                            styles.dateTimeText,
+                            { color: theme.textPrimary },
+                          ]}
+                        >
                           {selectedDate.toLocaleString()}
                         </Text>
                         <Text style={{ fontSize: 20 }}>📅</Text>
@@ -564,7 +696,9 @@ export default function PriceListScreen() {
                       ],
                     ]}
                     onPress={handleCreateAppointment}
-                    disabled={createAppointmentMutation.isPending || !newDateTime}
+                    disabled={
+                      createAppointmentMutation.isPending || !newDateTime
+                    }
                   >
                     <Text
                       style={[
@@ -721,12 +855,39 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 4,
   },
-  priceItemArrow: {
-    marginLeft: 12,
+  checkboxContainer: {
+    marginRight: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  arrowText: {
-    fontSize: 24,
-    color: colors.textPrimary,
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxCheck: {
+    color: colors.primaryWhite,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  bookButtonContainer: {
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  bookButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bookButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.primaryWhite,
   },
   modalOverlay: {
     flex: 1,
@@ -754,12 +915,23 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 24,
   },
+  modalProceduresList: {
+    marginBottom: 20,
+  },
+  modalProceduresLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
   modalProcedureInfo: {
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.greyscale200,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   modalProcedureTitle: {
     fontSize: 18,
@@ -834,4 +1006,3 @@ const styles = StyleSheet.create({
     color: colors.primaryWhite,
   },
 });
-

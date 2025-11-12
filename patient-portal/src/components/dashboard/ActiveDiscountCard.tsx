@@ -42,7 +42,7 @@ export function ActiveDiscountCard() {
       }
     };
     loadDiscounts();
-    
+
     // Listen for custom events (when discount is claimed)
     const handleClaimedOffersUpdated = (e: any) => {
       try {
@@ -59,21 +59,33 @@ export function ActiveDiscountCard() {
         loadDiscounts();
       }
     };
-    
+
     // Use custom event listener for cross-platform compatibility
     // Only add listener on web platform where window.addEventListener is available
-    if (Platform.OS === "web" && typeof window !== "undefined" && window.addEventListener) {
-      window.addEventListener("claimedOffersUpdated", handleClaimedOffersUpdated);
+    if (
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      window.addEventListener
+    ) {
+      window.addEventListener(
+        "claimedOffersUpdated",
+        handleClaimedOffersUpdated
+      );
       return () => {
         if (window.removeEventListener) {
-          window.removeEventListener("claimedOffersUpdated", handleClaimedOffersUpdated);
+          window.removeEventListener(
+            "claimedOffersUpdated",
+            handleClaimedOffersUpdated
+          );
         }
       };
     }
   }, []);
 
   // Show all claimed discounts
-  const activePromotions = promotions.filter((p) => claimedOffers.includes(p.id));
+  const activePromotions = promotions.filter((p) =>
+    claimedOffers.includes(p.id)
+  );
 
   if (activePromotions.length === 0) {
     return null;
@@ -102,31 +114,18 @@ export function ActiveDiscountCard() {
               <Text style={styles.icon}>🏷️</Text>
             </View>
             <View style={styles.textContainer}>
-              <Text
-                style={[styles.label, { color: theme.promoText }]}
-              >
+              <Text style={[styles.label, { color: theme.promoText }]}>
                 Active Discount
               </Text>
-              <Text
-                style={[styles.title, { color: theme.promoText }]}
-              >
+              <Text style={[styles.title, { color: theme.promoText }]}>
                 {promotion.title}
               </Text>
-              <Text
-                style={[styles.discount, { color: theme.promoText }]}
-              >
+              <Text style={[styles.discount, { color: theme.promoText }]}>
                 {promotion.discount}
               </Text>
             </View>
-            <View
-              style={[
-                styles.badge,
-                { backgroundColor: theme.brandSoft },
-              ]}
-            >
-              <Text
-                style={[styles.badgeText, { color: theme.brandSoftText }]}
-              >
+            <View style={[styles.badge, { backgroundColor: theme.brandSoft }]}>
+              <Text style={[styles.badgeText, { color: colors.primaryWhite }]}>
                 {promotion.category}
               </Text>
             </View>
@@ -201,4 +200,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-

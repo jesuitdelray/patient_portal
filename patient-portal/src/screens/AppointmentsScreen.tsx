@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { Header } from "../components/Header";
 import { useAppointments } from "../components/dashboard/AppointmentsContext";
 import { useBrandingTheme } from "../lib/useBrandingTheme";
@@ -23,6 +24,7 @@ type FilterKey = "upcoming" | "past";
 export default function AppointmentsScreen() {
   const { appointments, setAppointments } = useAppointments();
   const theme = useBrandingTheme();
+  const navigation = useNavigation<any>();
   const [filter, setFilter] = useState<FilterKey>("upcoming");
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(
@@ -120,37 +122,45 @@ export default function AppointmentsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.pageBg }]}>
       <Header title="Appointments" />
       <View style={styles.content}>
-        <View style={styles.filterContainer}>
-          {(
-            [
-              { key: "upcoming", label: "Upcoming" },
-              { key: "past", label: "Past" },
-            ] as Array<{ key: FilterKey; label: string }>
-          ).map((item) => {
-            const isActive = filter === item.key;
-            return (
-              <TouchableOpacity
-                key={item.key}
-                style={[
-                  styles.filterChip,
-                  isActive && {
-                    backgroundColor: colors.medicalBlue,
-                    borderColor: colors.medicalBlue,
-                  },
-                ]}
-                onPress={() => setFilter(item.key)}
-              >
-                <Text
+        <View style={styles.headerRow}>
+          <View style={styles.filterContainer}>
+            {(
+              [
+                { key: "upcoming", label: "Upcoming" },
+                { key: "past", label: "Past" },
+              ] as Array<{ key: FilterKey; label: string }>
+            ).map((item) => {
+              const isActive = filter === item.key;
+              return (
+                <TouchableOpacity
+                  key={item.key}
                   style={[
-                    styles.filterChipText,
-                    isActive && { color: colors.primaryWhite },
+                    styles.filterChip,
+                    isActive && {
+                      backgroundColor: colors.medicalBlue,
+                      borderColor: colors.medicalBlue,
+                    },
                   ]}
+                  onPress={() => setFilter(item.key)}
                 >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      isActive && { color: colors.primaryWhite },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity
+            style={[styles.bookButton, { backgroundColor: colors.medicalBlue }]}
+            onPress={() => navigation.navigate("PriceList")}
+          >
+            <Text style={styles.bookButtonText}>Book Appointment</Text>
+          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -218,9 +228,26 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 24,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
   filterContainer: {
     flexDirection: "row",
     gap: 12,
+    flex: 1,
+  },
+  bookButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  bookButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.primaryWhite,
   },
   filterChip: {
     paddingHorizontal: 16,
