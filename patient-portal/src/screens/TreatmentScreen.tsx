@@ -4,6 +4,8 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { API_BASE, resolvePatientId } from "../lib/api";
@@ -17,6 +19,14 @@ type TreatmentPlan = {
   id: string;
   title: string;
   status: string;
+  steps?: {
+    description?: string;
+    phases?: Array<{
+      title: string;
+      description?: string;
+      weeks?: string;
+    }>;
+  };
   procedures: Array<{
     id: string;
     title: string;
@@ -24,6 +34,11 @@ type TreatmentPlan = {
     scheduledDate?: string;
     completedDate?: string;
     status: string;
+    phase?: number;
+    tooth?: string;
+    price?: number;
+    discount?: number;
+    quantity?: number;
     appointment?: {
       id: string;
       title: string;
@@ -37,12 +52,222 @@ type TreatmentPlan = {
   }>;
 };
 
+const mockTreatmentPlans: TreatmentPlan[] = [
+  {
+    id: "1",
+    title: "Mock Treatments Plan Status",
+    status: "Test Status",
+    steps: {
+      description:
+        "Description bla bla bla.... Description bla bla bla... Description bla bla bla... Description bla bla bla... Description bla bla bla... Description bla bla bla...",
+      phases: [
+        {
+          title: "First phase",
+          description: "Second phase description",
+          weeks: "Phases Weeks",
+        },
+        {
+          title: "Second phase",
+          description: "Second phase description",
+          weeks: "Phases Weeks",
+        },
+        {
+          title: "Third phase",
+          description: "Second phase description",
+          weeks: "Phases Weeks",
+        },
+      ],
+    },
+    procedures: [
+      {
+        id: "1",
+        title: "Procedure Title First",
+        description: "Procedure Description",
+        scheduledDate: "12.06.2024",
+        completedDate: "18.08.2025",
+        status: "Done",
+        phase: 1,
+        tooth: "11",
+        price: 100,
+        discount: 10,
+        quantity: 1,
+        appointment: {
+          id: "1",
+          title: "first appointment",
+          datetime: "12.07.2026",
+        },
+        invoice: {
+          id: "1",
+          amount: 5,
+          status: "In progress",
+        },
+      },
+      {
+        id: "2",
+        title: "Procedure Title Second",
+        description: "Procedure Description",
+        scheduledDate: "12.06.2024",
+        completedDate: "18.08.2025",
+        status: "Done",
+        phase: 2,
+        tooth: "12",
+        price: 200,
+        discount: 50,
+        quantity: 2,
+        appointment: {
+          id: "2",
+          title: "first appointment",
+          datetime: "12.07.2026",
+        },
+        invoice: {
+          id: "2",
+          amount: 5,
+          status: "In progress",
+        },
+      },
+      {
+        id: "3",
+        title: "Procedure Title Third",
+        description: "Procedure Description",
+        scheduledDate: "12.06.2024",
+        completedDate: "18.08.2025",
+        status: "Done",
+        phase: 3,
+        tooth: "13",
+        price: 300,
+        discount: 100,
+        quantity: 2,
+        appointment: {
+          id: "1",
+          title: "first appointment",
+          datetime: "12.07.2026",
+        },
+        invoice: {
+          id: "1",
+          amount: 5,
+          status: "In progress",
+        },
+      },
+      {
+        id: "4",
+        title: "Procedure Title Third",
+        description: "Procedure Description",
+        scheduledDate: "12.06.2024",
+        completedDate: "18.08.2025",
+        status: "Done",
+        phase: 2,
+        tooth: "13",
+        price: 300,
+        discount: 100,
+        quantity: 2,
+        appointment: {
+          id: "1",
+          title: "first appointment",
+          datetime: "12.07.2026",
+        },
+        invoice: {
+          id: "1",
+          amount: 5,
+          status: "In progress",
+        },
+      },
+      {
+        id: "5",
+        title: "Procedure Title Third",
+        description: "Procedure Description",
+        scheduledDate: "12.06.2024",
+        completedDate: "18.08.2025",
+        status: "Done",
+        phase: 2,
+        tooth: "13",
+        price: 300,
+        discount: 40,
+        quantity: 2,
+        appointment: {
+          id: "1",
+          title: "first appointment",
+          datetime: "12.07.2026",
+        },
+        invoice: {
+          id: "1",
+          amount: 5,
+          status: "In progress",
+        },
+      },
+      {
+        id: "6",
+        title: "Procedure Title Third",
+        description: "Procedure Description",
+        scheduledDate: "12.06.2024",
+        completedDate: "18.08.2025",
+        status: "Done",
+        phase: 3,
+        tooth: "13",
+        price: 300,
+        discount: 20,
+        quantity: 2,
+        appointment: {
+          id: "1",
+          title: "first appointment",
+          datetime: "12.07.2026",
+        },
+        invoice: {
+          id: "1",
+          amount: 5,
+          status: "In progress",
+        },
+      },
+      {
+        id: "7",
+        title: "Procedure Title Third",
+        description: "Procedure Description",
+        scheduledDate: "12.06.2024",
+        completedDate: "18.08.2025",
+        status: "Done",
+        phase: 3,
+        tooth: "13",
+        price: 100,
+        discount: 0,
+        quantity: 2,
+        appointment: {
+          id: "1",
+          title: "first appointment",
+          datetime: "12.07.2026",
+        },
+        invoice: {
+          id: "1",
+          amount: 5,
+          status: "In progress",
+        },
+      },
+    ],
+  },
+];
+
+type Doctor = {
+  id: string;
+  name: string;
+  email: string;
+  picture?: string;
+};
+
+type Patient = {
+  id: string;
+  name: string;
+  email: string;
+  picture?: string;
+};
+
 export default function TreatmentScreen() {
   const { data: authData } = useAuth();
   const patientId = authData?.role === "patient" ? authData.userId : null;
-  const [plans, setPlans] = useState<TreatmentPlan[]>([]);
+  const [treatPlans, setPlans] = useState<TreatmentPlan[]>(mockTreatmentPlans);
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const theme = useBrandingTheme();
+
+  const plans = mockTreatmentPlans;
 
   useEffect(() => {
     (async () => {
@@ -57,6 +282,8 @@ export default function TreatmentScreen() {
         });
         const data = await res.json();
         setPlans(data.plans || []);
+        setDoctor(data.doctor || null);
+        setPatient(data.patient || null);
       } catch (error) {
         console.error("Failed to fetch treatments:", error);
       } finally {
@@ -71,6 +298,29 @@ export default function TreatmentScreen() {
       (p) => p.status === "completed"
     ).length;
     return Math.round((completed / plan.procedures.length) * 100);
+  };
+
+  const groupProceduresByPhase = (procedures: TreatmentPlan["procedures"]) => {
+    const grouped: Record<number, typeof procedures> = {};
+
+    procedures.forEach((proc) => {
+      const phase = proc.phase || 0;
+      if (!grouped[phase]) {
+        grouped[phase] = [];
+      }
+      grouped[phase].push(proc);
+    });
+    return grouped;
+  };
+
+  const calculatePhaseTotal = (procedures: TreatmentPlan["procedures"]) => {
+    return procedures.reduce((sum, proc) => {
+      const price = proc.price || proc.invoice?.amount || 0;
+      const discount = proc.discount || 0;
+      const qty = proc.quantity || 1;
+      const total = price * (1 - discount / 100) * qty;
+      return sum + total;
+    }, 0);
   };
 
   if (loading) {
@@ -90,7 +340,6 @@ export default function TreatmentScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
       >
-
         <View style={styles.treatmentsList}>
           {plans.length === 0 ? (
             <View style={styles.emptyState}>
@@ -102,142 +351,275 @@ export default function TreatmentScreen() {
           ) : (
             plans.map((plan) => {
               const progress = calculateProgress(plan);
-              const nextProcedure = plan.procedures.find(
-                (p) => p.status !== "completed"
-              );
+              const groupedProcedures = groupProceduresByPhase(plan.procedures);
+              const phases = plan.steps?.phases || [];
+              const description = plan.steps?.description || "";
+
+              console.log(phases, "phases");
+
               return (
                 <View key={plan.id} style={styles.treatmentCard}>
-                  <View style={styles.treatmentHeader}>
-                    <View style={styles.treatmentInfo}>
-                      <Text style={styles.treatmentName}>{plan.title}</Text>
-                      <Text style={styles.treatmentDescription}>
-                        {plan.procedures.length} procedure
-                        {plan.procedures.length !== 1 ? "s" : ""}
-                      </Text>
+                  {/* Header with title and status */}
+                  <View style={styles.planHeader}>
+                    <View style={styles.planHeaderLeft}>
+                      <Text style={styles.planTitle}>Treatment plan</Text>
+                      <View style={styles.statusButton}>
+                        <Text style={styles.statusButtonText}>
+                          {plan.status.charAt(0).toUpperCase() +
+                            plan.status.slice(1)}
+                        </Text>
+                        {/* <Text style={styles.statusArrow}>▼</Text> */}
+                      </View>
                     </View>
-                    <View style={styles.progressInfo}>
-                      <Text style={{ fontSize: 18 }}>
-                        {plan.status === "completed" ? "✅" : "⏰"}
-                      </Text>
-                      <Text style={styles.progressText}>{progress}%</Text>
-                    </View>
+                    {/* <View style={styles.planHeaderRight}>
+                      <TouchableOpacity style={styles.iconButton}>
+                        <Text style={styles.iconText}>✏️</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.iconButton}>
+                        <Text style={styles.iconText}>✕</Text>
+                      </TouchableOpacity>
+                    </View> */}
                   </View>
 
-                  <View style={styles.progressBarContainer}>
-                    <View
-                      style={[
-                        styles.progressBar,
-                        {
-                          width: `${progress}%`,
-                          backgroundColor: colors.medicalGreen,
-                        },
-                        plan.status === "completed" && {
-                          backgroundColor: colors.medicalGreen,
-                        },
-                      ]}
-                    />
-                  </View>
-
-                  <View style={styles.treatmentDetails}>
-                    {nextProcedure && (
-                      <View style={styles.detailRow}>
-                        <Text>➡️</Text>
-                        <Text style={styles.detailText}>
-                          Next: {nextProcedure.title}
-                          {nextProcedure.scheduledDate
-                            ? ` (${new Date(
-                                nextProcedure.scheduledDate
-                              ).toLocaleDateString()})`
-                            : ""}
-                        </Text>
-                      </View>
-                    )}
-                    {plan.procedures.length > 0 && (
-                      <View style={styles.detailRow}>
-                        <Text>📋</Text>
-                        <Text style={styles.detailText}>
-                          {
-                            plan.procedures.filter(
-                              (p) => p.status === "completed"
-                            ).length
-                          }{" "}
-                          of {plan.procedures.length} completed
-                        </Text>
-                      </View>
-                    )}
-                    {plan.procedures.some((p) => p.appointment) && (
-                      <View style={styles.detailRow}>
-                        <Text>📅</Text>
-                        <Text style={styles.detailText}>
-                          Linked to appointments
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {plan.procedures.length > 0 && (
-                    <View style={styles.proceduresList}>
-                      <View style={styles.phaseHeader}>
-                        <Text style={styles.phaseTitle}>{plan.title}</Text>
-                      </View>
-                      <View style={styles.tableContainer}>
-                        <View style={styles.tableHeader}>
-                          <View style={[styles.tableHeaderCell, { width: 30 }]} />
-                          <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Tooth</Text>
-                          <Text style={[styles.tableHeaderText, { flex: 2.5 }]}>Procedure</Text>
-                          <Text style={[styles.tableHeaderText, { flex: 1 }]}>Price</Text>
-                          <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Discount</Text>
-                          <Text style={[styles.tableHeaderText, { flex: 0.6 }]}>Qty</Text>
-                          <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Total</Text>
+                  {/* Doctor and Patient Info */}
+                  <View style={styles.doctorPatientInfo}>
+                    <View style={styles.doctorPatientRow}>
+                      <Text style={styles.doctorPatientLabel}>Doctor:</Text>
+                      {doctor?.picture ? (
+                        <Image
+                          source={{ uri: doctor.picture }}
+                          style={styles.avatar}
+                        />
+                      ) : (
+                        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                          <Text style={styles.avatarText}>
+                            {doctor?.name?.charAt(0) || "D"}
+                          </Text>
                         </View>
-                        {plan.procedures.map((proc) => {
-                          const price = proc.invoice?.amount || 0;
-                          const discount = 0; // TODO: Add discount field if needed
-                          const qty = 1;
-                          const total = price * (1 - discount / 100) * qty;
-                          const tooth = proc.description?.match(/\d+/)?.[0] || "-";
-                          
+                      )}
+                      <Text style={styles.doctorPatientName}>
+                        {doctor?.name || "Dr. Smith"}
+                      </Text>
+                    </View>
+                    <View style={styles.doctorPatientRow}>
+                      <Text style={styles.doctorPatientLabel}>Patient:</Text>
+                      {patient?.picture ? (
+                        <Image
+                          source={{ uri: patient.picture }}
+                          style={styles.avatar}
+                        />
+                      ) : (
+                        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                          <Text style={styles.avatarText}>
+                            {patient?.name?.charAt(0) || "P"}
+                          </Text>
+                        </View>
+                      )}
+                      <Text style={styles.doctorPatientName}>
+                        {patient?.name || "Patient"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Treatment Description */}
+                  {description && (
+                    <View style={styles.descriptionSection}>
+                      <Text style={styles.descriptionTitle}>{plan.title}</Text>
+                      <Text style={styles.descriptionText}>{description}</Text>
+                    </View>
+                  )}
+
+                  {/* Phases */}
+                  {Object.keys(groupedProcedures).length > 0 && (
+                    <View style={styles.phasesContainer}>
+                      {Object.keys(groupedProcedures)
+                        .map(Number)
+                        .sort((a, b) => a - b)
+                        .map((phaseNum) => {
+                          const phaseProcedures = groupedProcedures[phaseNum];
+                          const phaseInfo = phases[phaseNum - 1] || {
+                            title: `Phase ${phaseNum}`,
+                          };
+                          const phaseTotal =
+                            calculatePhaseTotal(phaseProcedures);
+
+                          console.log(phaseInfo, "phaseInfo");
+                          console.log(groupedProcedures, "groupedProcedures");
+
+                          console.log(
+                            Object.keys(groupedProcedures).map(Number)
+                          );
+
+                          console.log(phaseTotal, "phaseTotal");
+
                           return (
-                            <View key={proc.id} style={styles.tableRow}>
-                              <View style={[styles.tableCell, { width: 30, alignItems: "center" }]}>
-                                <View style={styles.checkbox}>
-                                  {proc.status === "completed" && (
-                                    <Text style={styles.checkmark}>✓</Text>
-                                  )}
+                            <View key={phaseNum} style={styles.phaseSection}>
+                              <View style={styles.phaseHeader}>
+                                <Text style={styles.phaseTitle}>
+                                  {phaseInfo.title}
+                                  {phaseInfo.weeks
+                                    ? ` (${phaseInfo.weeks})`
+                                    : ""}
+                                </Text>
+                              </View>
+                              <View style={styles.tableContainer}>
+                                <View style={styles.tableHeader}>
+                                  <View
+                                    style={[
+                                      styles.tableHeaderCell,
+                                      { width: 30 },
+                                    ]}
+                                  />
+                                  <Text
+                                    style={[
+                                      styles.tableHeaderText,
+                                      { flex: 0.8 },
+                                    ]}
+                                  >
+                                    Tooth
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.tableHeaderText,
+                                      { flex: 2.5 },
+                                    ]}
+                                  >
+                                    Procedure
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.tableHeaderText,
+                                      { flex: 1 },
+                                    ]}
+                                  >
+                                    Price
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.tableHeaderText,
+                                      { flex: 0.8 },
+                                    ]}
+                                  >
+                                    Discount
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.tableHeaderText,
+                                      { flex: 0.6 },
+                                    ]}
+                                  >
+                                    Qty
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.tableHeaderText,
+                                      { flex: 1.2 },
+                                    ]}
+                                  >
+                                    Total
+                                  </Text>
+                                </View>
+                                {phaseProcedures.map((proc) => {
+                                  const price =
+                                    proc.price || proc.invoice?.amount || 0;
+                                  const discount = proc.discount || 0;
+                                  const qty = proc.quantity || 1;
+                                  const total =
+                                    price * (1 - discount / 100) * qty;
+                                  const tooth =
+                                    proc.tooth ||
+                                    proc.description?.match(/\d+/)?.[0] ||
+                                    "-";
+
+                                  return (
+                                    <View key={proc.id} style={styles.tableRow}>
+                                      <View
+                                        style={[
+                                          styles.tableCell,
+                                          { width: 30, alignItems: "center" },
+                                        ]}
+                                      >
+                                        <View
+                                          style={[
+                                            styles.checkbox,
+                                            proc.status === "completed" &&
+                                              styles.checkboxCompleted,
+                                          ]}
+                                        >
+                                          {proc.status === "completed" && (
+                                            <Text style={styles.checkmark}>
+                                              ✓
+                                            </Text>
+                                          )}
+                                        </View>
+                                      </View>
+                                      <Text
+                                        style={[
+                                          styles.tableCell,
+                                          styles.tableCellText,
+                                          { flex: 0.8 },
+                                        ]}
+                                      >
+                                        {tooth}
+                                      </Text>
+                                      <Text
+                                        style={[
+                                          styles.tableCell,
+                                          styles.tableCellText,
+                                          { flex: 2.5 },
+                                        ]}
+                                      >
+                                        {proc.title}
+                                      </Text>
+                                      <Text
+                                        style={[
+                                          styles.tableCell,
+                                          styles.tableCellText,
+                                          { flex: 1 },
+                                        ]}
+                                      >
+                                        ${price.toFixed(2)}
+                                      </Text>
+                                      <Text
+                                        style={[
+                                          styles.tableCell,
+                                          styles.tableCellText,
+                                          { flex: 0.8 },
+                                        ]}
+                                      >
+                                        {discount}%
+                                      </Text>
+                                      <Text
+                                        style={[
+                                          styles.tableCell,
+                                          styles.tableCellText,
+                                          { flex: 0.6 },
+                                        ]}
+                                      >
+                                        {qty}
+                                      </Text>
+                                      <Text
+                                        style={[
+                                          styles.tableCell,
+                                          styles.tableCellText,
+                                          { flex: 1.2 },
+                                        ]}
+                                      >
+                                        ${total.toFixed(2)}
+                                      </Text>
+                                    </View>
+                                  );
+                                })}
+                                <View style={styles.tableFooter}>
+                                  <Text style={styles.footerText}>
+                                    Phase {phaseNum} total ($): $
+                                    {phaseTotal.toFixed(2)}
+                                  </Text>
                                 </View>
                               </View>
-                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 0.8 }]}>
-                                {tooth}
-                              </Text>
-                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 2.5 }]}>
-                                {proc.title}
-                              </Text>
-                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 1 }]}>
-                                ${price.toFixed(2)}
-                              </Text>
-                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 0.8 }]}>
-                                {discount}%
-                              </Text>
-                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 0.6 }]}>
-                                {qty}
-                              </Text>
-                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 1.2 }]}>
-                                ${total.toFixed(2)}
-                              </Text>
                             </View>
                           );
                         })}
-                        <View style={styles.tableFooter}>
-                          <Text style={styles.footerText}>
-                            {plan.title} total ($): ${plan.procedures.reduce((sum, proc) => {
-                              const price = proc.invoice?.amount || 0;
-                              const discount = 0;
-                              const qty = 1;
-                              return sum + (price * (1 - discount / 100) * qty);
-                            }, 0).toFixed(2)}
-                          </Text>
-                        </View>
-                      </View>
                     </View>
                   )}
                 </View>
@@ -276,15 +658,115 @@ const styles = StyleSheet.create({
     color: "#999",
     textAlign: "center",
   },
-  proceduresList: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E5E5",
+  planHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  planHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  planHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  planTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  statusButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.greyscale100,
+    borderRadius: 6,
+  },
+  statusButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.textPrimary,
+  },
+  statusArrow: {
+    fontSize: 10,
+    color: colors.textSecondary,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconText: {
+    fontSize: 18,
+  },
+  doctorPatientInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.greyscale200,
+  },
+  doctorPatientRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  doctorPatientLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.textSecondary,
+  },
+  doctorPatientName: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.textPrimary,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  avatarPlaceholder: {
+    backgroundColor: colors.greyscale300,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  descriptionSection: {
+    marginBottom: 24,
+  },
+  descriptionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    marginBottom: 12,
+  },
+  descriptionText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.textSecondary,
+  },
+  phasesContainer: {
+    // gap: 24,
+  },
+  phaseSection: {
+    marginBottom: 16,
   },
   phaseHeader: {
-    backgroundColor: colors.greyscale200,
-    paddingVertical: 8,
+    backgroundColor: "#F0EBF3",
+    paddingVertical: 10,
     paddingHorizontal: 12,
     marginBottom: 8,
     borderRadius: 4,
@@ -346,9 +828,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  checkboxCompleted: {
+    backgroundColor: colors.medicalGreen,
+    borderColor: colors.medicalGreen,
+  },
   checkmark: {
     fontSize: 12,
-    color: colors.medicalGreen,
+    color: colors.primaryWhite,
     fontWeight: "bold",
   },
   tableFooter: {

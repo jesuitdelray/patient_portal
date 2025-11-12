@@ -54,4 +54,3 @@ const styles = StyleSheet.create({
     // Styles will be applied via size prop
   },
 });
-

@@ -159,7 +159,7 @@ export default function AppointmentsScreen() {
             style={[styles.bookButton, { backgroundColor: colors.medicalBlue }]}
             onPress={() => navigation.navigate("PriceList")}
           >
-            <Text style={styles.bookButtonText}>Book Appointment</Text>
+            <Text style={styles.bookButtonText}>New</Text>
           </TouchableOpacity>
         </View>
 
@@ -243,6 +243,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
+    backgroundColor: colors.primaryWhite,
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
   },
   bookButtonText: {
     fontSize: 14,

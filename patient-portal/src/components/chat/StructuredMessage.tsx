@@ -67,9 +67,7 @@ export function StructuredMessage({ content, onAction }: Props) {
     "view_promotions",
   ];
   const shouldShowTitle =
-    title &&
-    title.trim() !== "" &&
-    !actionsWithButtons.includes(action);
+    title && title.trim() !== "" && !actionsWithButtons.includes(action);
 
   return (
     <View style={styles.container}>
@@ -242,7 +240,8 @@ function renderDataByAction(
               <View key={item.id || index} style={styles.priceListItem}>
                 <Text style={styles.priceListTitle}>{item.title}</Text>
                 <Text style={styles.priceListLine}>
-                  <Text style={styles.infoLabel}>Price: </Text>${price.toFixed(2)}
+                  <Text style={styles.infoLabel}>Price: </Text>$
+                  {price.toFixed(2)}
                 </Text>
                 {item.duration ? (
                   <Text style={styles.priceListLine}>
@@ -347,7 +346,10 @@ function renderActionButton(
     {
       label: string;
       variant?: "primary" | "secondary";
-      onPress?: (data: any, handler?: (action: string, data: any) => void) => void;
+      onPress?: (
+        data: any,
+        handler?: (action: string, data: any) => void
+      ) => void;
     }
   > = {
     book_appointment: { label: "Book Appointment", variant: "primary" },
@@ -556,7 +558,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   actionButtonPrimary: {
-    backgroundColor: colors.medicalBlue,
+    backgroundColor: colors.primaryWhite,
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
   },
   actionButtonSecondary: {
     backgroundColor: colors.greyscale200,
@@ -568,7 +572,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   actionButtonTextPrimary: {
-    color: colors.primaryWhite,
+    color: colors.textPrimary,
   },
   actionButtonTextSecondary: {
     color: colors.textPrimary,

@@ -11,6 +11,8 @@ import {
   Linking,
   Alert,
   Modal,
+  Image,
+  ImageSourcePropType,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -37,6 +39,47 @@ type Message = {
   patientId?: string;
 };
 
+const mockMessages: Message[] = [
+  {
+    id: "1",
+    content: "lol)))000",
+    sender: "doctor",
+    createdAt: "10.12.2019",
+    manual: true,
+    isManual: true,
+    patientId: "12",
+  },
+  {
+    id: "2",
+    content:
+      "lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000lol)))000",
+    sender: "doctor",
+    createdAt: "10.12.2019",
+    manual: true,
+    isManual: true,
+    patientId: "12",
+  },
+  {
+    id: "3",
+    content:
+      "lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 lol)))000lol)))000 ",
+    sender: "doctor",
+    createdAt: "10.12.2019",
+    manual: true,
+    isManual: true,
+    patientId: "12",
+  },
+  {
+    id: "20",
+    content: "lol)))000",
+    sender: "patient",
+    createdAt: "11.12.2019",
+    manual: true,
+    isManual: true,
+    patientId: "12",
+  },
+];
+
 type AIAction = {
   action: string;
   data: any;
@@ -53,7 +96,7 @@ export default function ChatScreen() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   // Socket connection is handled by connectSocket, no need to track state
   const [lastAction, setLastAction] = useState<AIAction | null>(null);
@@ -68,6 +111,8 @@ export default function ChatScreen() {
   const [bookingSlot, setBookingSlot] = useState<any>(null);
   const [isSendingFrontDesk, setIsSendingFrontDesk] = useState(false);
   const [isFrontDeskActive, setIsFrontDeskActive] = useState(false);
+
+  const defaultAvatar: ImageSourcePropType = require("./avatar.jpg");
 
   const messagesEndRef = useRef<ScrollView>(null);
   const initialScrollHandled = useRef(false);
@@ -1033,6 +1078,8 @@ export default function ChatScreen() {
     );
   }
 
+  // const avatar: ImageSourcePropType = require("@/assets/avatar.jpg");
+
   return (
     <SafeAreaView style={styles.container}>
       <Header title="Chat" />
@@ -1091,6 +1138,19 @@ export default function ChatScreen() {
                           : styles.messageDoctor,
                       ]}
                     >
+                      {!isPatient && isManual && (
+                        <Image
+                          defaultSource={defaultAvatar as any}
+                          style={{
+                            width: 52,
+                            height: 52,
+                            alignSelf: "flex-end",
+                            marginRight: 8,
+                            borderRadius: 50,
+                          }}
+                        />
+                      )}
+
                       <View
                         style={[
                           styles.messageBubble,

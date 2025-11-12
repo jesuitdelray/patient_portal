@@ -138,7 +138,7 @@ export function ActiveDiscountCard() {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    // marginBottom: 16,
     gap: 12,
   },
   card: {

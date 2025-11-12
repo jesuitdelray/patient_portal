@@ -40,14 +40,31 @@ export function usePatient(patientId: string) {
       const res = await fetch(`${API_BASE}/patients/${patientId}`, {
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to fetch patient");
-      return res.json();
+      if (!res.ok) {
+        if (res.status === 404) {
+          const errorData = await res.json().catch(() => ({}));
+          // Return null with patient field set to null for 404
+          return { patient: null, doctor: null, plans: [], appointments: [], messages: [] };
+        }
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch patient");
+      }
+      const data = await res.json();
+      // Ensure patient field exists, even if null
+      return data.patient ? data : { ...data, patient: null };
     },
     enabled: !!patientId,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 404 errors
+      if (error?.message?.includes("404") || error?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 }
 

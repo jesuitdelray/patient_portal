@@ -309,7 +309,7 @@ export default function LoginScreen() {
               </View>
             </TouchableOpacity>
 
-            <View style={styles.section}>
+            {/* <View style={styles.section}>
               {Platform.OS === "ios" && appleAuthAvailable ? (
                 <AppleAuthentication.AppleAuthenticationButton
                   buttonType={
@@ -348,7 +348,7 @@ export default function LoginScreen() {
                   </View>
                 </TouchableOpacity>
               )}
-            </View>
+            </View> */}
 
             <View style={styles.orDivider}>
               <View style={styles.orLine} />
@@ -437,9 +437,9 @@ export default function LoginScreen() {
               </Text>
             </View>
           </View>
-          <View style={styles.debugContainer}>
+          {/* <View style={styles.debugContainer}>
             <DebugLogs />
-          </View>
+          </View> */}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   header: {
-    marginBottom: 24,
+    // marginBottom: 24,
     alignItems: "center",
   },
   title: {
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   footer: {
-    marginTop: 32,
+    // marginTop: 32,
     paddingHorizontal: 24,
   },
   debugContainer: {
@@ -566,8 +566,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     maxWidth: 320,
-    marginTop: 32,
-    marginBottom: 12,
+    // marginTop: 32,
+    // marginBottom: 12,
     gap: 8,
   },
   orLine: {

@@ -88,7 +88,9 @@ function AuthChecker({
 
     // If we have an error (401), redirect to login immediately
     if (isError && !hasRedirected) {
-      console.log("[AuthChecker] Error detected, setting authenticated to false");
+      console.log(
+        "[AuthChecker] Error detected, setting authenticated to false"
+      );
       setIsAuthenticated(false);
       setHasRedirected(true);
       // Clear tokens
@@ -109,7 +111,9 @@ function AuthChecker({
     }
 
     if (error || !authData) {
-      console.log("[AuthChecker] No auth data or error, setting authenticated to false");
+      console.log(
+        "[AuthChecker] No auth data or error, setting authenticated to false"
+      );
       setIsAuthenticated(false);
       // Clear tokens on error
       try {
@@ -121,7 +125,9 @@ function AuthChecker({
 
     // Only patients can access patient portal
     if (authData.role === "patient") {
-      console.log("[AuthChecker] Patient authenticated, setting authenticated to true");
+      console.log(
+        "[AuthChecker] Patient authenticated, setting authenticated to true"
+      );
       setIsAuthenticated(true);
       setHasRedirected(false); // Reset redirect flag on success
     } else {
@@ -233,75 +239,75 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
       <View style={styles.appContainer}>
         {isDesktop && <Sidebar />}
         <View style={{ flex: 1 }}>
-        <Stack.Navigator
-          key={isAuthenticated ? "authenticated" : "login"}
-          initialRouteName="Dashboard"
-          screenOptions={{
-            headerShown: false,
-          }}
-          screenListeners={{
-            state: (e: any) => {
-              // Update URL when navigation state changes - only on web
-              if (
-                typeof window !== "undefined" &&
-                window.location &&
-                window.history
-              ) {
-                try {
-                  const state = e.data?.state;
-                  console.log("[App] Navigation state changed:", state);
-                  if (state) {
-                    const route = state.routes[state.index];
-                    const routeName =
-                      typeof route?.name === "string" && route.name.length > 0
-                        ? route.name
-                        : null;
-                    console.log("[App] Current route:", routeName);
+          <Stack.Navigator
+            key={isAuthenticated ? "authenticated" : "login"}
+            initialRouteName="Dashboard"
+            screenOptions={{
+              headerShown: false,
+            }}
+            screenListeners={{
+              state: (e: any) => {
+                // Update URL when navigation state changes - only on web
+                if (
+                  typeof window !== "undefined" &&
+                  window.location &&
+                  window.history
+                ) {
+                  try {
+                    const state = e.data?.state;
+                    console.log("[App] Navigation state changed:", state);
+                    if (state) {
+                      const route = state.routes[state.index];
+                      const routeName =
+                        typeof route?.name === "string" && route.name.length > 0
+                          ? route.name
+                          : null;
+                      console.log("[App] Current route:", routeName);
 
-                    const routeMap: Record<string, string> = {
-                      Dashboard: "/dashboard",
-                      Profile: "/profile",
-                      Promotions: "/promotions",
-                      Treatment: "/treatment",
-                      PriceList: "/price-list",
-                      Invoices: "/invoices",
-                      Chat: "/chat",
-                    };
-                    const path = routeName ? routeMap[routeName] : undefined;
+                      const routeMap: Record<string, string> = {
+                        Dashboard: "/dashboard",
+                        Profile: "/profile",
+                        Promotions: "/promotions",
+                        Treatment: "/treatment",
+                        PriceList: "/price-list",
+                        Invoices: "/invoices",
+                        Chat: "/chat",
+                      };
+                      const path = routeName ? routeMap[routeName] : undefined;
 
-                    if (window.history && window.history.replaceState) {
-                      window.history.replaceState(
-                        null,
-                        "",
-                        path || "/dashboard"
-                      );
+                      if (window.history && window.history.replaceState) {
+                        window.history.replaceState(
+                          null,
+                          "",
+                          path || "/dashboard"
+                        );
+                      }
+
+                      if (typeof document !== "undefined") {
+                        const fallbackTitle = "Patient Portal";
+                        const newTitle =
+                          routeName && routeName !== "undefined"
+                            ? routeName
+                            : fallbackTitle;
+                        document.title = newTitle;
+                      }
                     }
-
-                    if (typeof document !== "undefined") {
-                      const fallbackTitle = "Patient Portal";
-                      const newTitle =
-                        routeName && routeName !== "undefined"
-                          ? routeName
-                          : fallbackTitle;
-                      document.title = newTitle;
-                    }
+                  } catch (e) {
+                    console.error("[App] Error updating URL/title:", e);
                   }
-                } catch (e) {
-                  console.error("[App] Error updating URL/title:", e);
                 }
-              }
-            },
-          }}
-        >
-          <Stack.Screen name="Dashboard" component={DashboardScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="Promotions" component={PromotionsScreen} />
-          <Stack.Screen name="Treatment" component={TreatmentScreen} />
-          <Stack.Screen name="Appointments" component={AppointmentsScreen} />
-          <Stack.Screen name="PriceList" component={PriceListScreen} />
-          <Stack.Screen name="Invoices" component={InvoicesScreen} />
-          <Stack.Screen name="Chat" component={ChatScreen} />
-        </Stack.Navigator>
+              },
+            }}
+          >
+            <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="Promotions" component={PromotionsScreen} />
+            <Stack.Screen name="Treatment" component={TreatmentScreen} />
+            <Stack.Screen name="Appointments" component={AppointmentsScreen} />
+            <Stack.Screen name="PriceList" component={PriceListScreen} />
+            <Stack.Screen name="Invoices" component={InvoicesScreen} />
+            <Stack.Screen name="Chat" component={ChatScreen} />
+          </Stack.Navigator>
           {!isDesktop && <BottomNavigation />}
         </View>
       </View>
@@ -312,7 +318,12 @@ function MainNavigator({ isAuthenticated }: { isAuthenticated: boolean }) {
 export default function App() {
   // OAuth callback - handle token from URL if cross-domain
   useEffect(() => {
-    if (typeof window === "undefined" || !window.location || !window.location.search) return;
+    if (
+      typeof window === "undefined" ||
+      !window.location ||
+      !window.location.search
+    )
+      return;
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get("_auth_token");
 
@@ -367,7 +378,7 @@ export default function App() {
             </AuthChecker>
           </NavigationContainer>
           <StatusBar style="auto" />
-          {Platform.OS === "web" && <DebugLogs />}
+          {/* {Platform.OS === "web" && <DebugLogs />} */}
           <Toast
             position="top"
             config={{
@@ -412,9 +423,18 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
   // Log when authentication state changes
   // Navigation will happen automatically via MainNavigator key prop
   useEffect(() => {
-    console.log("[AppContent] Auth state changed - isAuthenticated:", isAuthenticated, "authData role:", authData?.role, "authData exists:", !!authData);
+    console.log(
+      "[AppContent] Auth state changed - isAuthenticated:",
+      isAuthenticated,
+      "authData role:",
+      authData?.role,
+      "authData exists:",
+      !!authData
+    );
     if (isAuthenticated && authData?.role === "patient") {
-      console.log("[AppContent] User authenticated - MainNavigator will automatically show Dashboard");
+      console.log(
+        "[AppContent] User authenticated - MainNavigator will automatically show Dashboard"
+      );
     }
   }, [isAuthenticated, authData]);
 
@@ -445,15 +465,22 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
           const token =
             urlObj.searchParams.get("token") ||
             urlObj.searchParams.get("_auth_token");
-          
-          console.log("[App] Token extracted from deep link:", token ? `present (length: ${token.length})` : "missing");
+
+          console.log(
+            "[App] Token extracted from deep link:",
+            token ? `present (length: ${token.length})` : "missing"
+          );
 
           if (token) {
             console.log("[App] Deep link auth token received");
             // Save token
             try {
               storageSync.setItem("auth_token", token);
-              if (Platform.OS === "web" && typeof window !== "undefined" && window.sessionStorage) {
+              if (
+                Platform.OS === "web" &&
+                typeof window !== "undefined" &&
+                window.sessionStorage
+              ) {
                 window.sessionStorage.setItem("auth_token_temp", token);
               } else {
                 storageSync.setItem("auth_token_temp", token);
@@ -465,13 +492,21 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
             // Invalidate and immediately refetch auth query to get user data
             console.log("[App] Invalidating auth queries");
             queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-            
+
             console.log("[App] Refetching auth data from deep link");
-            queryClient.refetchQueries({ queryKey: ["auth", "me"] }).then(() => {
-              console.log("[App] Auth data refetched from deep link - AuthChecker will handle navigation");
-            }).catch((err) => {
-              console.error("[App] Failed to refetch auth from deep link:", err);
-            });
+            queryClient
+              .refetchQueries({ queryKey: ["auth", "me"] })
+              .then(() => {
+                console.log(
+                  "[App] Auth data refetched from deep link - AuthChecker will handle navigation"
+                );
+              })
+              .catch((err) => {
+                console.error(
+                  "[App] Failed to refetch auth from deep link:",
+                  err
+                );
+              });
 
             // Navigation will happen automatically via the isAuthenticated useEffect above
             console.log(
@@ -539,7 +574,7 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
             } catch (e) {
               // Not JSON, use content as-is
             }
-            
+
             void showNotification({
               title: "New message",
               body: notificationBody,
@@ -678,7 +713,9 @@ function AppContent({ isAuthenticated }: { isAuthenticated: boolean }) {
           void showNotification({
             title: "New invoice",
             body: invoice?.procedure?.title
-              ? `Invoice for ${invoice.procedure.title}: $${invoice.amount.toFixed(2)}`
+              ? `Invoice for ${
+                  invoice.procedure.title
+                }: $${invoice.amount.toFixed(2)}`
               : `New invoice: $${invoice.amount.toFixed(2)}`,
           });
 

@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { AppointmentBanner } from "../components/dashboard/AppointmentBanner";
@@ -50,26 +56,20 @@ export default function DashboardScreen() {
               onPress={handleBookAppointment}
               activeOpacity={0.8}
             >
-              <Text
-                style={[styles.bookButtonText, { color: theme.ctaText }]}
-              >
+              <Text style={[styles.bookButtonText, { color: theme.ctaText }]}>
                 Book Appointment
               </Text>
             </TouchableOpacity>
           </View>
-
-          <View style={{ marginTop: 16 }}>
+          <View>
             <AppointmentBanner />
           </View>
-
           <ActiveDiscountCard />
-
-          <View style={{ marginTop: 24 }}>
+          <View>
             <QuickStats />
           </View>
-
           <View style={styles.grid}>
-            <View style={{ marginBottom: 24 }}>
+            <View>
               <UpcomingAppointments />
             </View>
             <TreatmentOverview />
@@ -126,6 +126,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   grid: {
-    marginTop: 24,
+    // marginTop: 24,
   },
 });

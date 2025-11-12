@@ -916,7 +916,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   modalProceduresList: {
-    marginBottom: 20,
+    // marginBottom: 20,
   },
   modalProceduresLabel: {
     fontSize: 14,
@@ -936,14 +936,14 @@ const styles = StyleSheet.create({
   modalProcedureTitle: {
     fontSize: 18,
     fontWeight: "600",
-    marginBottom: 8,
+    // marginBottom: 8,
   },
   modalProcedurePrice: {
     fontSize: 20,
     fontWeight: "700",
   },
   modalForm: {
-    marginBottom: 20,
+    // marginBottom: 20,
   },
   modalLabel: {
     fontSize: 14,

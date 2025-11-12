@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ImageSourcePropType,
+  Image,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { colors } from "../lib/colors";
@@ -9,13 +16,14 @@ const menuItems = [
   { title: "Appointments", screen: "Appointments", icon: "📅" },
   { title: "Treatment", screen: "Treatment", icon: "🩺" },
   { title: "Price List", screen: "PriceList", icon: "💰" },
-  { title: "Chat", screen: "Chat", icon: "💬" },
+  // { title: "Chat", screen: "Chat", icon: "💬" },
   { title: "Profile", screen: "Profile", icon: "👤" },
 ];
 
 export function BottomNavigation() {
   const navigation = useNavigation<any>();
   const [currentRoute, setCurrentRoute] = useState("Dashboard");
+  const defaultLogo: ImageSourcePropType = require("../../assets/teeth_logo.webp");
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("state", () => {
@@ -35,6 +43,8 @@ export function BottomNavigation() {
     return unsubscribe;
   }, [navigation]);
 
+  const isChatActive = currentRoute === "Chat";
+
   return (
     <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
       <View style={styles.container}>
@@ -48,12 +58,50 @@ export function BottomNavigation() {
               activeOpacity={0.8}
             >
               <Text style={{ fontSize: 18 }}>{item.icon}</Text>
-              <Text style={[styles.menuText, isActive && styles.menuTextActive]}>
+              <Text
+                style={[styles.menuText, isActive && styles.menuTextActive]}
+              >
                 {item.title}
               </Text>
             </TouchableOpacity>
           );
         })}
+        <TouchableOpacity
+          key="magic-key"
+          style={{
+            flex: 1,
+          }}
+          onPress={() => navigation.navigate("Chat")}
+          activeOpacity={0.8}
+        >
+          <View style={styles.chatMenuItem}>
+            <View
+              style={{
+                width: 34,
+                height: 34,
+                // display: "flex",
+                // justifyContent: "space-between",
+                // alignItems: "center",
+                backgroundColor: "#d36ed3",
+                borderRadius: 14,
+                position: "relative",
+              }}
+            >
+              <Image
+                style={{
+                  width: 18,
+                  // height: "auto",
+                  height: 20,
+                  position: "absolute",
+                  transform: "translateX(-50%)",
+                  left: "50%",
+                  top: "22%",
+                }}
+                defaultSource={defaultLogo}
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -83,6 +131,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingVertical: 4,
+  },
+  chatMenuItem: {
+    flex: 1,
+    backgroundColor: "#fbe0fb",
+    color: "white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "18px",
+    boxShadow: "0px 1px 1px 0px purple",
   },
   menuText: {
     fontSize: 10,

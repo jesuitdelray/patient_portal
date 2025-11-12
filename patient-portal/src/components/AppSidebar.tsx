@@ -53,7 +53,6 @@ export function AppSidebar() {
           )}
         </div>
       </SidebarHeader>
-
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>

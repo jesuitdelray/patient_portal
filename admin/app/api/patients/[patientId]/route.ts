@@ -9,7 +9,31 @@ export async function GET(
     const { patientId } = await params;
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
+      include: {
+        doctorLinks: {
+          include: {
+            doctor: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                picture: true,
+              },
+            },
+          },
+        },
+      },
     });
+    
+    if (!patient) {
+      return NextResponse.json(
+        { error: "Patient not found" },
+        { status: 404 }
+      );
+    }
+    
+    const doctor = patient?.doctorLinks?.[0]?.doctor || null;
+    
     const plans = await prisma.treatmentPlan.findMany({
       where: { patientId },
       include: {
@@ -30,7 +54,7 @@ export async function GET(
               },
             },
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: [{ phase: "asc" }, { createdAt: "asc" }],
         },
       },
       orderBy: { createdAt: "desc" },
@@ -53,7 +77,7 @@ export async function GET(
       where: { patientId },
       orderBy: { createdAt: "asc" },
     });
-    return NextResponse.json({ patient, plans, appointments, messages });
+    return NextResponse.json({ patient, doctor, plans, appointments, messages });
   } catch (error: any) {
     console.error("Patient detail API error:", error);
     return NextResponse.json(
