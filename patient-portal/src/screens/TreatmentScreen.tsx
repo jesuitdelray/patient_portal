@@ -462,161 +462,170 @@ export default function TreatmentScreen() {
                                     : ""}
                                 </Text>
                               </View>
-                              <View style={styles.tableContainer}>
-                                <View style={styles.tableHeader}>
-                                  <View
-                                    style={[
-                                      styles.tableHeaderCell,
-                                      { width: 30 },
-                                    ]}
-                                  />
-                                  <Text
-                                    style={[
-                                      styles.tableHeaderText,
-                                      { flex: 0.8 },
-                                    ]}
-                                  >
-                                    Tooth
-                                  </Text>
-                                  <Text
-                                    style={[
-                                      styles.tableHeaderText,
-                                      { flex: 2.5 },
-                                    ]}
-                                  >
-                                    Procedure
-                                  </Text>
-                                  <Text
-                                    style={[
-                                      styles.tableHeaderText,
-                                      { flex: 1 },
-                                    ]}
-                                  >
-                                    Price
-                                  </Text>
-                                  <Text
-                                    style={[
-                                      styles.tableHeaderText,
-                                      { flex: 0.8 },
-                                    ]}
-                                  >
-                                    Discount
-                                  </Text>
-                                  <Text
-                                    style={[
-                                      styles.tableHeaderText,
-                                      { flex: 0.6 },
-                                    ]}
-                                  >
-                                    Qty
-                                  </Text>
-                                  <Text
-                                    style={[
-                                      styles.tableHeaderText,
-                                      { flex: 1.2 },
-                                    ]}
-                                  >
-                                    Total
-                                  </Text>
-                                </View>
-                                {phaseProcedures.map((proc) => {
-                                  const price =
-                                    proc.price || proc.invoice?.amount || 0;
-                                  const discount = proc.discount || 0;
-                                  const qty = proc.quantity || 1;
-                                  const total =
-                                    price * (1 - discount / 100) * qty;
-                                  const tooth =
-                                    proc.tooth ||
-                                    proc.description?.match(/\d+/)?.[0] ||
-                                    "-";
+                              <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={true}
+                                style={styles.phaseScrollWrapper}
+                              >
+                                <View style={styles.tableContainer}>
+                                  <View style={styles.tableHeader}>
+                                    <View
+                                      style={[
+                                        styles.tableHeaderCell,
+                                        { width: 30 },
+                                      ]}
+                                    />
+                                    <Text
+                                      style={[
+                                        styles.tableHeaderText,
+                                        { flex: 0.8 },
+                                      ]}
+                                    >
+                                      Tooth
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.tableHeaderText,
+                                        { flex: 2.5 },
+                                      ]}
+                                    >
+                                      Procedure
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.tableHeaderText,
+                                        { flex: 1 },
+                                      ]}
+                                    >
+                                      Price
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.tableHeaderText,
+                                        { flex: 0.8 },
+                                      ]}
+                                    >
+                                      Discount
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.tableHeaderText,
+                                        { flex: 0.6 },
+                                      ]}
+                                    >
+                                      Qty
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.tableHeaderText,
+                                        { flex: 1.2 },
+                                      ]}
+                                    >
+                                      Total
+                                    </Text>
+                                  </View>
+                                  {phaseProcedures.map((proc) => {
+                                    const price =
+                                      proc.price || proc.invoice?.amount || 0;
+                                    const discount = proc.discount || 0;
+                                    const qty = proc.quantity || 1;
+                                    const total =
+                                      price * (1 - discount / 100) * qty;
+                                    const tooth =
+                                      proc.tooth ||
+                                      proc.description?.match(/\d+/)?.[0] ||
+                                      "-";
 
-                                  return (
-                                    <View key={proc.id} style={styles.tableRow}>
+                                    return (
                                       <View
-                                        style={[
-                                          styles.tableCell,
-                                          { width: 30, alignItems: "center" },
-                                        ]}
+                                        key={proc.id}
+                                        style={styles.tableRow}
                                       >
                                         <View
                                           style={[
-                                            styles.checkbox,
-                                            proc.status === "completed" &&
-                                              styles.checkboxCompleted,
+                                            styles.tableCell,
+                                            { width: 30, alignItems: "center" },
                                           ]}
                                         >
-                                          {proc.status === "completed" && (
-                                            <Text style={styles.checkmark}>
-                                              ✓
-                                            </Text>
-                                          )}
+                                          <View
+                                            style={[
+                                              styles.checkbox,
+                                              proc.status === "completed" &&
+                                                styles.checkboxCompleted,
+                                            ]}
+                                          >
+                                            {proc.status === "completed" && (
+                                              <Text style={styles.checkmark}>
+                                                ✓
+                                              </Text>
+                                            )}
+                                          </View>
                                         </View>
+                                        <Text
+                                          style={[
+                                            styles.tableCell,
+                                            styles.tableCellText,
+                                            { flex: 0.8 },
+                                          ]}
+                                        >
+                                          {tooth}
+                                        </Text>
+                                        <Text
+                                          style={[
+                                            styles.tableCell,
+                                            styles.tableCellText,
+                                            { flex: 2.5 },
+                                          ]}
+                                        >
+                                          {proc.title}
+                                        </Text>
+                                        <Text
+                                          style={[
+                                            styles.tableCell,
+                                            styles.tableCellText,
+                                            { flex: 1 },
+                                          ]}
+                                        >
+                                          ${price.toFixed(2)}
+                                        </Text>
+                                        <Text
+                                          style={[
+                                            styles.tableCell,
+                                            styles.tableCellText,
+                                            { flex: 0.8 },
+                                          ]}
+                                        >
+                                          {discount}%
+                                        </Text>
+                                        <Text
+                                          style={[
+                                            styles.tableCell,
+                                            styles.tableCellText,
+                                            { flex: 0.6 },
+                                          ]}
+                                        >
+                                          {qty}
+                                        </Text>
+                                        <Text
+                                          style={[
+                                            styles.tableCell,
+                                            styles.tableCellText,
+                                            { flex: 1.2 },
+                                          ]}
+                                        >
+                                          ${total.toFixed(2)}
+                                        </Text>
                                       </View>
-                                      <Text
-                                        style={[
-                                          styles.tableCell,
-                                          styles.tableCellText,
-                                          { flex: 0.8 },
-                                        ]}
-                                      >
-                                        {tooth}
-                                      </Text>
-                                      <Text
-                                        style={[
-                                          styles.tableCell,
-                                          styles.tableCellText,
-                                          { flex: 2.5 },
-                                        ]}
-                                      >
-                                        {proc.title}
-                                      </Text>
-                                      <Text
-                                        style={[
-                                          styles.tableCell,
-                                          styles.tableCellText,
-                                          { flex: 1 },
-                                        ]}
-                                      >
-                                        ${price.toFixed(2)}
-                                      </Text>
-                                      <Text
-                                        style={[
-                                          styles.tableCell,
-                                          styles.tableCellText,
-                                          { flex: 0.8 },
-                                        ]}
-                                      >
-                                        {discount}%
-                                      </Text>
-                                      <Text
-                                        style={[
-                                          styles.tableCell,
-                                          styles.tableCellText,
-                                          { flex: 0.6 },
-                                        ]}
-                                      >
-                                        {qty}
-                                      </Text>
-                                      <Text
-                                        style={[
-                                          styles.tableCell,
-                                          styles.tableCellText,
-                                          { flex: 1.2 },
-                                        ]}
-                                      >
-                                        ${total.toFixed(2)}
-                                      </Text>
-                                    </View>
-                                  );
-                                })}
-                                <View style={styles.tableFooter}>
-                                  <Text style={styles.footerText}>
-                                    Phase {phaseNum} total ($): $
-                                    {phaseTotal.toFixed(2)}
-                                  </Text>
+                                    );
+                                  })}
+                                  <View style={styles.tableFooter}>
+                                    <Text style={styles.footerText}>
+                                      Phase {phaseNum} total ($): $
+                                      {phaseTotal.toFixed(2)}
+                                    </Text>
+                                  </View>
                                 </View>
-                              </View>
+                              </ScrollView>
                             </View>
                           );
                         })}
@@ -708,7 +717,8 @@ const styles = StyleSheet.create({
   },
   doctorPatientInfo: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 16,
     marginBottom: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
@@ -764,6 +774,9 @@ const styles = StyleSheet.create({
   phaseSection: {
     marginBottom: 16,
   },
+  phaseScrollWrapper: {
+    maxHeight: 400,
+  },
   phaseHeader: {
     backgroundColor: "#F0EBF3",
     paddingVertical: 10,
@@ -781,6 +794,7 @@ const styles = StyleSheet.create({
     borderColor: colors.greyscale200,
     borderRadius: 4,
     overflow: "hidden",
+    minWidth: 600,
   },
   tableHeader: {
     flexDirection: "row",
