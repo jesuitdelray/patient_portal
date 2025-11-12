@@ -307,7 +307,7 @@ export default function PriceListScreen() {
               <Text
                 style={[
                   styles.categoryChipText,
-                  selectedCategory === null && { color: theme.brandSoftText },
+                  selectedCategory === null && { color: colors.primaryWhite },
                 ]}
               >
                 All
@@ -329,7 +329,7 @@ export default function PriceListScreen() {
                   <Text
                     style={[
                       styles.categoryChipText,
-                      selectedCategory === cat && { color: theme.brandSoftText },
+                      selectedCategory === cat && { color: colors.primaryWhite },
                     ]}
                   >
                     {cat}
@@ -373,10 +373,10 @@ export default function PriceListScreen() {
               >
                 <View style={styles.priceItemContent}>
                   <View style={styles.priceItemHeader}>
-                    <Text style={[styles.priceItemTitle, { color: theme.brand }]}>
+                    <Text style={[styles.priceItemTitle, { color: colors.textPrimary }]}>
                       {item.title}
                     </Text>
-                    <Text style={[styles.priceItemPrice, { color: theme.brand }]}>
+                    <Text style={[styles.priceItemPrice, { color: colors.textPrimary }]}>
                       ${item.price.toFixed(2)}
                     </Text>
                   </View>
@@ -386,7 +386,7 @@ export default function PriceListScreen() {
                   <View style={styles.priceItemFooter}>
                     {item.duration && (
                       <Text
-                        style={[styles.priceItemDuration, { color: theme.brand }]}
+                        style={[styles.priceItemDuration, { color: colors.textSecondary }]}
                       >
                         ⏱ {item.duration} min
                       </Text>
@@ -396,7 +396,7 @@ export default function PriceListScreen() {
                         styles.priceItemCategory,
                       {
                         backgroundColor: theme.brandSoft,
-                        color: theme.brandSoftText,
+                        color: colors.primaryWhite,
                       },
                       ]}
                     >
@@ -405,7 +405,7 @@ export default function PriceListScreen() {
                   </View>
                 </View>
                 <View style={styles.priceItemArrow}>
-                  <Text style={[styles.arrowText, { color: theme.brand }]}>→</Text>
+                  <Text style={[styles.arrowText, { color: colors.textSecondary }]}>→</Text>
                 </View>
               </TouchableOpacity>
             ))
@@ -427,7 +427,7 @@ export default function PriceListScreen() {
               { borderColor: theme.borderSubtle, backgroundColor: theme.surface },
             ]}
           >
-            <Text style={[styles.modalTitle, { color: theme.brand }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
               Book Appointment
             </Text>
             {selectedProcedure && (
@@ -444,7 +444,7 @@ export default function PriceListScreen() {
                   <Text
                     style={[
                       styles.modalProcedureTitle,
-                      { color: theme.brandText },
+                      { color: colors.textPrimary },
                     ]}
                   >
                     {selectedProcedure.title}
@@ -452,7 +452,7 @@ export default function PriceListScreen() {
                   <Text
                     style={[
                       styles.modalProcedurePrice,
-                      { color: theme.brandText },
+                      { color: colors.textPrimary },
                     ]}
                   >
                     ${selectedProcedure.price.toFixed(2)}
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   categoryChipText: {
     fontSize: 14,
     color: colors.textPrimary,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   categoryChipTextActive: {
     color: colors.primaryWhite,

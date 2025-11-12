@@ -48,11 +48,9 @@ export function useBrandingTheme(): BrandingTheme {
       theme["--rem-highlight-bg"],
       softColor(brand, 0.35)
     );
-    const promoBg = ensureHex(
-      theme["--rem-promo-bg"],
-      softColor(brand, 0.45)
-    );
+    const promoBg = ensureHex(theme["--rem-promo-bg"], softColor(brand, 0.45));
     const ctaBg = ensureHex(theme["--rem-cta-bg"], brand);
+    const navBg = ensureHex(theme["--rem-nav-bg"], "#FFFFFF");
     const navActiveBg = ensureHex(
       theme["--rem-nav-active-bg"],
       softColor(brand, 0.12)
@@ -60,25 +58,34 @@ export function useBrandingTheme(): BrandingTheme {
 
     return {
       brand,
-      brandText: colors.primaryWhite,
+      brandText: pickText(brand, DARK_TEXT, LIGHT_TEXT, {
+        preferLight: true,
+        threshold: 3.0,
+      }),
       brandSoft,
-      brandSoftText: colors.textPrimary,
-      navBg: ensureHex(theme["--rem-nav-bg"], "#FFFFFF"),
-      navText: colors.textPrimary,
+      brandSoftText: pickText(brandSoft, DARK_TEXT, LIGHT_TEXT, {
+        preferLight: true,
+        threshold: 3.2,
+      }),
+      navBg,
+      navText: pickText(navBg, DARK_TEXT, LIGHT_TEXT),
       navIcon: ensureHex(theme["--rem-nav-icon"], brand),
       navActiveBg,
       navActiveIcon: ensureHex(theme["--rem-nav-active-icon"], brand),
-      navActiveText: colors.textPrimary,
+      navActiveText: pickText(navActiveBg, DARK_TEXT, LIGHT_TEXT, {
+        preferLight: true,
+        threshold: 3.0,
+      }),
       ctaBg,
-      ctaBgHover: ensureHex(
-        theme["--rem-cta-bg-hover"],
-        darken(ctaBg, 0.08)
-      ),
-      ctaText: colors.primaryWhite,
+      ctaBgHover: ensureHex(theme["--rem-cta-bg-hover"], darken(ctaBg, 0.08)),
+      ctaText: pickText(ctaBg, DARK_TEXT, LIGHT_TEXT, {
+        preferLight: true,
+        threshold: 3.0,
+      }),
       highlightBg,
-      highlightText: colors.textPrimary,
+      highlightText: pickText(highlightBg, DARK_TEXT, LIGHT_TEXT),
       promoBg,
-      promoText: colors.textPrimary,
+      promoText: pickText(promoBg, DARK_TEXT, LIGHT_TEXT),
       danger: ensureHex(theme["--rem-danger"], "#EF4444"),
       success: ensureHex(theme["--rem-success"], "#16A34A"),
       textPrimary: colors.textPrimary,
@@ -98,18 +105,6 @@ function ensureHex(value: string | undefined, fallback: string) {
     return `#${trimmed}`.slice(0, 7).toUpperCase();
   }
   return trimmed.slice(0, 7).toUpperCase();
-}
-
-function ensureText(
-  explicit: string | undefined,
-  background: string,
-  dark: string,
-  light: string
-) {
-  if (explicit && explicit.trim()) {
-    return ensureHex(explicit, pickText(background, dark, light));
-  }
-  return pickText(background, dark, light);
 }
 
 function hexToRgb(hex: string) {
@@ -156,20 +151,30 @@ function rgbToHex(r: number, g: number, b: number) {
   );
 }
 
-function pickText(background: string, dark: string, light: string) {
+function pickText(
+  background: string,
+  dark: string,
+  light: string,
+  opts?: { threshold?: number; preferLight?: boolean }
+) {
   const bg = ensureHex(background, "#000000");
   const darkHex = ensureHex(dark, "#111827");
   const lightHex = ensureHex(light, "#FFFFFF");
-  const threshold = 4.5;
+
+  const threshold = opts?.threshold ?? 4.5;
 
   const lightContrast = getContrastRatio(bg, lightHex);
   const darkContrast = getContrastRatio(bg, darkHex);
 
   if (lightContrast >= threshold && darkContrast >= threshold) {
+    if (opts?.preferLight) return lightHex;
     return getLuminance(bg) > 0.5 ? darkHex : lightHex;
   }
+
   if (lightContrast >= threshold) return lightHex;
   if (darkContrast >= threshold) return darkHex;
+
+  if (opts?.preferLight) return lightHex;
   return lightContrast > darkContrast ? lightHex : darkHex;
 }
 
@@ -191,4 +196,3 @@ function getContrastRatio(color1: string, color2: string) {
   const darker = Math.min(lum1, lum2);
   return (lighter + 0.05) / (darker + 0.05);
 }
-

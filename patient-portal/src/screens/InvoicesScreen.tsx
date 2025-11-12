@@ -103,7 +103,7 @@ export default function InvoicesScreen() {
               >
                 <View style={styles.invoiceHeader}>
                   <View style={styles.invoiceTitleRow}>
-                    <Text style={[styles.invoiceTitle, { color: theme.brand }]}>
+                    <Text style={[styles.invoiceTitle, { color: colors.textPrimary }]}>
                       {invoice.procedure?.title || "Unknown Procedure"}
                     </Text>
                     <View
@@ -145,7 +145,7 @@ export default function InvoicesScreen() {
                 <View style={styles.invoiceDetails}>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Amount:</Text>
-                      <Text style={[styles.detailValue, { color: theme.brand }]}>
+                      <Text style={[styles.detailValue, { color: colors.textPrimary }]}>
                       ${invoice.amount.toFixed(2)}
                     </Text>
                   </View>

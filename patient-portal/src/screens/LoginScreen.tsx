@@ -284,7 +284,7 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.header}>
-              <Text style={[styles.title, { color: theme.brand }]}>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>
                 {branding.clinicName || "Welcome"}
               </Text>
               <Text style={styles.subtitle}>

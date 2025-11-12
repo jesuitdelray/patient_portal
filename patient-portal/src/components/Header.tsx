@@ -29,7 +29,7 @@ export function Header({ title, showLogo = true }: HeaderProps) {
           </View>
         )}
         {displayTitle && (
-          <Text style={[styles.title, { color: theme.brand }]}>{displayTitle}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{displayTitle}</Text>
         )}
       </View>
     </SafeAreaView>

@@ -34,7 +34,7 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
       ]}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.brand }]}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>
           {appointment.title || "Appointment"}
         </Text>
         {appointment.type && (
@@ -45,7 +45,7 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
             ]}
           >
             <Text
-              style={[styles.typeText, { color: theme.brandSoftText }]}
+              style={[styles.typeText, { color: colors.primaryWhite }]}
             >
               {appointment.type}
             </Text>
@@ -56,7 +56,7 @@ export function AppointmentCard({ appointment, onReschedule, onCancel }: Props) 
       <View style={styles.content}>
         <View style={styles.row}>
           <Text style={styles.label}>📅 Date & Time:</Text>
-          <Text style={[styles.value, { color: theme.brand }]}>
+          <Text style={[styles.value, { color: colors.textSecondary }]}>
             {formatDate(appointment.datetime)}
           </Text>
         </View>

@@ -162,7 +162,7 @@ export function BookAppointmentModal({
             },
           ]}
         >
-          <Text style={[styles.title, { color: theme.brand }]}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>
             Book Appointment
           </Text>
 

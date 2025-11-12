@@ -191,7 +191,7 @@ export function UpcomingAppointments() {
             >
               <View style={styles.appointmentContent}>
                 <Text
-                  style={[styles.appointmentTitle, { color: theme.brand }]}
+                  style={[styles.appointmentTitle, { color: colors.textPrimary }]}
                 >
                   {appointment.title}
                 </Text>
@@ -205,7 +205,7 @@ export function UpcomingAppointments() {
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>📅</Text>
                     <Text
-                      style={[styles.detailText, { color: theme.brand }]}
+                      style={[styles.detailText, { color: colors.textSecondary }]}
                     >
                       {new Date(appointment.datetime).toLocaleDateString()}
                     </Text>
@@ -213,7 +213,7 @@ export function UpcomingAppointments() {
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>⏰</Text>
                     <Text
-                      style={[styles.detailText, { color: theme.brand }]}
+                      style={[styles.detailText, { color: colors.textSecondary }]}
                     >
                       {new Date(appointment.datetime).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -224,7 +224,7 @@ export function UpcomingAppointments() {
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>📍</Text>
                     <Text
-                      style={[styles.detailText, { color: theme.brand }]}
+                      style={[styles.detailText, { color: colors.textSecondary }]}
                     >
                       {appointment.location || "Clinic"}
                     </Text>
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "bold",
-    color: colors.textPrimary,
+    color: colors.primaryWhite,
   },
   content: {
     gap: 12,
@@ -621,8 +621,8 @@ const styles = StyleSheet.create({
   appointmentCard: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.greyscale200,
-    backgroundColor: colors.primaryWhite,
+    borderColor: "rgba(255, 255, 255, 0.25)",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     padding: 12,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -634,12 +634,12 @@ const styles = StyleSheet.create({
   appointmentTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: colors.textPrimary,
+    color: colors.primaryWhite,
     marginBottom: 4,
   },
   appointmentDoctor: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: "rgba(255, 255, 255, 0.85)",
     marginBottom: 8,
   },
   appointmentDetails: {
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: "rgba(255, 255, 255, 0.8)",
   },
   emptyState: {
     padding: 24,

@@ -38,13 +38,13 @@ const defaultThemeTokens: ClinicTheme = {
   "--rem-brand-soft": DEFAULT_BRAND_SOFT,
   "--rem-brand-soft-text": readableColor(
     DEFAULT_BRAND_SOFT,
-    "#0F172A",
-    "#FFFFFF"
+    "#FFFFFF",
+    "#0F172A"
   ),
 
   // Sidebar
   "--rem-nav-bg": "#FFFFFF",
-  "--rem-nav-text": "#111827",
+  "--rem-nav-text": readableColor("#FFFFFF", "#FFFFFF", "#111827"),
   "--rem-nav-icon": BLUE,
   "--rem-nav-active-bg": softColor(BLUE, 0.12),
   "--rem-nav-active-icon": BLUE,
@@ -58,17 +58,13 @@ const defaultThemeTokens: ClinicTheme = {
   "--rem-highlight-bg": DEFAULT_HIGHLIGHT_BG,
   "--rem-highlight-text": readableColor(
     DEFAULT_HIGHLIGHT_BG,
-    "#0F172A",
-    "#FFFFFF"
+    "#FFFFFF",
+    "#0F172A"
   ),
 
   // Promotions
   "--rem-promo-bg": DEFAULT_PROMO_BG,
-  "--rem-promo-text": readableColor(
-    DEFAULT_PROMO_BG,
-    "#0F172A",
-    "#FFFFFF"
-  ),
+  "--rem-promo-text": readableColor(DEFAULT_PROMO_BG, "#FFFFFF", "#0F172A"),
 
   // Status
   "--rem-danger": DEFAULT_DANGER,
@@ -76,54 +72,41 @@ const defaultThemeTokens: ClinicTheme = {
 };
 
 export function buildClinicTheme(input: ClinicBrandingInput): ClinicTheme {
-  const brand = normalizeHex(input.colors.brand);
-  const nav = normalizeHex(
-    input.colors.nav ??
-      (isLightColor(brand) ? "#FFFFFF" : softColor(brand, 0.08))
-  );
-  const cta = normalizeHex(input.colors.cta ?? brand);
-  const highlight = normalizeHex(input.colors.highlight ?? brand);
-  const promo = normalizeHex(input.colors.promo ?? brand);
-  const danger = normalizeHex(input.colors.danger ?? DEFAULT_DANGER);
+  const valid = validateBrandingInput(input);
+  const colorsValidated = valid.colors as {
+    brand: string;
+    nav: string;
+    cta: string;
+    highlight: string;
+    promo: string;
+    danger: string;
+  };
+  const { brand, nav, cta, highlight, promo, danger } = colorsValidated;
 
   const brandSoft = softColor(brand, 0.22);
   const highlightBg = softColor(highlight, 0.35);
   const promoBg = softColor(promo, 0.45);
 
-  const theme: ClinicTheme = {
+  return {
     ...defaultThemeTokens,
     "--rem-brand": brand,
     "--rem-brand-text": readableColor(brand, "#FFFFFF", "#0F172A"),
     "--rem-brand-soft": brandSoft,
-    "--rem-brand-soft-text": readableColor(
-      brandSoft,
-      "#0F172A",
-      "#FFFFFF"
-    ),
+    "--rem-brand-soft-text": readableColor(brandSoft, "#FFFFFF", "#0F172A"),
     "--rem-nav-bg": nav,
-    "--rem-nav-text": readableColor(nav),
+    "--rem-nav-text": readableColor(nav, "#FFFFFF", "#111827"),
     "--rem-nav-icon": brand,
     "--rem-nav-active-bg": softColor(brand, 0.12),
     "--rem-nav-active-icon": brand,
     "--rem-cta-bg": cta,
     "--rem-cta-bg-hover": darken(cta, 0.08),
-    "--rem-cta-text": readableColor(cta, "#111827", "#FFFFFF"),
+    "--rem-cta-text": readableColor(cta, "#FFFFFF", "#111827"),
     "--rem-highlight-bg": highlightBg,
-    "--rem-highlight-text": readableColor(
-      highlightBg,
-      "#0F172A",
-      "#FFFFFF"
-    ),
+    "--rem-highlight-text": readableColor(highlightBg, "#FFFFFF", "#0F172A"),
     "--rem-promo-bg": promoBg,
-    "--rem-promo-text": readableColor(
-      promoBg,
-      "#0F172A",
-      "#FFFFFF"
-    ),
+    "--rem-promo-text": readableColor(promoBg, "#FFFFFF", "#0F172A"),
     "--rem-danger": danger,
   };
-
-  return theme;
 }
 
 export function clinicBrandingToInput(
@@ -207,7 +190,9 @@ export function mapInputToPrismaData(input: ClinicBrandingInput) {
 }
 
 export function isValidHex(value: string) {
-  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(value);
+  if (!value) return false;
+  const normalized = value.startsWith("#") ? value : `#${value}`;
+  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(normalized);
 }
 
 function normalizeHex(value: string) {

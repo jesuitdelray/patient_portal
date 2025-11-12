@@ -58,7 +58,7 @@ export function Sidebar() {
           activeOpacity={0.8}
         >
           <Logo size={36} />
-          <Text style={[styles.title, { color: theme.brand }]}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>
             {branding.clinicName || "Patient Portal"}
           </Text>
         </TouchableOpacity>
@@ -69,7 +69,7 @@ export function Sidebar() {
           activeOpacity={0.8}
         >
           <Logo size={32} />
-          <Text style={[styles.title, { color: theme.brand }]}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>
             {branding.clinicName || "Patient Portal"}
           </Text>
         </TouchableOpacity>

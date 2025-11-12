@@ -110,7 +110,7 @@ export function TreatmentOverview() {
                     <Text style={{ fontSize: 16 }}>
                       {isCompleted ? "✅" : "⏰"}
                     </Text>
-                    <Text style={[styles.progressText, { color: theme.brand }]}>
+                    <Text style={[styles.progressText, { color: colors.textPrimary }]}>
                       {percentage}%
                     </Text>
                   </View>
