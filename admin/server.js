@@ -733,7 +733,7 @@ async function start() {
       socket.emit("ready", { ok: true });
     });
 
-    socket.on("message:send", async ({ patientId, sender, content }, ack) => {
+    socket.on("message:send", async ({ patientId, sender, content, manual }, ack) => {
       let ackSent = false;
       const safeAck = (payload) => {
         if (ack && !ackSent) {
@@ -750,7 +750,12 @@ async function start() {
 
         // Save message to database
         const message = await prisma.message.create({
-          data: { patientId, sender, content },
+          data: { 
+            patientId, 
+            sender, 
+            content, 
+            manual: Boolean(manual),
+          },
         });
 
         // Send message to patient room (all sockets in room, including sender)

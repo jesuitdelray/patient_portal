@@ -20,8 +20,6 @@ import {
 } from "@tanstack/react-query";
 import {
   connectSocket,
-  setupGlobalMessageHandler,
-  removeGlobalMessageHandler,
   resolvePatientId,
   setQueryClientForAuth,
   setNavigateForAuth,
@@ -49,7 +47,6 @@ import { Loader } from "./src/components/Loader";
 import Toast from "react-native-toast-message";
 // Import DebugLogs early to capture console logs
 import "./src/components/DebugLogs";
-import { DebugLogs } from "./src/components/DebugLogs";
 import { BrandingGate } from "./src/components/BrandingGate";
 import { AppointmentsProvider } from "./src/components/dashboard/AppointmentsContext";
 

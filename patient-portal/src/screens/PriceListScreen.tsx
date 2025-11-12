@@ -623,7 +623,7 @@ export default function PriceListScreen() {
                     </View>
                   ) : (
                     <>
-                      <TouchableOpacity
+                      {/* <TouchableOpacity
                         style={[
                           styles.dateTimeInput,
                           {
@@ -642,18 +642,18 @@ export default function PriceListScreen() {
                           {selectedDate.toLocaleString()}
                         </Text>
                         <Text style={{ fontSize: 20 }}>📅</Text>
-                      </TouchableOpacity>
-                      {showDatePicker && (
-                        <View style={styles.datePickerContainer}>
-                          <DateTimePicker
-                            value={selectedDate}
-                            mode="datetime"
-                            display="default"
-                            onChange={handleDateChange}
-                            minimumDate={tomorrow}
-                          />
-                        </View>
-                      )}
+                      </TouchableOpacity> */}
+                      {/* {showDatePicker && ( */}
+                      <View style={styles.datePickerContainer}>
+                        <DateTimePicker
+                          value={selectedDate}
+                          mode="datetime"
+                          display="default"
+                          onChange={handleDateChange}
+                          minimumDate={tomorrow}
+                        />
+                      </View>
+                      {/* )} */}
                     </>
                   )}
                 </View>
@@ -970,12 +970,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   datePickerContainer: {
-    marginTop: 12,
-    alignItems: "center",
+    // marginTop: 12,
+    marginLeft: -8,
   },
   modalButtons: {
     flexDirection: "row",
     gap: 12,
+    marginTop: 12,
   },
   modalButton: {
     flex: 1,

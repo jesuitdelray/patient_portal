@@ -1115,6 +1115,9 @@ export default function ChatScreen() {
                   const uniqueKey = msg.id || `msg-${index}-${msg.createdAt}`;
                   const isManual =
                     !isPatient && Boolean(msg.manual ?? msg.isManual);
+                  // Определяем, является ли сообщение JSON (структурированным)
+                  // JSON = сообщение от доктора, которое не manual (используется StructuredMessage)
+                  const isJsonMessage = !isPatient && !isManual;
                   const bubbleBackground = isPatient
                     ? null
                     : isManual
@@ -1140,7 +1143,7 @@ export default function ChatScreen() {
                     >
                       {!isPatient && isManual && (
                         <Image
-                          defaultSource={defaultAvatar as any}
+                          source={defaultAvatar}
                           style={{
                             width: 52,
                             height: 52,
@@ -1160,6 +1163,10 @@ export default function ChatScreen() {
                           isManual ? styles.bubbleDoctorManual : null,
                           bubbleBackground,
                           { alignSelf: isPatient ? "flex-end" : "flex-start" },
+                          // Для JSON сообщений - flex: 1, для строк - без flex
+                          Platform.OS !== "web" && isJsonMessage
+                            ? { flex: 1 }
+                            : {},
                         ]}
                       >
                         {isPatient ? (
@@ -1490,7 +1497,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     ...(Platform.OS === "web"
       ? { maxWidth: 520, flexGrow: 0 }
-      : { maxWidth: "90%", flexGrow: 1 }),
+      : { maxWidth: "90%" }),
   },
   bubblePatient: {
     backgroundColor: colors.medicalBlue,

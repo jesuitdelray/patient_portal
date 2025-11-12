@@ -118,7 +118,10 @@ export function BookAppointmentModal({
       try {
         responseData = JSON.parse(responseText);
       } catch (e) {
-        console.error("[BookAppointment] Failed to parse response:", responseText);
+        console.error(
+          "[BookAppointment] Failed to parse response:",
+          responseText
+        );
         throw new Error("Failed to create appointment");
       }
 
@@ -168,7 +171,9 @@ export function BookAppointmentModal({
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: theme.textPrimary }]}>Title</Text>
+              <Text style={[styles.label, { color: theme.textPrimary }]}>
+                Title
+              </Text>
               <TextInput
                 style={[
                   styles.input,
@@ -257,30 +262,25 @@ export function BookAppointmentModal({
               onPress={onClose}
               disabled={isSubmitting}
             >
-            <Text
-              style={[
-                styles.buttonTextCancel,
-                  { color: theme.textPrimary },
-              ]}
-            >
-              Cancel
-            </Text>
+              <Text
+                style={[styles.buttonTextCancel, { color: theme.textPrimary }]}
+              >
+                Cancel
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.button,
                 styles.buttonSubmit,
                 { backgroundColor: theme.brand },
-                (isSubmitting || !title.trim() || !datetime) && styles.buttonDisabled,
+                (isSubmitting || !title.trim() || !datetime) &&
+                  styles.buttonDisabled,
               ]}
               onPress={handleSubmit}
               disabled={isSubmitting || !title.trim() || !datetime}
             >
               <Text
-                style={[
-                  styles.buttonTextSubmit,
-                  { color: theme.brandText },
-                ]}
+                style={[styles.buttonTextSubmit, { color: theme.brandText }]}
               >
                 {isSubmitting ? "Booking..." : "Book Appointment"}
               </Text>
@@ -351,6 +351,7 @@ const styles = StyleSheet.create({
   buttons: {
     flexDirection: "row",
     gap: 12,
+    marginTop: 10,
   },
   button: {
     flex: 1,
@@ -380,4 +381,3 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
 });
-

@@ -16,14 +16,13 @@ const menuItems = [
   { title: "Appointments", screen: "Appointments", icon: "📅" },
   { title: "Treatment", screen: "Treatment", icon: "🩺" },
   { title: "Price List", screen: "PriceList", icon: "💰" },
-  // { title: "Chat", screen: "Chat", icon: "💬" },
   { title: "Profile", screen: "Profile", icon: "👤" },
 ];
 
 export function BottomNavigation() {
   const navigation = useNavigation<any>();
   const [currentRoute, setCurrentRoute] = useState("Dashboard");
-  const defaultLogo: ImageSourcePropType = require("../../assets/teeth_logo.webp");
+  const chatButtonImage: ImageSourcePropType = require("../assets/image.png");
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("state", () => {
@@ -42,8 +41,6 @@ export function BottomNavigation() {
 
     return unsubscribe;
   }, [navigation]);
-
-  const isChatActive = currentRoute === "Chat";
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
@@ -68,39 +65,15 @@ export function BottomNavigation() {
         })}
         <TouchableOpacity
           key="magic-key"
-          style={{
-            flex: 1,
-          }}
+          style={styles.chatButton}
           onPress={() => navigation.navigate("Chat")}
           activeOpacity={0.8}
         >
-          <View style={styles.chatMenuItem}>
-            <View
-              style={{
-                width: 34,
-                height: 34,
-                // display: "flex",
-                // justifyContent: "space-between",
-                // alignItems: "center",
-                backgroundColor: "#d36ed3",
-                borderRadius: 14,
-                position: "relative",
-              }}
-            >
-              <Image
-                style={{
-                  width: 18,
-                  // height: "auto",
-                  height: 20,
-                  position: "absolute",
-                  transform: "translateX(-50%)",
-                  left: "50%",
-                  top: "22%",
-                }}
-                defaultSource={defaultLogo}
-              />
-            </View>
-          </View>
+          <Image
+            source={chatButtonImage}
+            style={styles.chatButtonImage}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -117,7 +90,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.greyscale200,
     paddingTop: 8,
-    paddingBottom: 8,
+    paddingBottom: 4,
     paddingHorizontal: 4,
     justifyContent: "space-around",
     shadowColor: colors.greyscale900,
@@ -132,15 +105,18 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingVertical: 4,
   },
-  chatMenuItem: {
+  chatButton: {
     flex: 1,
-    backgroundColor: "#fbe0fb",
-    color: "white",
-    display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: "18px",
-    boxShadow: "0px 1px 1px 0px purple",
+    paddingVertical: 4,
+  },
+  chatButtonImage: {
+    width: 40,
+    height: 40,
+    transform: "scale(1.5)",
+    marginLeft: -10,
+    marginTop: -5,
   },
   menuText: {
     fontSize: 10,

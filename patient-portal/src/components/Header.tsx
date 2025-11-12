@@ -21,7 +21,7 @@ export function Header({ title, showLogo = true }: HeaderProps) {
   const displayTitle = branding.clinicName || title;
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.safeArea}>
+    <SafeAreaView edges={[]} style={styles.safeArea}>
       <View style={styles.container}>
         {showLogo && (
           <View style={styles.logoContainer}>
@@ -29,7 +29,9 @@ export function Header({ title, showLogo = true }: HeaderProps) {
           </View>
         )}
         {displayTitle && (
-          <Text style={[styles.title, { color: colors.textPrimary }]}>{displayTitle}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>
+            {displayTitle}
+          </Text>
         )}
       </View>
     </SafeAreaView>
