@@ -148,25 +148,29 @@ export function RescheduleAppointmentModal({
                   }}
                 />
               ) : (
-                <TouchableOpacity
-                  style={styles.dateInput}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text style={styles.dateText}>
-                    {newDateTime
-                      ? new Date(newDateTime).toLocaleString()
-                      : "Select date and time"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {showDatePicker && Platform.OS !== "web" && (
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="datetime"
-                  minimumDate={today}
-                  onChange={handleDateChange}
-                />
+                <>
+                  {/* <TouchableOpacity
+                    style={styles.dateInput}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Text style={styles.dateText}>
+                      {newDateTime
+                        ? new Date(newDateTime).toLocaleString()
+                        : "Select date and time"}
+                    </Text>
+                  </TouchableOpacity> */}
+                  {/* {showDatePicker && ( */}
+                  <View style={styles.datePickerContainer}>
+                    <DateTimePicker
+                      value={selectedDate}
+                      mode="datetime"
+                      display="default"
+                      minimumDate={today}
+                      onChange={handleDateChange}
+                    />
+                  </View>
+                  {/* )} */}
+                </>
               )}
             </View>
           </View>
@@ -252,6 +256,10 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 15,
     color: colors.textPrimary,
+  },
+  datePickerContainer: {
+    // marginTop: 12,
+    marginLeft: -8,
   },
   buttons: {
     flexDirection: "row",

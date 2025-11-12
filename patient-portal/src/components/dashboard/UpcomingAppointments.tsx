@@ -38,12 +38,14 @@ export function UpcomingAppointments() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const theme = useBrandingTheme();
-  const upcomingAppointments = (appointments || []).filter((appointment: any) => {
-    if (!appointment?.datetime) return false;
-    const appointmentDate = new Date(appointment.datetime);
-    const now = new Date();
-    return appointmentDate.getTime() >= now.getTime();
-  });
+  const upcomingAppointments = (appointments || []).filter(
+    (appointment: any) => {
+      if (!appointment?.datetime) return false;
+      const appointmentDate = new Date(appointment.datetime);
+      const now = new Date();
+      return appointmentDate.getTime() >= now.getTime();
+    }
+  );
 
   const today = new Date();
   const todayString = today.toISOString().slice(0, 16);
@@ -123,8 +125,8 @@ export function UpcomingAppointments() {
   const handleOpenReschedule = (appointment: any) => {
     setSelectedAppointment(appointment);
     // Use appointment's current datetime as initial value
-    const initialDate = appointment?.datetime 
-      ? new Date(appointment.datetime) 
+    const initialDate = appointment?.datetime
+      ? new Date(appointment.datetime)
       : new Date();
     setSelectedDate(initialDate);
     setNewDateTime(initialDate.toISOString().slice(0, 16));
@@ -191,7 +193,10 @@ export function UpcomingAppointments() {
             >
               <View style={styles.appointmentContent}>
                 <Text
-                  style={[styles.appointmentTitle, { color: colors.textPrimary }]}
+                  style={[
+                    styles.appointmentTitle,
+                    { color: colors.textPrimary },
+                  ]}
                 >
                   {appointment.title}
                 </Text>
@@ -205,7 +210,10 @@ export function UpcomingAppointments() {
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>📅</Text>
                     <Text
-                      style={[styles.detailText, { color: colors.textSecondary }]}
+                      style={[
+                        styles.detailText,
+                        { color: colors.textSecondary },
+                      ]}
                     >
                       {new Date(appointment.datetime).toLocaleDateString()}
                     </Text>
@@ -213,7 +221,10 @@ export function UpcomingAppointments() {
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>⏰</Text>
                     <Text
-                      style={[styles.detailText, { color: colors.textSecondary }]}
+                      style={[
+                        styles.detailText,
+                        { color: colors.textSecondary },
+                      ]}
                     >
                       {new Date(appointment.datetime).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -224,7 +235,10 @@ export function UpcomingAppointments() {
                   <View style={styles.detailRow}>
                     <Text style={{ fontSize: 14 }}>📍</Text>
                     <Text
-                      style={[styles.detailText, { color: colors.textSecondary }]}
+                      style={[
+                        styles.detailText,
+                        { color: colors.textSecondary },
+                      ]}
                     >
                       {appointment.location || "Clinic"}
                     </Text>
@@ -239,7 +253,7 @@ export function UpcomingAppointments() {
                       styles.rescheduleButton,
                       {
                         borderColor: theme.ctaBg,
-                    backgroundColor: theme.ctaBg,
+                        backgroundColor: theme.ctaBg,
                       },
                     ]}
                     onPress={() => handleOpenEdit(appointment)}
@@ -247,7 +261,7 @@ export function UpcomingAppointments() {
                     <Text
                       style={[
                         styles.rescheduleButtonText,
-                    { color: theme.ctaText },
+                        { color: theme.ctaText },
                       ]}
                     >
                       Edit
@@ -259,7 +273,7 @@ export function UpcomingAppointments() {
                       styles.rescheduleButton,
                       {
                         borderColor: theme.ctaBg,
-                    backgroundColor: theme.ctaBg,
+                        backgroundColor: theme.ctaBg,
                       },
                     ]}
                     onPress={() => handleOpenReschedule(appointment)}
@@ -267,7 +281,7 @@ export function UpcomingAppointments() {
                     <Text
                       style={[
                         styles.rescheduleButtonText,
-                    { color: theme.ctaText },
+                        { color: theme.ctaText },
                       ]}
                     >
                       Reschedule
@@ -356,26 +370,28 @@ export function UpcomingAppointments() {
                   />
                 </View>
               ) : (
-                <TouchableOpacity
-                  style={styles.dateTimeInput}
-                  onPress={() => setShowDatePicker(!showDatePicker)}
-                >
-                  <Text style={styles.dateTimeText}>
-                    {selectedDate.toLocaleString()}
-                  </Text>
-                  <Text style={{ fontSize: 20 }}>📅</Text>
-                </TouchableOpacity>
-              )}
-              {showDatePicker && Platform.OS !== "web" && (
-                <View style={styles.datePickerContainer}>
-                  <DateTimePicker
-                    value={selectedDate}
-                    mode="datetime"
-                    display="default"
-                    onChange={handleDateChange}
-                    minimumDate={today}
-                  />
-                </View>
+                <>
+                  {/* <TouchableOpacity
+                    style={styles.dateTimeInput}
+                    onPress={() => setShowDatePicker(!showDatePicker)}
+                  >
+                    <Text style={styles.dateTimeText}>
+                      {selectedDate.toLocaleString()}
+                    </Text>
+                    <Text style={{ fontSize: 20 }}>📅</Text>
+                  </TouchableOpacity> */}
+                  {/* {showDatePicker && ( */}
+                  <View style={styles.datePickerContainer}>
+                    <DateTimePicker
+                      value={selectedDate}
+                      mode="datetime"
+                      display="default"
+                      onChange={handleDateChange}
+                      minimumDate={today}
+                    />
+                  </View>
+                  {/* )} */}
+                </>
               )}
             </View>
 
@@ -396,11 +412,15 @@ export function UpcomingAppointments() {
                 disabled={isRescheduling || !newDateTime}
               >
                 {isRescheduling ? (
-                  <Text style={[styles.saveButtonText, { color: theme.ctaText }]}>
+                  <Text
+                    style={[styles.saveButtonText, { color: theme.ctaText }]}
+                  >
                     Rescheduling...
                   </Text>
                 ) : (
-                  <Text style={[styles.saveButtonText, { color: theme.ctaText }]}>
+                  <Text
+                    style={[styles.saveButtonText, { color: theme.ctaText }]}
+                  >
                     Reschedule
                   </Text>
                 )}
@@ -502,8 +522,8 @@ export function UpcomingAppointments() {
                     />
                   </View>
                 ) : (
-                  <View>
-                    <TouchableOpacity
+                  <>
+                    {/* <TouchableOpacity
                       style={styles.dateTimeButton}
                       onPress={() => setShowDatePicker(!showDatePicker)}
                     >
@@ -512,37 +532,37 @@ export function UpcomingAppointments() {
                           ? new Date(editData.datetime).toLocaleString()
                           : "Select date & time"}
                       </Text>
-                    </TouchableOpacity>
-                    {showDatePicker && (
-                      <View style={styles.datePickerContainer}>
-                        <DateTimePicker
-                          value={selectedDate}
-                          mode="datetime"
-                          display="default"
-                          onChange={(event, date) => {
-                            if (Platform.OS === "android") {
+                    </TouchableOpacity> */}
+                    {/* {showDatePicker && ( */}
+                    <View style={styles.datePickerContainer}>
+                      <DateTimePicker
+                        value={selectedDate}
+                        mode="datetime"
+                        display="default"
+                        onChange={(event, date) => {
+                          if (Platform.OS === "android") {
+                            setShowDatePicker(false);
+                          }
+                          if (Platform.OS === "ios") {
+                            // On iOS, allow toggle by keeping picker open if user wants to change again
+                            // But close if user selects a date
+                            if (event.type === "set" && date) {
                               setShowDatePicker(false);
                             }
-                            if (Platform.OS === "ios") {
-                              // On iOS, allow toggle by keeping picker open if user wants to change again
-                              // But close if user selects a date
-                              if (event.type === "set" && date) {
-                                setShowDatePicker(false);
-                              }
-                            }
-                            if (date) {
-                              setSelectedDate(date);
-                              setEditData({
-                                ...editData,
-                                datetime: date.toISOString().slice(0, 16),
-                              });
-                            }
-                          }}
-                          minimumDate={today}
-                        />
-                      </View>
-                    )}
-                  </View>
+                          }
+                          if (date) {
+                            setSelectedDate(date);
+                            setEditData({
+                              ...editData,
+                              datetime: date.toISOString().slice(0, 16),
+                            });
+                          }
+                        }}
+                        minimumDate={today}
+                      />
+                    </View>
+                    {/* )} */}
+                  </>
                 )}
               </View>
             </ScrollView>
@@ -573,11 +593,15 @@ export function UpcomingAppointments() {
                 disabled={!editData.title || !editData.datetime || isEditing}
               >
                 {isEditing ? (
-                  <Text style={[styles.saveButtonText, { color: theme.ctaText }]}>
+                  <Text
+                    style={[styles.saveButtonText, { color: theme.ctaText }]}
+                  >
                     Saving...
                   </Text>
                 ) : (
-                  <Text style={[styles.saveButtonText, { color: theme.ctaText }]}>
+                  <Text
+                    style={[styles.saveButtonText, { color: theme.ctaText }]}
+                  >
                     Save
                   </Text>
                 )}
@@ -764,9 +788,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   datePickerContainer: {
-    marginTop: 12,
-    marginBottom: 8,
-    alignItems: "center",
+    // marginTop: 12,
+    marginLeft: -8,
   },
   dateTimeInput: {
     borderWidth: 1,

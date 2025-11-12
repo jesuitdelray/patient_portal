@@ -976,7 +976,7 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: "row",
     gap: 12,
-    marginTop: 12,
+    marginTop: 24,
   },
   modalButton: {
     flex: 1,

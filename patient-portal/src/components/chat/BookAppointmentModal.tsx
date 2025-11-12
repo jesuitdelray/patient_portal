@@ -219,31 +219,35 @@ export function BookAppointmentModal({
                   className="datetime-input"
                 />
               ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.dateInput,
-                    {
-                      borderColor: theme.borderSubtle,
-                      backgroundColor: colors.primaryWhite,
-                    },
-                  ]}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text style={[styles.dateText, { color: theme.textPrimary }]}>
-                    {datetime
-                      ? new Date(datetime).toLocaleString()
-                      : "Select date and time"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {showDatePicker && Platform.OS !== "web" && (
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="datetime"
-                  minimumDate={tomorrow}
-                  onChange={handleDateChange}
-                />
+                <>
+                  {/* <TouchableOpacity
+                    style={[
+                      styles.dateInput,
+                      {
+                        borderColor: theme.borderSubtle,
+                        backgroundColor: colors.primaryWhite,
+                      },
+                    ]}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Text style={[styles.dateText, { color: theme.textPrimary }]}>
+                      {datetime
+                        ? new Date(datetime).toLocaleString()
+                        : "Select date and time"}
+                    </Text>
+                  </TouchableOpacity> */}
+                  {/* {showDatePicker && ( */}
+                  <View style={styles.datePickerContainer}>
+                    <DateTimePicker
+                      value={selectedDate}
+                      mode="datetime"
+                      display="default"
+                      minimumDate={tomorrow}
+                      onChange={handleDateChange}
+                    />
+                  </View>
+                  {/* )} */}
+                </>
               )}
             </View>
           </View>
@@ -347,6 +351,10 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 15,
     color: colors.textPrimary,
+  },
+  datePickerContainer: {
+    // marginTop: 12,
+    marginLeft: -8,
   },
   buttons: {
     flexDirection: "row",
