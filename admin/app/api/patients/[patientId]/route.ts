@@ -22,6 +22,13 @@ export async function GET(
                 datetime: true,
               },
             },
+            invoice: {
+              select: {
+                id: true,
+                amount: true,
+                status: true,
+              },
+            },
           },
           orderBy: { createdAt: "desc" },
         },

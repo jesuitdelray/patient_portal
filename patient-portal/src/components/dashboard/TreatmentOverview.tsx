@@ -121,10 +121,10 @@ export function TreatmentOverview() {
                       styles.progressBar,
                       {
                         width: `${percentage}%`,
-                        backgroundColor: theme.ctaBg,
+                        backgroundColor: colors.medicalGreen,
                       },
                       isCompleted && {
-                        backgroundColor: theme.success,
+                        backgroundColor: colors.medicalGreen,
                       },
                     ]}
                   />

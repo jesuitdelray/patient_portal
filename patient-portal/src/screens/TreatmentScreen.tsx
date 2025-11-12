@@ -29,6 +29,11 @@ type TreatmentPlan = {
       title: string;
       datetime: string;
     };
+    invoice?: {
+      id: string;
+      amount: number;
+      status: string;
+    };
   }>;
 };
 
@@ -124,10 +129,10 @@ export default function TreatmentScreen() {
                         styles.progressBar,
                         {
                           width: `${progress}%`,
-                          backgroundColor: theme.ctaBg,
+                          backgroundColor: colors.medicalGreen,
                         },
                         plan.status === "completed" && {
-                          backgroundColor: theme.success,
+                          backgroundColor: colors.medicalGreen,
                         },
                       ]}
                     />
@@ -172,32 +177,67 @@ export default function TreatmentScreen() {
 
                   {plan.procedures.length > 0 && (
                     <View style={styles.proceduresList}>
-                      <Text style={styles.proceduresTitle}>Procedures:</Text>
-                      {plan.procedures.map((proc) => (
-                        <View key={proc.id} style={styles.procedureItem}>
-                          <Text style={styles.procedureName}>
-                            {proc.status === "completed"
-                              ? "✅"
-                              : proc.status === "scheduled"
-                              ? "📅"
-                              : "⏸️"}{" "}
-                            {proc.title}
-                          </Text>
-                          {proc.description && (
-                            <Text style={styles.procedureDesc}>
-                              {proc.description}
-                            </Text>
-                          )}
-                          {proc.appointment && (
-                            <Text style={styles.procedureAppt}>
-                              📅 {proc.appointment.title} -{" "}
-                              {new Date(
-                                proc.appointment.datetime
-                              ).toLocaleDateString()}
-                            </Text>
-                          )}
+                      <View style={styles.phaseHeader}>
+                        <Text style={styles.phaseTitle}>{plan.title}</Text>
+                      </View>
+                      <View style={styles.tableContainer}>
+                        <View style={styles.tableHeader}>
+                          <View style={[styles.tableHeaderCell, { width: 30 }]} />
+                          <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Tooth</Text>
+                          <Text style={[styles.tableHeaderText, { flex: 2.5 }]}>Procedure</Text>
+                          <Text style={[styles.tableHeaderText, { flex: 1 }]}>Price</Text>
+                          <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Discount</Text>
+                          <Text style={[styles.tableHeaderText, { flex: 0.6 }]}>Qty</Text>
+                          <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Total</Text>
                         </View>
-                      ))}
+                        {plan.procedures.map((proc) => {
+                          const price = proc.invoice?.amount || 0;
+                          const discount = 0; // TODO: Add discount field if needed
+                          const qty = 1;
+                          const total = price * (1 - discount / 100) * qty;
+                          const tooth = proc.description?.match(/\d+/)?.[0] || "-";
+                          
+                          return (
+                            <View key={proc.id} style={styles.tableRow}>
+                              <View style={[styles.tableCell, { width: 30, alignItems: "center" }]}>
+                                <View style={styles.checkbox}>
+                                  {proc.status === "completed" && (
+                                    <Text style={styles.checkmark}>✓</Text>
+                                  )}
+                                </View>
+                              </View>
+                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 0.8 }]}>
+                                {tooth}
+                              </Text>
+                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 2.5 }]}>
+                                {proc.title}
+                              </Text>
+                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 1 }]}>
+                                ${price.toFixed(2)}
+                              </Text>
+                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 0.8 }]}>
+                                {discount}%
+                              </Text>
+                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 0.6 }]}>
+                                {qty}
+                              </Text>
+                              <Text style={[styles.tableCell, styles.tableCellText, { flex: 1.2 }]}>
+                                ${total.toFixed(2)}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                        <View style={styles.tableFooter}>
+                          <Text style={styles.footerText}>
+                            {plan.title} total ($): ${plan.procedures.reduce((sum, proc) => {
+                              const price = proc.invoice?.amount || 0;
+                              const discount = 0;
+                              const qty = 1;
+                              return sum + (price * (1 - discount / 100) * qty);
+                            }, 0).toFixed(2)}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
                   )}
                 </View>
@@ -242,31 +282,87 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E5E5E5",
   },
-  proceduresTitle: {
+  phaseHeader: {
+    backgroundColor: colors.greyscale200,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 4,
+  },
+  phaseTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#000",
-    marginBottom: 8,
+    color: colors.textPrimary,
   },
-  procedureItem: {
-    marginBottom: 8,
-    paddingLeft: 8,
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
+    borderRadius: 4,
+    overflow: "hidden",
   },
-  procedureName: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#000",
-    marginBottom: 2,
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: colors.primaryWhite,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.greyscale200,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    alignItems: "center",
   },
-  procedureDesc: {
+  tableHeaderCell: {
+    paddingHorizontal: 4,
+  },
+  tableHeaderText: {
     fontSize: 12,
-    color: "#666",
-    marginTop: 2,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    textAlign: "left",
+    paddingHorizontal: 4,
   },
-  procedureAppt: {
-    fontSize: 11,
-    color: "#007AFF",
-    marginTop: 2,
+  tableRow: {
+    flexDirection: "row",
+    backgroundColor: colors.primaryWhite,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.greyscale200,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: "center",
+  },
+  tableCell: {
+    paddingHorizontal: 4,
+    justifyContent: "center",
+  },
+  tableCellText: {
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.greyscale400,
+    backgroundColor: colors.primaryWhite,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkmark: {
+    fontSize: 12,
+    color: colors.medicalGreen,
+    fontWeight: "bold",
+  },
+  tableFooter: {
+    backgroundColor: colors.greyscale100,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.greyscale200,
+  },
+  footerText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    textAlign: "right",
   },
   scrollView: {
     flex: 1,
