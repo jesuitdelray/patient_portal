@@ -777,7 +777,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   phasesContainer: {
-    gap: 24,
+    // gap: 24,
   },
   phaseSection: {
     marginBottom: 16,
