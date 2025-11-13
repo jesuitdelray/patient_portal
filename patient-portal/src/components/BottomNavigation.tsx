@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ImageSourcePropType,
   Image,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -16,6 +17,8 @@ const menuItems = [
   { title: "App...ts", screen: "Appointments", icon: "📅" },
   { title: "Treatment", screen: "Treatment", icon: "🩺" },
   { title: "Price List", screen: "PriceList", icon: "💰" },
+  { title: "Invoices", screen: "Invoices", icon: "📄" },
+  { title: "Promotions", screen: "Promotions", icon: "🏷️" },
   { title: "Profile", screen: "Profile", icon: "👤" },
 ];
 
@@ -45,24 +48,31 @@ export function BottomNavigation() {
   return (
     <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
       <View style={styles.container}>
-        {menuItems.map((item) => {
-          const isActive = currentRoute === item.screen;
-          return (
-            <TouchableOpacity
-              key={item.screen}
-              style={styles.menuItem}
-              onPress={() => navigation.navigate(item.screen)}
-              activeOpacity={0.8}
-            >
-              <Text style={{ fontSize: 18 }}>{item.icon}</Text>
-              <Text
-                style={[styles.menuText, isActive && styles.menuTextActive]}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.menuItemsContainer}
+          style={styles.menuItemsScrollView}
+        >
+          {menuItems.map((item) => {
+            const isActive = currentRoute === item.screen;
+            return (
+              <TouchableOpacity
+                key={item.screen}
+                style={styles.menuItem}
+                onPress={() => navigation.navigate(item.screen)}
+                activeOpacity={0.8}
               >
-                {item.title}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                <Text style={{ fontSize: 18 }}>{item.icon}</Text>
+                <Text
+                  style={[styles.menuText, isActive && styles.menuTextActive]}
+                >
+                  {item.title}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
         <TouchableOpacity
           key="magic-key"
           style={styles.chatButton}
@@ -92,21 +102,30 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
     paddingHorizontal: 4,
-    justifyContent: "space-around",
     shadowColor: colors.greyscale900,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
   },
-  menuItem: {
+  menuItemsScrollView: {
     flex: 1,
+    marginRight: 4,
+  },
+  menuItemsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  menuItem: {
     alignItems: "center",
     gap: 4,
     paddingVertical: 4,
+    paddingHorizontal: 8,
+    minWidth: 60,
   },
   chatButton: {
-    flex: 1,
+    width: 60,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 4,
