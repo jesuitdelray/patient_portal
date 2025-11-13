@@ -13,7 +13,7 @@ import { colors } from "../lib/colors";
 
 const menuItems = [
   { title: "Dashboard", screen: "Dashboard", icon: "🏠" },
-  { title: "Appointments", screen: "Appointments", icon: "📅" },
+  { title: "App...ts", screen: "Appointments", icon: "📅" },
   { title: "Treatment", screen: "Treatment", icon: "🩺" },
   { title: "Price List", screen: "PriceList", icon: "💰" },
   { title: "Profile", screen: "Profile", icon: "👤" },

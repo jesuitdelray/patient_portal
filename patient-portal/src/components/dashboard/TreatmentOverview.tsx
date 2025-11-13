@@ -1,48 +1,40 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { API_BASE, resolvePatientId } from "../../lib/api";
 import { colors } from "../../lib/colors";
 import { useBrandingTheme } from "../../lib/useBrandingTheme";
 import { useNavigation } from "@react-navigation/native";
-
-type Procedure = {
-  id: string;
-  title: string;
-  status: string;
-};
-
-type Plan = {
-  id: string;
-  title: string;
-  status: string;
-  procedures?: Procedure[];
-};
+import {
+  MOCK_TREATMENT_PLANS,
+  TreatmentPlan,
+  TreatmentProcedure,
+} from "../../mock/treatmentPlans";
 
 export function TreatmentOverview() {
-  const [plans, setPlans] = useState<Plan[]>([]);
   const theme = useBrandingTheme();
   const navigation = useNavigation<any>();
+  const plans = useMemo<TreatmentPlan[]>(() => MOCK_TREATMENT_PLANS, []);
 
-  useEffect(() => {
-    (async () => {
-      const patientId = await resolvePatientId();
-      if (!patientId) return;
-      const res = await fetch(`${API_BASE}/patients/${patientId}`);
-      const data = await res.json();
-      setPlans(data.plans || []);
-    })();
-  }, []);
-
-  const calculateProgress = (plan: Plan) => {
+  const calculateProgress = (plan: TreatmentPlan) => {
     if (!plan.procedures || plan.procedures.length === 0) {
       return { percentage: 0, completed: 0, total: 0 };
     }
     const total = plan.procedures.length;
     const completed = plan.procedures.filter(
-      (p) => p.status === "completed"
+      (p: TreatmentProcedure) => p.status === "completed"
     ).length;
     const percentage = Math.round((completed / total) * 100);
     return { percentage, completed, total };
+  };
+
+  const getStatusLabel = (plan: TreatmentPlan) => {
+    switch (plan.status) {
+      case "completed":
+        return "Completed";
+      case "active":
+        return "Active";
+      default:
+        return plan.status;
+    }
   };
 
   return (
@@ -93,18 +85,14 @@ export function TreatmentOverview() {
                     >
                       {plan.title}
                     </Text>
-                    <Text
-                      style={[
-                        styles.treatmentStep,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      {plan.status === "completed"
-                        ? "Completed"
-                        : plan.status === "active"
-                        ? "Active"
-                        : plan.status}
-                    </Text>
+            <Text
+              style={[
+                styles.treatmentStep,
+                { color: theme.textSecondary },
+              ]}
+            >
+              {getStatusLabel(plan)}
+            </Text>
                   </View>
                   <View style={styles.progressInfo}>
                     <Text style={{ fontSize: 16 }}>

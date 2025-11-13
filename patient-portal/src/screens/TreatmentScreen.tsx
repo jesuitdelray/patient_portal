@@ -1,301 +1,35 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Image,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { API_BASE, resolvePatientId } from "../lib/api";
-import { useAuth } from "../lib/queries";
 import { Header } from "../components/Header";
-import { Loader } from "../components/Loader";
 import { colors } from "../lib/colors";
 import { useBrandingTheme } from "../lib/useBrandingTheme";
-
-type TreatmentPlan = {
-  id: string;
-  title: string;
-  status: string;
-  steps?: {
-    description?: string;
-    phases?: Array<{
-      title: string;
-      description?: string;
-      weeks?: string;
-    }>;
-  };
-  procedures: Array<{
-    id: string;
-    title: string;
-    description?: string;
-    scheduledDate?: string;
-    completedDate?: string;
-    status: string;
-    phase?: number;
-    tooth?: string;
-    price?: number;
-    discount?: number;
-    quantity?: number;
-    appointment?: {
-      id: string;
-      title: string;
-      datetime: string;
-    };
-    invoice?: {
-      id: string;
-      amount: number;
-      status: string;
-    };
-  }>;
-};
-
-const mockTreatmentPlans: TreatmentPlan[] = [
-  {
-    id: "1",
-    title: "Mock Treatments Plan Status",
-    status: "Test Status",
-    steps: {
-      description:
-        "Description bla bla bla.... Description bla bla bla... Description bla bla bla... Description bla bla bla... Description bla bla bla... Description bla bla bla...",
-      phases: [
-        {
-          title: "First phase",
-          description: "Second phase description",
-          weeks: "Phases Weeks",
-        },
-        {
-          title: "Second phase",
-          description: "Second phase description",
-          weeks: "Phases Weeks",
-        },
-        {
-          title: "Third phase",
-          description: "Second phase description",
-          weeks: "Phases Weeks",
-        },
-      ],
-    },
-    procedures: [
-      {
-        id: "1",
-        title: "Procedure Title First",
-        description: "Procedure Description",
-        scheduledDate: "12.06.2024",
-        completedDate: "18.08.2025",
-        status: "Done",
-        phase: 1,
-        tooth: "11",
-        price: 100,
-        discount: 10,
-        quantity: 1,
-        appointment: {
-          id: "1",
-          title: "first appointment",
-          datetime: "12.07.2026",
-        },
-        invoice: {
-          id: "1",
-          amount: 5,
-          status: "In progress",
-        },
-      },
-      {
-        id: "2",
-        title: "Procedure Title Second",
-        description: "Procedure Description",
-        scheduledDate: "12.06.2024",
-        completedDate: "18.08.2025",
-        status: "Done",
-        phase: 2,
-        tooth: "12",
-        price: 200,
-        discount: 50,
-        quantity: 2,
-        appointment: {
-          id: "2",
-          title: "first appointment",
-          datetime: "12.07.2026",
-        },
-        invoice: {
-          id: "2",
-          amount: 5,
-          status: "In progress",
-        },
-      },
-      {
-        id: "3",
-        title: "Procedure Title Third",
-        description: "Procedure Description",
-        scheduledDate: "12.06.2024",
-        completedDate: "18.08.2025",
-        status: "Done",
-        phase: 3,
-        tooth: "13",
-        price: 300,
-        discount: 100,
-        quantity: 2,
-        appointment: {
-          id: "1",
-          title: "first appointment",
-          datetime: "12.07.2026",
-        },
-        invoice: {
-          id: "1",
-          amount: 5,
-          status: "In progress",
-        },
-      },
-      {
-        id: "4",
-        title: "Procedure Title Third",
-        description: "Procedure Description",
-        scheduledDate: "12.06.2024",
-        completedDate: "18.08.2025",
-        status: "Done",
-        phase: 2,
-        tooth: "13",
-        price: 300,
-        discount: 100,
-        quantity: 2,
-        appointment: {
-          id: "1",
-          title: "first appointment",
-          datetime: "12.07.2026",
-        },
-        invoice: {
-          id: "1",
-          amount: 5,
-          status: "In progress",
-        },
-      },
-      {
-        id: "5",
-        title: "Procedure Title Third",
-        description: "Procedure Description",
-        scheduledDate: "12.06.2024",
-        completedDate: "18.08.2025",
-        status: "Done",
-        phase: 2,
-        tooth: "13",
-        price: 300,
-        discount: 40,
-        quantity: 2,
-        appointment: {
-          id: "1",
-          title: "first appointment",
-          datetime: "12.07.2026",
-        },
-        invoice: {
-          id: "1",
-          amount: 5,
-          status: "In progress",
-        },
-      },
-      {
-        id: "6",
-        title: "Procedure Title Third",
-        description: "Procedure Description",
-        scheduledDate: "12.06.2024",
-        completedDate: "18.08.2025",
-        status: "Done",
-        phase: 3,
-        tooth: "13",
-        price: 300,
-        discount: 20,
-        quantity: 2,
-        appointment: {
-          id: "1",
-          title: "first appointment",
-          datetime: "12.07.2026",
-        },
-        invoice: {
-          id: "1",
-          amount: 5,
-          status: "In progress",
-        },
-      },
-      {
-        id: "7",
-        title: "Procedure Title Third",
-        description: "Procedure Description",
-        scheduledDate: "12.06.2024",
-        completedDate: "18.08.2025",
-        status: "Done",
-        phase: 3,
-        tooth: "13",
-        price: 100,
-        discount: 0,
-        quantity: 2,
-        appointment: {
-          id: "1",
-          title: "first appointment",
-          datetime: "12.07.2026",
-        },
-        invoice: {
-          id: "1",
-          amount: 5,
-          status: "In progress",
-        },
-      },
-    ],
-  },
-];
-
-type Doctor = {
-  id: string;
-  name: string;
-  email: string;
-  picture?: string;
-};
-
-type Patient = {
-  id: string;
-  name: string;
-  email: string;
-  picture?: string;
-};
+import {
+  MOCK_DOCTOR,
+  MOCK_PATIENT,
+  MOCK_TREATMENT_PLANS,
+  TreatmentPlan,
+  TreatmentProcedure,
+  TreatmentPerson,
+} from "../mock/treatmentPlans";
 
 export default function TreatmentScreen() {
-  const { data: authData } = useAuth();
-  const patientId = authData?.role === "patient" ? authData.userId : null;
-  const [treatPlans, setPlans] = useState<TreatmentPlan[]>(mockTreatmentPlans);
-  const [doctor, setDoctor] = useState<Doctor | null>(null);
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [loading, setLoading] = useState(true);
   const theme = useBrandingTheme();
-
-  const plans = mockTreatmentPlans;
-
-  useEffect(() => {
-    (async () => {
-      const id = patientId || (await resolvePatientId());
-      if (!id) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE}/patients/${id}`, {
-          credentials: "include",
-        });
-        const data = await res.json();
-        setPlans(data.plans || []);
-        setDoctor(data.doctor || null);
-        setPatient(data.patient || null);
-      } catch (error) {
-        console.error("Failed to fetch treatments:", error);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [patientId]);
+  const plans = useMemo<TreatmentPlan[]>(() => MOCK_TREATMENT_PLANS, []);
+  const doctor: TreatmentPerson | null = MOCK_DOCTOR;
+  const patient: TreatmentPerson | null = MOCK_PATIENT;
 
   const calculateProgress = (plan: TreatmentPlan) => {
     if (plan.procedures.length === 0) return 0;
     const completed = plan.procedures.filter(
-      (p) => p.status === "completed"
+      (p: TreatmentProcedure) => p.status === "completed"
     ).length;
     return Math.round((completed / plan.procedures.length) * 100);
   };
@@ -323,16 +57,6 @@ export default function TreatmentScreen() {
     }, 0);
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Loader />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <Header title="Treatment" />
@@ -354,8 +78,7 @@ export default function TreatmentScreen() {
               const groupedProcedures = groupProceduresByPhase(plan.procedures);
               const phases = plan.steps?.phases || [];
               const description = plan.steps?.description || "";
-
-              console.log(phases, "phases");
+              const overallTotal = calculatePhaseTotal(plan.procedures);
 
               return (
                 <View key={plan.id} style={styles.treatmentCard}>
@@ -462,67 +185,99 @@ export default function TreatmentScreen() {
                                     : ""}
                                 </Text>
                               </View>
-                              <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={true}
-                                style={styles.phaseScrollWrapper}
-                              >
+                              {Platform.OS === "web" ? (
                                 <View style={styles.tableContainer}>
                                   <View style={styles.tableHeader}>
                                     <View
                                       style={[
                                         styles.tableHeaderCell,
-                                        { width: 30 },
-                                      ]}
-                                    />
-                                    <Text
-                                      style={[
-                                        styles.tableHeaderText,
-                                        { flex: 0.8 },
+                                        styles.columnCheckbox,
                                       ]}
                                     >
-                                      Tooth
-                                    </Text>
-                                    <Text
+                                      <Text
+                                        style={styles.tableHeaderText}
+                                      ></Text>
+                                    </View>
+                                    <View
                                       style={[
-                                        styles.tableHeaderText,
-                                        { flex: 2.5 },
+                                        styles.tableHeaderCell,
+                                        styles.columnTooth,
                                       ]}
                                     >
-                                      Procedure
-                                    </Text>
-                                    <Text
+                                      <Text style={styles.tableHeaderText}>
+                                        Tooth
+                                      </Text>
+                                    </View>
+                                    <View
                                       style={[
-                                        styles.tableHeaderText,
-                                        { flex: 1 },
+                                        styles.tableHeaderCell,
+                                        styles.columnProcedure,
                                       ]}
                                     >
-                                      Price
-                                    </Text>
-                                    <Text
+                                      <Text style={styles.tableHeaderText}>
+                                        Procedure
+                                      </Text>
+                                    </View>
+                                    <View
                                       style={[
-                                        styles.tableHeaderText,
-                                        { flex: 0.8 },
+                                        styles.tableHeaderCell,
+                                        styles.columnPrice,
                                       ]}
                                     >
-                                      Discount
-                                    </Text>
-                                    <Text
+                                      <Text
+                                        style={[
+                                          styles.tableHeaderText,
+                                          styles.textRight,
+                                        ]}
+                                      >
+                                        Price
+                                      </Text>
+                                    </View>
+                                    <View
                                       style={[
-                                        styles.tableHeaderText,
-                                        { flex: 0.6 },
+                                        styles.tableHeaderCell,
+                                        styles.columnDiscount,
                                       ]}
                                     >
-                                      Qty
-                                    </Text>
-                                    <Text
+                                      <Text
+                                        style={[
+                                          styles.tableHeaderText,
+                                          styles.textRight,
+                                        ]}
+                                      >
+                                        Discount
+                                      </Text>
+                                    </View>
+                                    <View
                                       style={[
-                                        styles.tableHeaderText,
-                                        { flex: 1.2 },
+                                        styles.tableHeaderCell,
+                                        styles.columnQty,
                                       ]}
                                     >
-                                      Total
-                                    </Text>
+                                      <Text
+                                        style={[
+                                          styles.tableHeaderText,
+                                          styles.textCenter,
+                                        ]}
+                                      >
+                                        Qty
+                                      </Text>
+                                    </View>
+                                    <View
+                                      style={[
+                                        styles.tableHeaderCell,
+                                        styles.columnTotal,
+                                      ]}
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.tableHeaderText,
+                                          styles.textRight,
+                                        ]}
+                                      >
+                                        Total
+                                      </Text>
+                                    </View>
                                   </View>
                                   {phaseProcedures.map((proc) => {
                                     const price =
@@ -544,7 +299,7 @@ export default function TreatmentScreen() {
                                         <View
                                           style={[
                                             styles.tableCell,
-                                            { width: 30, alignItems: "center" },
+                                            styles.columnCheckbox,
                                           ]}
                                         >
                                           <View
@@ -561,60 +316,86 @@ export default function TreatmentScreen() {
                                             )}
                                           </View>
                                         </View>
-                                        <Text
+                                        <View
                                           style={[
                                             styles.tableCell,
-                                            styles.tableCellText,
-                                            { flex: 0.8 },
+                                            styles.columnTooth,
                                           ]}
                                         >
-                                          {tooth}
-                                        </Text>
-                                        <Text
+                                          <Text style={styles.tableCellText}>
+                                            {tooth}
+                                          </Text>
+                                        </View>
+                                        <View
                                           style={[
                                             styles.tableCell,
-                                            styles.tableCellText,
-                                            { flex: 2.5 },
+                                            styles.columnProcedure,
                                           ]}
                                         >
-                                          {proc.title}
-                                        </Text>
-                                        <Text
+                                          <Text style={styles.tableCellText}>
+                                            {proc.title}
+                                          </Text>
+                                        </View>
+                                        <View
                                           style={[
                                             styles.tableCell,
-                                            styles.tableCellText,
-                                            { flex: 1 },
+                                            styles.columnPrice,
                                           ]}
                                         >
-                                          ${price.toFixed(2)}
-                                        </Text>
-                                        <Text
+                                          <Text
+                                            style={[
+                                              styles.tableCellText,
+                                              styles.textRight,
+                                            ]}
+                                          >
+                                            ${price.toFixed(2)}
+                                          </Text>
+                                        </View>
+                                        <View
                                           style={[
                                             styles.tableCell,
-                                            styles.tableCellText,
-                                            { flex: 0.8 },
+                                            styles.columnDiscount,
                                           ]}
                                         >
-                                          {discount}%
-                                        </Text>
-                                        <Text
+                                          <Text
+                                            style={[
+                                              styles.tableCellText,
+                                              styles.textRight,
+                                            ]}
+                                          >
+                                            {discount}%
+                                          </Text>
+                                        </View>
+                                        <View
                                           style={[
                                             styles.tableCell,
-                                            styles.tableCellText,
-                                            { flex: 0.6 },
+                                            styles.columnQty,
                                           ]}
                                         >
-                                          {qty}
-                                        </Text>
-                                        <Text
+                                          <Text
+                                            style={[
+                                              styles.tableCellText,
+                                              styles.textCenter,
+                                            ]}
+                                          >
+                                            {qty}
+                                          </Text>
+                                        </View>
+                                        <View
                                           style={[
                                             styles.tableCell,
-                                            styles.tableCellText,
-                                            { flex: 1.2 },
+                                            styles.columnTotal,
                                           ]}
                                         >
-                                          ${total.toFixed(2)}
-                                        </Text>
+                                          <Text
+                                            style={[
+                                              styles.tableCellText,
+                                              styles.textRight,
+                                            ]}
+                                          >
+                                            ${total.toFixed(2)}
+                                          </Text>
+                                        </View>
                                       </View>
                                     );
                                   })}
@@ -625,12 +406,244 @@ export default function TreatmentScreen() {
                                     </Text>
                                   </View>
                                 </View>
-                              </ScrollView>
+                              ) : (
+                                <ScrollView
+                                  horizontal
+                                  showsHorizontalScrollIndicator={true}
+                                  style={styles.phaseScrollWrapper}
+                                >
+                                  <View style={styles.tableContainer}>
+                                    <View style={styles.tableHeader}>
+                                      <View
+                                        style={[
+                                          styles.tableHeaderCell,
+                                          styles.columnCheckbox,
+                                        ]}
+                                      >
+                                        <Text
+                                          style={styles.tableHeaderText}
+                                        ></Text>
+                                      </View>
+                                      <View
+                                        style={[
+                                          styles.tableHeaderCell,
+                                          styles.columnTooth,
+                                        ]}
+                                      >
+                                        <Text style={styles.tableHeaderText}>
+                                          Tooth
+                                        </Text>
+                                      </View>
+                                      <View
+                                        style={[
+                                          styles.tableHeaderCell,
+                                          styles.columnProcedure,
+                                        ]}
+                                      >
+                                        <Text style={styles.tableHeaderText}>
+                                          Procedure
+                                        </Text>
+                                      </View>
+                                      <View
+                                        style={[
+                                          styles.tableHeaderCell,
+                                          styles.columnPrice,
+                                        ]}
+                                      >
+                                        <Text
+                                          style={[
+                                            styles.tableHeaderText,
+                                            styles.textRight,
+                                          ]}
+                                        >
+                                          Price
+                                        </Text>
+                                      </View>
+                                      <View
+                                        style={[
+                                          styles.tableHeaderCell,
+                                          styles.columnDiscount,
+                                        ]}
+                                      >
+                                        <Text
+                                          style={[
+                                            styles.tableHeaderText,
+                                            styles.textRight,
+                                          ]}
+                                        >
+                                          Discount
+                                        </Text>
+                                      </View>
+                                      <View
+                                        style={[
+                                          styles.tableHeaderCell,
+                                          styles.columnQty,
+                                        ]}
+                                      >
+                                        <Text
+                                          style={[
+                                            styles.tableHeaderText,
+                                            styles.textCenter,
+                                          ]}
+                                        >
+                                          Qty
+                                        </Text>
+                                      </View>
+                                      <View
+                                        style={[
+                                          styles.tableHeaderCell,
+                                          styles.columnTotal,
+                                        ]}
+                                      >
+                                        <Text
+                                          style={[
+                                            styles.tableHeaderText,
+                                            styles.textRight,
+                                          ]}
+                                        >
+                                          Total
+                                        </Text>
+                                      </View>
+                                    </View>
+                                    {phaseProcedures.map((proc) => {
+                                      const price =
+                                        proc.price || proc.invoice?.amount || 0;
+                                      const discount = proc.discount || 0;
+                                      const qty = proc.quantity || 1;
+                                      const total =
+                                        price * (1 - discount / 100) * qty;
+                                      const tooth =
+                                        proc.tooth ||
+                                        proc.description?.match(/\d+/)?.[0] ||
+                                        "-";
+
+                                      return (
+                                        <View
+                                          key={proc.id}
+                                          style={styles.tableRow}
+                                        >
+                                          <View
+                                            style={[
+                                              styles.tableCell,
+                                              styles.columnCheckbox,
+                                            ]}
+                                          >
+                                            <View
+                                              style={[
+                                                styles.checkbox,
+                                                proc.status === "completed" &&
+                                                  styles.checkboxCompleted,
+                                              ]}
+                                            >
+                                              {proc.status === "completed" && (
+                                                <Text style={styles.checkmark}>
+                                                  ✓
+                                                </Text>
+                                              )}
+                                            </View>
+                                          </View>
+                                          <View
+                                            style={[
+                                              styles.tableCell,
+                                              styles.columnTooth,
+                                            ]}
+                                          >
+                                            <Text style={styles.tableCellText}>
+                                              {tooth}
+                                            </Text>
+                                          </View>
+                                          <View
+                                            style={[
+                                              styles.tableCell,
+                                              styles.columnProcedure,
+                                            ]}
+                                          >
+                                            <Text style={styles.tableCellText}>
+                                              {proc.title}
+                                            </Text>
+                                          </View>
+                                          <View
+                                            style={[
+                                              styles.tableCell,
+                                              styles.columnPrice,
+                                            ]}
+                                          >
+                                            <Text
+                                              style={[
+                                                styles.tableCellText,
+                                                styles.textRight,
+                                              ]}
+                                            >
+                                              ${price.toFixed(2)}
+                                            </Text>
+                                          </View>
+                                          <View
+                                            style={[
+                                              styles.tableCell,
+                                              styles.columnDiscount,
+                                            ]}
+                                          >
+                                            <Text
+                                              style={[
+                                                styles.tableCellText,
+                                                styles.textRight,
+                                              ]}
+                                            >
+                                              {discount}%
+                                            </Text>
+                                          </View>
+                                          <View
+                                            style={[
+                                              styles.tableCell,
+                                              styles.columnQty,
+                                            ]}
+                                          >
+                                            <Text
+                                              style={[
+                                                styles.tableCellText,
+                                                styles.textCenter,
+                                              ]}
+                                            >
+                                              {qty}
+                                            </Text>
+                                          </View>
+                                          <View
+                                            style={[
+                                              styles.tableCell,
+                                              styles.columnTotal,
+                                            ]}
+                                          >
+                                            <Text
+                                              style={[
+                                                styles.tableCellText,
+                                                styles.textRight,
+                                              ]}
+                                            >
+                                              ${total.toFixed(2)}
+                                            </Text>
+                                          </View>
+                                        </View>
+                                      );
+                                    })}
+                                    <View style={styles.tableFooter}>
+                                      <Text style={styles.footerText}>
+                                        Phase {phaseNum} total ($): $
+                                        {phaseTotal.toFixed(2)}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                </ScrollView>
+                              )}
                             </View>
                           );
                         })}
                     </View>
                   )}
+                  <View style={styles.planTotalRow}>
+                    <Text style={styles.planTotalText}>
+                      Plan total ($): ${overallTotal.toFixed(2)}
+                    </Text>
+                  </View>
                 </View>
               );
             })
@@ -645,11 +658,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   emptyState: {
     padding: 40,
@@ -769,7 +777,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   phasesContainer: {
-    // gap: 24,
+    gap: 24,
   },
   phaseSection: {
     marginBottom: 16,
@@ -778,7 +786,7 @@ const styles = StyleSheet.create({
     maxHeight: 400,
   },
   phaseHeader: {
-    backgroundColor: "#F0EBF3",
+    backgroundColor: colors.greyscale200,
     paddingVertical: 10,
     paddingHorizontal: 12,
     marginBottom: 8,
@@ -794,7 +802,7 @@ const styles = StyleSheet.create({
     borderColor: colors.greyscale200,
     borderRadius: 4,
     overflow: "hidden",
-    minWidth: 600,
+    ...(Platform.OS === "web" ? { width: "100%" } : { minWidth: 700 }),
   },
   tableHeader: {
     flexDirection: "row",
@@ -803,17 +811,17 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.greyscale200,
     paddingVertical: 8,
     paddingHorizontal: 8,
-    alignItems: "center",
+    ...(Platform.OS === "web" ? { width: "100%" } : { minWidth: 700 }),
   },
   tableHeaderCell: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
+    justifyContent: "center",
   },
   tableHeaderText: {
     fontSize: 12,
     fontWeight: "600",
     color: colors.textPrimary,
     textAlign: "left",
-    paddingHorizontal: 4,
   },
   tableRow: {
     flexDirection: "row",
@@ -822,15 +830,68 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.greyscale200,
     paddingVertical: 10,
     paddingHorizontal: 8,
-    alignItems: "center",
+    ...(Platform.OS === "web" ? { width: "100%" } : { minWidth: 700 }),
   },
   tableCell: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
     justifyContent: "center",
   },
   tableCellText: {
     fontSize: 13,
     color: colors.textPrimary,
+  },
+  columnCheckbox: {
+    width: 50,
+    minWidth: 50,
+    maxWidth: 50,
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  columnTooth: {
+    width: 70,
+    minWidth: 70,
+    maxWidth: 70,
+    flexShrink: 0,
+  },
+  columnProcedure: {
+    ...(Platform.OS === "web"
+      ? { flex: 1, minWidth: 200 }
+      : { width: 250, minWidth: 250, maxWidth: 250 }),
+    flexShrink: 0,
+  },
+  columnPrice: {
+    width: 100,
+    minWidth: 100,
+    maxWidth: 100,
+    alignItems: "flex-end",
+    flexShrink: 0,
+  },
+  columnDiscount: {
+    width: 90,
+    minWidth: 90,
+    maxWidth: 90,
+    alignItems: "flex-end",
+    flexShrink: 0,
+  },
+  columnQty: {
+    width: 60,
+    minWidth: 60,
+    maxWidth: 60,
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  columnTotal: {
+    width: 110,
+    minWidth: 110,
+    maxWidth: 110,
+    alignItems: "flex-end",
+    flexShrink: 0,
+  },
+  textRight: {
+    textAlign: "right",
+  },
+  textCenter: {
+    textAlign: "center",
   },
   checkbox: {
     width: 20,
@@ -869,6 +930,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
+    ...(Platform.OS === "web" ? { width: "100%", maxWidth: "100%" } : {}),
   },
   header: {
     marginBottom: 24,
@@ -957,5 +1019,21 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 13,
     color: "#666",
+  },
+  planTotalRow: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.greyscale200,
+    backgroundColor:
+      Platform.OS === "web" ? "rgba(15, 111, 255, 0.06)" : colors.greyscale100,
+  },
+  planTotalText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    textAlign: "right",
   },
 });
