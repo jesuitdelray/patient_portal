@@ -8,8 +8,10 @@ import {
   TextInput,
   ScrollView,
   Platform,
+  Alert,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import Toast from "react-native-toast-message";
 import { useAppointments } from "./AppointmentsContext";
 import { API_BASE } from "../../lib/api";
 import { useAuth } from "../../lib/queries";
@@ -49,6 +51,61 @@ export function UpcomingAppointments() {
 
   const today = new Date();
   const todayString = today.toISOString().slice(0, 16);
+
+  const cancelAppointment = async (appointment: any) => {
+    if (!appointment?.id) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid appointment",
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/appointments/${appointment.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error || "Failed to cancel appointment");
+      }
+
+      setAppointments((prev) =>
+        prev.filter((appt) => appt.id !== appointment.id)
+      );
+      Toast.show({
+        type: "success",
+        text1: "Appointment cancelled successfully",
+      });
+    } catch (error: any) {
+      console.error("[UpcomingAppointments] Cancel error:", error);
+      Toast.show({
+        type: "error",
+        text1: error?.message || "Failed to cancel appointment",
+      });
+    }
+  };
+
+  const handleCancel = (appointment: any) => {
+    const confirmCancellation = () => cancelAppointment(appointment);
+
+    if (Platform.OS === "web") {
+      if (window.confirm("Cancel this appointment?")) {
+        confirmCancellation();
+      }
+    } else {
+      Alert.alert(
+        "Cancel Appointment",
+        "Are you sure you want to cancel this appointment?",
+        [
+          { text: "No", style: "cancel" },
+          { text: "Yes", style: "destructive", onPress: confirmCancellation },
+        ]
+      );
+    }
+  };
 
   const handleReschedule = async () => {
     if (isRescheduling || !newDateTime || !selectedAppointment?.id) return;
@@ -290,30 +347,7 @@ export function UpcomingAppointments() {
                 )}
                 <TouchableOpacity
                   style={styles.cancelModalButton}
-                  onPress={async () => {
-                    if (
-                      !confirm(
-                        "Are you sure you want to cancel this appointment?"
-                      )
-                    )
-                      return;
-                    try {
-                      const res = await fetch(
-                        `${API_BASE}/appointments/${appointment.id}`,
-                        {
-                          method: "DELETE",
-                          credentials: "include",
-                        }
-                      );
-                      if (res.ok) {
-                        // Appointment will be removed via socket update
-                      } else {
-                        alert("Failed to cancel appointment");
-                      }
-                    } catch (error) {
-                      alert("Failed to cancel appointment");
-                    }
-                  }}
+                  onPress={() => handleCancel(appointment)}
                 >
                   <Text style={styles.cancelModalButtonText}>Cancel</Text>
                 </TouchableOpacity>

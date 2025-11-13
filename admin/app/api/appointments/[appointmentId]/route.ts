@@ -93,12 +93,10 @@ export async function DELETE(
     if (io) {
       io.to(`patient:${appointment.patientId}`).emit("appointment:cancelled", {
         appointmentId,
-        by: "doctor",
       });
       io.to("admin").emit("appointment:cancelled", {
         appointmentId,
         patientId: appointment.patientId,
-        by: "doctor",
       });
     }
 
