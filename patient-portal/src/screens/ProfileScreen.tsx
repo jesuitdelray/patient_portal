@@ -189,7 +189,6 @@ export default function ProfileScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
       >
-
         <View style={styles.grid}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -255,9 +254,6 @@ export default function ProfileScreen() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Medical History</Text>
-              <Text style={styles.cardDescription}>
-                Your dental treatment history and current conditions
-              </Text>
             </View>
             <View style={styles.cardContent}>
               <View style={styles.historySection}>
@@ -459,7 +455,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   grid: {
-    gap: 24,
+    gap: 12,
   },
   card: {
     backgroundColor: "#fff",
