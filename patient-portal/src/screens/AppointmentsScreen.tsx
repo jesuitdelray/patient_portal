@@ -33,11 +33,15 @@ export default function AppointmentsScreen() {
 
   const sections = useMemo(() => {
     const now = new Date();
-    const upcoming = (appointments || []).filter((appointment: any) => {
+    // Don't show cancelled appointments
+    const activeAppointments = (appointments || []).filter(
+      (appointment: any) => !appointment.isCancelled
+    );
+    const upcoming = activeAppointments.filter((appointment: any) => {
       if (!appointment?.datetime) return false;
       return new Date(appointment.datetime).getTime() >= now.getTime();
     });
-    const past = (appointments || []).filter((appointment: any) => {
+    const past = activeAppointments.filter((appointment: any) => {
       if (!appointment?.datetime) return false;
       return new Date(appointment.datetime).getTime() < now.getTime();
     });
@@ -83,9 +87,14 @@ export default function AppointmentsScreen() {
         throw new Error(payload.error || "Failed to cancel appointment");
       }
 
-      setAppointments((prev) =>
-        prev.filter((appt) => appt.id !== appointment.id)
+      // Immediately update local state for instant UI feedback
+      // Socket event will also update, providing redundancy
+      const currentAppointments = appointments || [];
+      const updatedAppointments = currentAppointments.filter(
+        (appt) => appt.id !== appointment.id
       );
+      setAppointments(updatedAppointments);
+      
       Toast.show({
         type: "success",
         text1: "Appointment cancelled successfully",

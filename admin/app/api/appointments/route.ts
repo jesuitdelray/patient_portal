@@ -5,9 +5,18 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search")?.trim() || "";
   const status = searchParams.get("status") || "all"; // all, upcoming, past, missed
+  const patientId = searchParams.get("patientId");
 
   try {
-    const where: any = {};
+    const where: any = {
+      // Include cancelled appointments for admin view
+      // Frontend can filter them if needed
+    };
+
+    // Filter by patientId if provided
+    if (patientId) {
+      where.patientId = patientId;
+    }
 
     // Search by patient name or email
     if (search) {

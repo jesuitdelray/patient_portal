@@ -22,7 +22,11 @@ export function QuickStats() {
 
   const now = new Date();
   const upcoming = appts
-    .filter((a) => new Date(a.datetime) >= now)
+    .filter((a) => {
+      // Don't show cancelled appointments
+      if ((a as any).isCancelled) return false;
+      return new Date(a.datetime) >= now;
+    })
     .sort(
       (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
     );

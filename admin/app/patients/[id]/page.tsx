@@ -12,7 +12,9 @@ import {
   usePatient,
   useTreatmentPlans,
   useInvalidateAdminQueries,
+  adminQueryKeys,
 } from "@/lib/admin-queries";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader } from "@/app/components/Loader";
 import { PatientDiscountBadge } from "@/app/components/PatientDiscountBadge";
 
@@ -22,6 +24,7 @@ type Appointment = {
   datetime: string;
   location?: string | null;
   type: string;
+  isCancelled?: boolean;
 };
 type Plan = { id: string; title: string; status: string; steps: any };
 type Message = {
@@ -255,9 +258,12 @@ function ProceduresList({
   const handleComplete = async (procedureId: string) => {
     setIsCompleting(procedureId);
     try {
-      const res = await fetch(`${API_BASE}/procedures/${procedureId}/complete`, {
-        method: "POST",
-      });
+      const res = await fetch(
+        `${API_BASE}/procedures/${procedureId}/complete`,
+        {
+          method: "POST",
+        }
+      );
       if (res.ok) {
         onUpdate();
       } else {
@@ -712,6 +718,7 @@ export default function PatientDetail({
 }) {
   const { id: patientId } = React.use(params);
   const invalidate = useInvalidateAdminQueries();
+  const queryClient = useQueryClient();
   const { data: patientData, isLoading: isLoadingPatient } =
     usePatient(patientId);
 
@@ -748,7 +755,8 @@ export default function PatientDetail({
       .trim();
 
   const isIsoDate = (value: string) =>
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) && !Number.isNaN(Date.parse(value));
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) &&
+    !Number.isNaN(Date.parse(value));
 
   const formatPrimitive = (value: string | number | boolean) => {
     if (typeof value === "string") {
@@ -775,9 +783,7 @@ export default function PatientDetail({
       typeof value === "boolean"
     ) {
       return (
-        <span className="whitespace-pre-wrap">
-          {formatPrimitive(value)}
-        </span>
+        <span className="whitespace-pre-wrap">{formatPrimitive(value)}</span>
       );
     }
 
@@ -850,8 +856,7 @@ export default function PatientDetail({
         ? payload.action.trim()
         : null;
 
-    const source =
-      typeof payload.data !== "undefined" ? payload.data : payload;
+    const source = typeof payload.data !== "undefined" ? payload.data : payload;
 
     return (
       <div className="space-y-2">
@@ -1048,18 +1053,47 @@ export default function PatientDetail({
 
   const doReschedule = async () => {
     if (!reschedule?.id || !reschedule.when) return;
-    const r = await fetch(
-      `${API_BASE}/appointments/${reschedule.id}/reschedule`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ datetime: reschedule.when }),
+    try {
+      const r = await fetch(
+        `${API_BASE}/appointments/${reschedule.id}/reschedule`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ datetime: reschedule.when }),
+        }
+      );
+      if (!r.ok) {
+        const error = await r.json().catch(() => ({}));
+        alert(error.error || "Failed to reschedule appointment");
+        return;
       }
-    );
-    const data = await r.json();
-    // Invalidate cache to refetch
-    invalidate.invalidatePatient(patientId);
-    setReschedule(null);
+      const data = await r.json();
+
+      // Immediately update local state optimistically
+      if (data.appointment) {
+        // Update the appointments list in React Query cache
+        queryClient.setQueryData(
+          adminQueryKeys.patient(patientId),
+          (oldData: any) => {
+            if (!oldData) return oldData;
+            return {
+              ...oldData,
+              appointments:
+                oldData.appointments?.map((apt: Appointment) =>
+                  apt.id === data.appointment.id ? data.appointment : apt
+                ) || [],
+            };
+          }
+        );
+      }
+
+      // Invalidate and refetch to ensure consistency
+      await invalidate.invalidatePatient(patientId);
+      setReschedule(null);
+    } catch (error) {
+      console.error("Reschedule error:", error);
+      alert("Failed to reschedule appointment");
+    }
   };
 
   if (isLoadingPatient)
@@ -1075,7 +1109,9 @@ export default function PatientDetail({
       <section className="bg-white/80 backdrop-blur rounded-xl border shadow-sm p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{patient.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {patient.name}
+            </h1>
             <p className="text-slate-600">{patient.email}</p>
           </div>
           <PatientDiscountBadge patientId={patientId} />
@@ -1115,10 +1151,19 @@ export default function PatientDetail({
             {appointments.map((a: Appointment) => (
               <li
                 key={a.id}
-                className="border rounded-lg p-3 flex items-center justify-between hover:bg-slate-50 transition"
+                className={`border rounded-lg p-3 flex items-center justify-between hover:bg-slate-50 transition ${
+                  a.isCancelled ? "opacity-60 bg-slate-100" : ""
+                }`}
               >
-                <div>
-                  <div className="font-medium text-slate-900">{a.title}</div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <div className="font-medium text-slate-900">{a.title}</div>
+                    {a.isCancelled && (
+                      <span className="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded">
+                        Cancelled
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm text-slate-600">
                     {new Date(a.datetime).toLocaleString()}{" "}
                     {a.location ? `· ${a.location}` : ""}
@@ -1152,45 +1197,49 @@ export default function PatientDetail({
                     </>
                   ) : (
                     <>
-                      <button
-                        className="px-2 py-1 text-sm border rounded hover:bg-slate-100"
-                        onClick={() => {
-                          const iso = new Date(a.datetime)
-                            .toISOString()
-                            .slice(0, 16);
-                          setReschedule({ id: a.id, when: iso });
-                        }}
-                      >
-                        Reschedule
-                      </button>
-                      <button
-                        className="px-2 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
-                        onClick={async () => {
-                          if (
-                            !confirm(
-                              "Are you sure you want to cancel this appointment?"
-                            )
-                          )
-                            return;
-                          try {
-                            const res = await fetch(
-                              `${API_BASE}/appointments/${a.id}`,
-                              {
-                                method: "DELETE",
+                      {!a.isCancelled && (
+                        <>
+                          <button
+                            className="px-2 py-1 text-sm border rounded hover:bg-slate-100"
+                            onClick={() => {
+                              const iso = new Date(a.datetime)
+                                .toISOString()
+                                .slice(0, 16);
+                              setReschedule({ id: a.id, when: iso });
+                            }}
+                          >
+                            Reschedule
+                          </button>
+                          <button
+                            className="px-2 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+                            onClick={async () => {
+                              if (
+                                !confirm(
+                                  "Are you sure you want to cancel this appointment?"
+                                )
+                              )
+                                return;
+                              try {
+                                const res = await fetch(
+                                  `${API_BASE}/appointments/${a.id}`,
+                                  {
+                                    method: "DELETE",
+                                  }
+                                );
+                                if (res.ok) {
+                                  invalidate.invalidatePatient(patientId);
+                                } else {
+                                  alert("Failed to cancel appointment");
+                                }
+                              } catch (error) {
+                                alert("Failed to cancel appointment");
                               }
-                            );
-                            if (res.ok) {
-                              invalidate.invalidatePatient(patientId);
-                            } else {
-                              alert("Failed to cancel appointment");
-                            }
-                          } catch (error) {
-                            alert("Failed to cancel appointment");
-                          }
-                        }}
-                      >
-                        Cancel
-                      </button>
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
@@ -1265,7 +1314,9 @@ export default function PatientDetail({
               const isDoctor = m.sender === "doctor";
               const isManual = Boolean(m.manual);
               const structured =
-                isDoctor && !isManual ? parseStructuredMessage(m.content) : null;
+                isDoctor && !isManual
+                  ? parseStructuredMessage(m.content)
+                  : null;
               const isStructured = Boolean(structured);
               const bubbleClass =
                 (isDoctor
@@ -1296,7 +1347,9 @@ export default function PatientDetail({
                         {m.content}
                       </div>
                     )}
-                    <div className={`mt-1 text-[10px] opacity-70 text-right ${timeClass}`}>
+                    <div
+                      className={`mt-1 text-[10px] opacity-70 text-right ${timeClass}`}
+                    >
                       {new Date(m.createdAt).toLocaleTimeString()}
                     </div>
                   </div>

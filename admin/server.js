@@ -57,7 +57,12 @@ const prisma = new PrismaClient({
 });
 
 // Map actions to titles and fetch data from database
-async function getActionData(action, patientId, actionPayload = {}, context = {}) {
+async function getActionData(
+  action,
+  patientId,
+  actionPayload = {},
+  context = {}
+) {
   const actionTitles = {
     view_next_appointment: "Next appointment",
     reschedule_appointment: "Reschedule appointment",
@@ -241,6 +246,7 @@ async function getActionData(action, patientId, actionPayload = {}, context = {}
           where: {
             patientId,
             datetime: { gte: now },
+            isCancelled: false,
           },
           orderBy: { datetime: "asc" },
           include: {
@@ -324,9 +330,30 @@ async function getActionData(action, patientId, actionPayload = {}, context = {}
           where: {
             patientId,
             datetime: { gte: now },
+            isCancelled: false,
           },
           orderBy: { datetime: "asc" },
         });
+        break;
+      }
+
+      case "reschedule_appointment": {
+        const now = new Date();
+        const appointments = await prisma.appointment.findMany({
+          where: {
+            patientId,
+            datetime: { gte: now },
+            isCancelled: false,
+          },
+          orderBy: { datetime: "asc" },
+        });
+        // Return the last (furthest) upcoming appointment as an array, same format as view_upcoming_appointments
+        data =
+          appointments.length > 0
+            ? [appointments[appointments.length - 1]]
+            : [];
+        // Change action to view_upcoming_appointments so frontend renders appointment card
+        action = "view_upcoming_appointments";
         break;
       }
 
@@ -336,6 +363,7 @@ async function getActionData(action, patientId, actionPayload = {}, context = {}
           where: {
             patientId,
             datetime: { gte: now },
+            isCancelled: false,
           },
           orderBy: { datetime: "asc" },
         });
@@ -700,9 +728,7 @@ async function generateAvailableSlots(preferredDate) {
   return {
     slots,
     generatedAt: new Date().toISOString(),
-    preferredDate: preferredDate
-      ? preferredDate.toISOString()
-      : null,
+    preferredDate: preferredDate ? preferredDate.toISOString() : null,
   };
 }
 
@@ -733,154 +759,157 @@ async function start() {
       socket.emit("ready", { ok: true });
     });
 
-    socket.on("message:send", async ({ patientId, sender, content, manual }, ack) => {
-      let ackSent = false;
-      const safeAck = (payload) => {
-        if (ack && !ackSent) {
-          ack(payload);
-          ackSent = true;
-        }
-      };
-
-      try {
-        if (!patientId || !sender || !content) {
-          safeAck({ ok: false, error: "invalid_payload" });
-          return;
-        }
-
-        // Save message to database
-        const message = await prisma.message.create({
-          data: { 
-            patientId, 
-            sender, 
-            content, 
-            manual: Boolean(manual),
-          },
-        });
-
-        // Send message to patient room (all sockets in room, including sender)
-        io.to(`patient:${patientId}`).emit("message:new", { message });
-
-        // Send to admin room using broadcast to avoid sending to sender if they're in admin room
-        socket.broadcast.to("admin").emit("message:new", { message });
-
-        // Immediately acknowledge receipt to client before longer AI processing
-        safeAck({ ok: true, message });
-
-        // If message is from patient, send to AI and get action
-        if (sender === "patient") {
-          console.log("[Server] Patient message received, calling AI...");
-          try {
-            // Get conversation history for context
-            const recentMessages = await prisma.message.findMany({
-              where: { patientId },
-              orderBy: { createdAt: "desc" },
-              take: 10,
-            });
-
-            const conversationHistory = recentMessages.reverse().map((m) => ({
-              role: m.sender === "patient" ? "user" : "assistant",
-              content: m.content,
-            }));
-
-            // Call AI endpoint to get action
-            // Use environment variable for base URL, or construct from request
-            const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN
-              ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-              : process.env.ADMIN_BASE_URL
-              ? process.env.ADMIN_BASE_URL
-              : process.env.PORT
-              ? `http://localhost:${process.env.PORT}`
-              : "http://localhost:3001";
-
-            console.log(
-              "[Server] Calling AI endpoint:",
-              `${baseUrl}/api/ai/chat-action`
-            );
-
-            const aiResponse = await fetch(`${baseUrl}/api/ai/chat-action`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                patientId,
-                message: content,
-                conversationHistory,
-              }),
-            });
-
-            if (aiResponse.ok) {
-              const actionData = await aiResponse.json();
-              console.log("[Server] AI response received:", {
-                action: actionData.action,
-                data: actionData.data,
-              });
-
-              // Map action to title and fetch data
-              const { title, data, action } = await getActionData(
-                actionData.action,
-                patientId,
-                actionData.data,
-                { message: content }
-              );
-
-              // Create structured message with action, title and data
-              const messageContent = JSON.stringify({ action, title, data });
-
-              const botMessage = await prisma.message.create({
-                data: {
-                  patientId,
-                  sender: "doctor",
-                  content: messageContent,
-                },
-              });
-
-              console.log(
-                "[Server] Created bot message with structured data:",
-                botMessage.id,
-                title
-              );
-
-              // Send bot message to patient room
-              io.to(`patient:${patientId}`).emit("message:new", {
-                message: botMessage,
-              });
-              console.log(
-                "[Server] Emitted message:new to patient room:",
-                `patient:${patientId}`
-              );
-
-              // Send to admin room using broadcast to avoid sending to sender
-              socket.broadcast
-                .to("admin")
-                .emit("message:new", { message: botMessage });
-
-              // Also send action data for frontend to handle
-              io.to(`patient:${patientId}`).emit("ai:action", {
-                action: actionData.action,
-                data: actionData.data,
-                messageId: botMessage.id,
-              });
-            } else {
-              const errorText = await aiResponse.text();
-              console.error(
-                "[Server] AI endpoint error:",
-                aiResponse.status,
-                errorText
-              );
-            }
-          } catch (aiError) {
-            console.error("[Server] Error calling AI:", aiError);
-            console.error("[Server] AI error stack:", aiError.stack);
-            // Don't fail the message send if AI fails
+    socket.on(
+      "message:send",
+      async ({ patientId, sender, content, manual }, ack) => {
+        let ackSent = false;
+        const safeAck = (payload) => {
+          if (ack && !ackSent) {
+            ack(payload);
+            ackSent = true;
           }
+        };
+
+        try {
+          if (!patientId || !sender || !content) {
+            safeAck({ ok: false, error: "invalid_payload" });
+            return;
+          }
+
+          // Save message to database
+          const message = await prisma.message.create({
+            data: {
+              patientId,
+              sender,
+              content,
+              manual: Boolean(manual),
+            },
+          });
+
+          // Send message to patient room (all sockets in room, including sender)
+          io.to(`patient:${patientId}`).emit("message:new", { message });
+
+          // Send to admin room using broadcast to avoid sending to sender if they're in admin room
+          socket.broadcast.to("admin").emit("message:new", { message });
+
+          // Immediately acknowledge receipt to client before longer AI processing
+          safeAck({ ok: true, message });
+
+          // If message is from patient, send to AI and get action
+          if (sender === "patient") {
+            console.log("[Server] Patient message received, calling AI...");
+            try {
+              // Get conversation history for context
+              const recentMessages = await prisma.message.findMany({
+                where: { patientId },
+                orderBy: { createdAt: "desc" },
+                take: 10,
+              });
+
+              const conversationHistory = recentMessages.reverse().map((m) => ({
+                role: m.sender === "patient" ? "user" : "assistant",
+                content: m.content,
+              }));
+
+              // Call AI endpoint to get action
+              // Use environment variable for base URL, or construct from request
+              const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN
+                ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+                : process.env.ADMIN_BASE_URL
+                ? process.env.ADMIN_BASE_URL
+                : process.env.PORT
+                ? `http://localhost:${process.env.PORT}`
+                : "http://localhost:3001";
+
+              console.log(
+                "[Server] Calling AI endpoint:",
+                `${baseUrl}/api/ai/chat-action`
+              );
+
+              const aiResponse = await fetch(`${baseUrl}/api/ai/chat-action`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  patientId,
+                  message: content,
+                  conversationHistory,
+                }),
+              });
+
+              if (aiResponse.ok) {
+                const actionData = await aiResponse.json();
+                console.log("[Server] AI response received:", {
+                  action: actionData.action,
+                  data: actionData.data,
+                });
+
+                // Map action to title and fetch data
+                const { title, data, action } = await getActionData(
+                  actionData.action,
+                  patientId,
+                  actionData.data,
+                  { message: content }
+                );
+
+                // Create structured message with action, title and data
+                const messageContent = JSON.stringify({ action, title, data });
+
+                const botMessage = await prisma.message.create({
+                  data: {
+                    patientId,
+                    sender: "doctor",
+                    content: messageContent,
+                  },
+                });
+
+                console.log(
+                  "[Server] Created bot message with structured data:",
+                  botMessage.id,
+                  title
+                );
+
+                // Send bot message to patient room
+                io.to(`patient:${patientId}`).emit("message:new", {
+                  message: botMessage,
+                });
+                console.log(
+                  "[Server] Emitted message:new to patient room:",
+                  `patient:${patientId}`
+                );
+
+                // Send to admin room using broadcast to avoid sending to sender
+                socket.broadcast
+                  .to("admin")
+                  .emit("message:new", { message: botMessage });
+
+                // Also send action data for frontend to handle
+                io.to(`patient:${patientId}`).emit("ai:action", {
+                  action: actionData.action,
+                  data: actionData.data,
+                  messageId: botMessage.id,
+                });
+              } else {
+                const errorText = await aiResponse.text();
+                console.error(
+                  "[Server] AI endpoint error:",
+                  aiResponse.status,
+                  errorText
+                );
+              }
+            } catch (aiError) {
+              console.error("[Server] Error calling AI:", aiError);
+              console.error("[Server] AI error stack:", aiError.stack);
+              // Don't fail the message send if AI fails
+            }
+          }
+        } catch (e) {
+          console.error("Message send error:", e);
+          safeAck({ ok: false, error: "server_error" });
         }
-      } catch (e) {
-        console.error("Message send error:", e);
-        safeAck({ ok: false, error: "server_error" });
       }
-    });
+    );
 
     socket.on("messages:clear", async ({ patientId }, ack) => {
       try {

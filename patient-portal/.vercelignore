@@ -1,4 +1,5 @@
 node_modules
+admin
 .expo
 ios
 android
@@ -8,3 +9,9 @@ android
 .env.*.local
 *.md
 !README.md
+patient-portal/ios
+patient-portal/android
+patient-portal/node_modules
+admin/node_modules
+dist
+.next

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -40,14 +40,21 @@ export function UpcomingAppointments() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const theme = useBrandingTheme();
-  const upcomingAppointments = (appointments || []).filter(
-    (appointment: any) => {
+  const upcomingAppointments = useMemo(() => {
+    const filtered = (appointments || []).filter((appointment: any) => {
       if (!appointment?.datetime) return false;
+      // Don't show cancelled appointments
+      if (appointment.isCancelled) return false;
       const appointmentDate = new Date(appointment.datetime);
       const now = new Date();
       return appointmentDate.getTime() >= now.getTime();
-    }
-  );
+    });
+    console.log("[UpcomingAppointments] Recalculated upcoming:", {
+      total: appointments?.length || 0,
+      upcoming: filtered.length,
+    });
+    return filtered;
+  }, [appointments]);
 
   const today = new Date();
   const todayString = today.toISOString().slice(0, 16);
@@ -72,9 +79,23 @@ export function UpcomingAppointments() {
         throw new Error(payload.error || "Failed to cancel appointment");
       }
 
-      setAppointments((prev) =>
-        prev.filter((appt) => appt.id !== appointment.id)
+      // Immediately update local state for instant UI feedback
+      // Socket event will also update, providing redundancy
+      const currentAppointments = appointments || [];
+      const updatedAppointments = currentAppointments.filter(
+        (appt) => appt.id !== appointment.id
       );
+      setAppointments(updatedAppointments);
+
+      console.log(
+        "[UpcomingAppointments] Cancelled appointment, updated list:",
+        {
+          before: currentAppointments.length,
+          after: updatedAppointments.length,
+          cancelledId: appointment.id,
+        }
+      );
+
       Toast.show({
         type: "success",
         text1: "Appointment cancelled successfully",

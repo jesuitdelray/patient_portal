@@ -8,6 +8,8 @@ export function AppointmentBanner() {
   const { appointments } = useAppointments();
   const upcomingAppointments = (appointments || []).filter((appointment) => {
     if (!appointment?.datetime) return false;
+    // Don't show cancelled appointments
+    if ((appointment as any).isCancelled) return false;
     return new Date(appointment.datetime).getTime() >= Date.now();
   });
   const firstAppointment = upcomingAppointments[0];

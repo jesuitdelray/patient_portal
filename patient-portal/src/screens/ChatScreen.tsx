@@ -236,6 +236,7 @@ export default function ChatScreen() {
                 const emptyStateMessages: Record<string, string> = {
                   view_upcoming_appointments: "No appointments found",
                   view_next_appointment: "No appointments found",
+                  reschedule_appointment: "No appointments found",
                 };
 
                 return {
@@ -281,6 +282,7 @@ export default function ChatScreen() {
 
     // Remove all existing listeners first to prevent duplicates
     socket.off("message:new");
+    socket.off("message:update");
     socket.off("messages:cleared");
     socket.off("ai:action");
     socket.off("appointment:update");
@@ -349,6 +351,20 @@ export default function ChatScreen() {
     };
 
     socket.on("message:new", messageHandler);
+
+    // Listen for message updates (e.g., when appointment is cancelled)
+    const messageUpdateHandler = ({ message: updatedMessage }: any) => {
+      if (updatedMessage?.patientId === patientId) {
+        const normalizedMessage = normalizeMessage(updatedMessage || {});
+        setMessages((prev) => {
+          return prev.map((msg) =>
+            msg.id === normalizedMessage.id ? normalizedMessage : msg
+          );
+        });
+      }
+    };
+
+    socket.on("message:update", messageUpdateHandler);
 
     // Listen for messages cleared
     const messagesClearedHandler = ({ patientId: clearedPatientId }: any) => {
@@ -465,10 +481,9 @@ export default function ChatScreen() {
                       !updatedData ||
                       (Array.isArray(updatedData) && updatedData.length === 0);
                     const emptyStateMessages: Record<string, string> = {
-                      view_upcoming_appointments:
-                        "Sorry, but you don't have any upcoming appointments yet.",
-                      view_next_appointment:
-                        "Sorry, but you don't have any upcoming appointments yet.",
+                      view_upcoming_appointments: "No appointments found",
+                      view_next_appointment: "No appointments found",
+                      reschedule_appointment: "No appointments found",
                     };
 
                     return {
@@ -494,15 +509,17 @@ export default function ChatScreen() {
       }
     };
 
-    socket.on("appointment:cancelled", appointmentCancelledHandler);
+    // Don't handle appointment:cancelled locally - rely on message:update instead
+    // socket.on("appointment:cancelled", appointmentCancelledHandler);
 
     return () => {
       console.log("[Chat] Cleaning up socket listeners");
       socket.off("message:new", messageHandler);
+      socket.off("message:update", messageUpdateHandler);
       socket.off("messages:cleared", messagesClearedHandler);
       socket.off("ai:action", actionHandler);
       socket.off("appointment:update", appointmentUpdatedHandler);
-      socket.off("appointment:cancelled", appointmentCancelledHandler);
+      // socket.off("appointment:cancelled", appointmentCancelledHandler);
       // Don't disconnect socket - it's managed globally
     };
   }, [patientId]);
@@ -820,61 +837,16 @@ export default function ChatScreen() {
               });
 
               if (res.ok) {
-                // Update messages immediately to remove cancelled appointment
-                setMessages((prev) => {
-                  return prev.map((msg) => {
-                    if (msg.sender === "doctor") {
-                      try {
-                        const parsed = JSON.parse(msg.content);
-                        if (parsed.action && parsed.data) {
-                          const appointmentData = Array.isArray(parsed.data)
-                            ? parsed.data.find((apt: any) => apt.id === data.id)
-                            : parsed.data?.id === data.id
-                            ? parsed.data
-                            : null;
-
-                          if (appointmentData) {
-                            const updatedData = Array.isArray(parsed.data)
-                              ? parsed.data.filter(
-                                  (apt: any) => apt.id !== data.id
-                                )
-                              : null;
-
-                            const isEmpty =
-                              !updatedData ||
-                              (Array.isArray(updatedData) &&
-                                updatedData.length === 0);
-                            const emptyStateMessages: Record<string, string> = {
-                              view_upcoming_appointments:
-                                "Sorry, but you don't have any upcoming appointments yet.",
-                              view_next_appointment:
-                                "Sorry, but you don't have any upcoming appointments yet.",
-                            };
-
-                            return {
-                              ...msg,
-                              content: JSON.stringify({
-                                ...parsed,
-                                title:
-                                  isEmpty && emptyStateMessages[parsed.action]
-                                    ? emptyStateMessages[parsed.action]
-                                    : parsed.title,
-                                data: updatedData,
-                              }),
-                            };
-                          }
-                        }
-                      } catch (e) {
-                        // Not JSON, skip
-                      }
-                    }
-                    return msg;
-                  });
-                });
-
+                // Don't update messages locally - wait for message:update socket event
                 Toast.show({
                   type: "success",
                   text1: "Appointment cancelled successfully",
+                });
+              } else if (res.status === 404) {
+                // 404 means appointment already cancelled
+                Toast.show({
+                  type: "success",
+                  text1: "Appointment already cancelled",
                 });
               } else {
                 throw new Error("Failed to cancel appointment");

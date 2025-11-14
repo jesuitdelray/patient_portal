@@ -44,7 +44,13 @@ export function usePatient(patientId: string) {
         if (res.status === 404) {
           const errorData = await res.json().catch(() => ({}));
           // Return null with patient field set to null for 404
-          return { patient: null, doctor: null, plans: [], appointments: [], messages: [] };
+          return {
+            patient: null,
+            doctor: null,
+            plans: [],
+            appointments: [],
+            messages: [],
+          };
         }
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || "Failed to fetch patient");
@@ -202,22 +208,33 @@ export function useInvalidateAdminQueries() {
       queryClient.invalidateQueries({
         queryKey: adminQueryKeys.patients(params),
       }),
-    invalidatePatient: (id: string) =>
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.patient(id) }),
-    invalidateAppointments: (params?: string) =>
+    invalidatePatient: (id: string) => {
+      // Invalidate and immediately refetch to ensure UI updates
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.patient(id) });
+      return queryClient.refetchQueries({
+        queryKey: adminQueryKeys.patient(id),
+      });
+    },
+    invalidateAppointments: (params?: string) => {
       queryClient.invalidateQueries({
         queryKey: adminQueryKeys.appointments(params),
-      }),
-    invalidateTreatmentPlans: (patientId: string) =>
+      });
+      return queryClient.refetchQueries({
+        queryKey: adminQueryKeys.appointments(params),
+      });
+    },
+    invalidateTreatmentPlans: (patientId: string) => {
       queryClient.invalidateQueries({
         queryKey: adminQueryKeys.treatmentPlans(patientId),
-      }),
+      });
+      return queryClient.refetchQueries({
+        queryKey: adminQueryKeys.treatmentPlans(patientId),
+      });
+    },
     invalidateDoctorPatients: (doctorId: string) =>
       queryClient.invalidateQueries({
         queryKey: ["admin", "doctors", doctorId, "patients"],
       }),
-    invalidateAll: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin"] }),
+    invalidateAll: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
   };
 }
-

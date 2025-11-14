@@ -20,7 +20,9 @@ type Appointment = {
 
 type AppointmentsContextType = {
   appointments: Appointment[];
-  setAppointments: (appointments: Appointment[]) => void;
+  setAppointments: (
+    appointments: Appointment[] | ((prev: Appointment[]) => Appointment[])
+  ) => void;
 };
 
 const AppointmentsContext = createContext<AppointmentsContextType | undefined>(
@@ -44,7 +46,10 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
           credentials: "include",
         });
         const data = await res.json();
-        const appts = (data.appointments || []) as Appointment[];
+        // Filter out cancelled appointments
+        const appts = ((data.appointments || []) as Appointment[]).filter(
+          (apt: any) => !apt.isCancelled
+        );
         if (mounted) {
           setAppointments(appts);
         }
@@ -60,6 +65,8 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
         // Listen for new appointments
         socket.on("appointment:new", ({ appointment }: any) => {
           if (mounted) {
+            // Don't add cancelled appointments
+            if (appointment.isCancelled) return;
             setAppointments((prev) => {
               // Check if appointment already exists
               const exists = prev.some((a) => a.id === appointment.id);
@@ -77,6 +84,13 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
         // Listen for appointment updates
         socket.on("appointment:update", ({ appointment }: any) => {
           if (mounted) {
+            // If appointment is cancelled, remove it from the list
+            if (appointment.isCancelled) {
+              setAppointments((prev) =>
+                prev.filter((a) => a.id !== appointment.id)
+              );
+              return;
+            }
             setAppointments((prev) =>
               prev.map((a) => (a.id === appointment.id ? appointment : a))
             );
@@ -91,9 +105,18 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
         // Listen for appointment cancellations
         socket.on("appointment:cancelled", ({ appointmentId }: any) => {
           if (mounted) {
-            setAppointments((prev) =>
-              prev.filter((a) => a.id !== appointmentId)
-            );
+            console.log("[AppointmentsContext] Socket appointment:cancelled:", appointmentId);
+            setAppointments((prev) => {
+              // Remove cancelled appointment if it exists
+              const updated = prev.filter((a) => a.id !== appointmentId);
+              console.log("[AppointmentsContext] Updated appointments after cancellation:", {
+                before: prev.length,
+                after: updated.length,
+                appointmentId,
+              });
+              // Always return updated array (React will handle comparison)
+              return updated;
+            });
           }
         });
       }
